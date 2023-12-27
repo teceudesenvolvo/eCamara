@@ -1,0 +1,62 @@
+{
+  "name": "ePaciente",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@date-io/dayjs": "^2.15.0",
+    "@date-io/luxon": "^2.15.0",
+    "@mui/icons-material": "latest",
+    "@mui/material": "latest",
+    "@mui/x-date-pickers": "latest",
+    "@splidejs/react-splide": "^0.7.8",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^0.19.2",
+    "base-64": "^1.0.0",
+    "cors": "^2.8.5",
+    "cpf-cnpj-validator": "^1.0.3",
+    "date-fns": "latest",
+    "dayjs": "latest",
+    "firebase": "^9.10.0",
+    "history": "^4.10.1",
+    "moment": "^2.24.0",
+    "pagarme": "^4.15.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^3.9.0",
+    "react-player": "^2.7.2",
+    "react-redux": "^8.0.2",
+    "react-router": "^5.0.1",
+    "react-router-dom": "^5.3.3",
+    "react-scripts": "5.0.1",
+    "redux-persist": "^6.0.0",
+    "redux-thunk": "^2.3.0",
+    "request": "^2.88.2",
+    "web-vitals": "^2.1.4",
+    "yarn": "^1.22.10"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
