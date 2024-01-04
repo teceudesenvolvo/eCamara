@@ -8,7 +8,7 @@
 
 .App-logo {
   height: 40vmin;
-  pointer-events: none;
+  pointer-events: none; 
 }
 
 .logo {
@@ -44,9 +44,11 @@
   background-color: transparent;
 }
 .heroImg{
+  background-position: 25% 75%;
   width: 100%;
-  height: 451px;
+  height: 620px;
   object-fit: cover;
+  object-position: center top;
   background-color: transparent;
   margin-top: -10px;
   position: relative;
@@ -55,14 +57,14 @@
   height: 100px !important;
   border-radius: 0 !important;
   margin-top: -120px;
-  color: white;
-  background-color: rgba(0, 0, 0, 0.75) !important;
+  color: #5A5A5A;
+  background-color: #EEEEEE !important;
   position: relative;
   z-index: 1;
 }
 
 .heroDesc > p{
-  color: white;
+  color: #5a5a5a;
   font-size: 20px;
   margin-left: 0px;
   margin-bottom: 5px;
@@ -95,7 +97,7 @@
   width: 100%;
   flex-direction: column;
   justify-content: left;
-  background-color: #FF740F;
+  background-color: #126B5E;
   border-radius: 0px 0px 10px 10px;
   padding-bottom: 16px; 
   z-index: 10;
@@ -2105,7 +2107,7 @@ footer > p {
   bottom: 0;
   height: 100vh;
   left: 0;
-  background: #ff740f;
+  background: #126B5E;
   width: 40px;
   overflow: hidden;
   transition: width 0.2 linear;
@@ -2180,12 +2182,12 @@ footer > p {
 }
 
 .aDesktop:hover {
-  color: #ffad60ab;
+  color: #04b398;
 }
 
 
 .link-desktop-active {
-  color: #8d4400 !important;
+  color: #043a32 !important;
 }
 
 .fas {

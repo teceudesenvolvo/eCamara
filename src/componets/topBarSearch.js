@@ -3,7 +3,7 @@ import '../App.css'
 
 //Imagens
 
-import Logo from '../assets/e-compras-branco-05.png'
+import Logo from '../assets/e-camara-16.png'
 
 // Icones
 
