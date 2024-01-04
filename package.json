@@ -5,9 +5,11 @@
   "dependencies": {
     "@date-io/dayjs": "^2.15.0",
     "@date-io/luxon": "^2.15.0",
-    "@mui/styled-engine": "npm:@mui/styled-engine-sc@latest",
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "latest",
     "@mui/material": "latest",
+    "@mui/styled-engine": "npm:@mui/styled-engine-sc@latest",
     "@mui/x-date-pickers": "latest",
     "@splidejs/react-splide": "^0.7.8",
     "@testing-library/react": "^13.3.0",
