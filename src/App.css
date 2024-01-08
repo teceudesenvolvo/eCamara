@@ -25,6 +25,7 @@
 .App-header {
   background-color: #fff;
   min-height: 100vh;
+  padding-bottom: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -35,6 +36,11 @@
 .App-link {
   color: #FF740F;
 }
+
+.loginPage{
+  background: #126B5E;
+}
+
 .heroDiv{
   width: 100% !important;
   margin-left: -40px !important;
@@ -46,7 +52,7 @@
 .heroImg{
   background-position: 25% 75%;
   width: 100%;
-  height: 620px;
+  height: 600px;
   object-fit: cover;
   object-position: center top;
   background-color: transparent;
@@ -54,9 +60,9 @@
   position: relative;
 }
 .heroDesc{
-  height: 100px !important;
+  height: 120px !important;
   border-radius: 0 !important;
-  margin-top: -120px;
+  margin-top: -50px !important;
   color: #5A5A5A;
   background-color: #EEEEEE !important;
   position: relative;
@@ -65,7 +71,7 @@
 
 .heroDesc > p{
   color: #5a5a5a;
-  font-size: 20px;
+  font-size: 15px;
   margin-left: 0px;
   margin-bottom: 5px;
 }
@@ -409,12 +415,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: #fff;
   z-index: 8;
 }
 
 h1 {
-  color: #484848;
   align-self: start;
   font-size: 15px;
   font-weight: bold;
@@ -426,27 +430,27 @@ h1 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: 50%;
   height: 100%;
 }
 
 .Container > h1{
-  color: #484848;
+  color: #fff !important;
   font-size: 12px;
 }
 
 .Container > p{
-  color: #141414;
+  color: #fff;
   font-size: 13px;
 }
 
 
 .Container > p > a {
-  color: #484848;
+  color: #fff;
 }
 
 .formLogin > p{
-  color: #484848;
+  color: #fff;
 }
 
 .formLogin > a{
@@ -470,6 +474,7 @@ h1 {
   color: #5a5a5a;
   transition: all 0.4s;
   text-align: left;
+  border-radius: 10px;
 }
 
 .labelEndereco {
@@ -600,7 +605,7 @@ video {
 }
 
 .inputLoginDesktop {
-  width: 70%;
+  width: 50%;
   height: 40px;
   border: 0;
   border-bottom: 1px solid #BCBCBC;
@@ -745,14 +750,14 @@ video {
   max-width: 90em;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  /* white-space: nowrap; */
   margin-top: 5px;
   color: #5a5a5a;
   font-size: 10px;
 }
 
 .DestaquesDescricao p{
-  max-width: 90em;
+  max-width: 100em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2070,14 +2075,13 @@ textarea {
 
 /* Footer */
 .footer{
-  background-color: #fff;
-  margin-bottom: 10px;
-  color: #000 !important;
+  background-color: #003f36;
+  color: #fff !important;
   font-size: 12px;
   padding: 10px;
 }
 footer > p {
-  color: #000 !important;
+  color: #fff !important;
   font-size: 12px;
 }
 
@@ -2144,19 +2148,11 @@ footer > p {
 .logoDesktop img {
   margin: 0 auto;
   width: 30px;
-
-
-
-
 }
 
 .logoDesktopM img {
   margin: 0 auto;
   width: 30px;
-
-
-
-
 }
 
 .h1-logo {
@@ -2195,6 +2191,7 @@ footer > p {
   position: relative;
   top: 14px;
   text-align: center;
+  font-weight: lighter;
 }
 
 .nav-item {
@@ -2319,7 +2316,7 @@ footer > p {
   }
   
   .descricaoProduct{
-    font-size: 15px;
+    font-size: 10px;
   }
 
   .Servico-container {

@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 
 //Imagens
-import logo from '../../assets/e-compras-laranja-05.png';
+import logo from '../../assets/e-camara-16.png';
 
 // Libs
 import { cpf } from 'cpf-cnpj-validator';
@@ -127,11 +127,11 @@ class register extends Component {
 
   render() {
     return (
-      <div className='App-header' >
+      <div className='App-header loginPage' >
         <div className='Container' >
           <img src={logo} alt="logo" className='logo' />
-          <h1>Seja bem-vindo!</h1>
           <form className='formLogin'>
+          <h1>Seja bem-vindo!</h1>
 
             {/* CNPJ */}
             <input 
@@ -298,9 +298,6 @@ class register extends Component {
             </div> */}
 
             
-
-          </form> 
-
             <button
               onClick={(
                 () => {
@@ -314,7 +311,10 @@ class register extends Component {
                 }
             )}
             className='buttonLogin'>Cadastrar</button>
+
+          </form> 
             <p>já tem uma conta? <a href='/login' className='linkLogin'>Fazer login</a></p>
+
 
         </div>
 

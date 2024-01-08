@@ -2,18 +2,21 @@ import React, { Component } from 'react';
 
 
 //Imagens
-import Logo from '../assets/e-compras-branco-05.png';
+import Logo from '../assets/logoED.png';
 
 // Icones
 import {
-    FaFilter,
-    FaNewspaper,
-    FaBan,
-    FaRegLightbulb,
-    FaUser,
-    FaQuestionCircle
+    GoBookmark,
+    GoGraph,
+    GoPlay,
+    GoLaw,
+    GoBook,
+    GoRepo,
+    GoQuestion,
+    GoLightBulb,
+    GoSignIn 
 
-} from "react-icons/fa";
+} from "react-icons/go";
 
 // Components
 
@@ -70,32 +73,44 @@ class menuDesktop extends Component {
                 </a>
 
                 <a href="/consultas" className={this.state.linkMenu}>
-                    <FaFilter className='fas fa-home'></FaFilter>
-                    <span className='nav-item'>Consultas</span> 
+                    <GoBookmark className='fas fa-home'></GoBookmark>
+                    <span className='nav-item'>Sessões</span> 
                 </a>
 
                 <a href="/publicacoes" className={this.state.linkMenu2}>
-                    <FaNewspaper className='fas fa-favoritos'></FaNewspaper>
-                    <span className='nav-item'>Publicacoes</span>
+                    <GoGraph  className='fas fa-favoritos'></GoGraph >
+                    <span className='nav-item'>Relatórios</span>
                 </a>
 
                 <a href="/impulgnacoes" className={this.state.linkMenu3}>
-                    <FaBan className='fas fa-Compras'></FaBan>
-                    <span className='nav-item'>Impulgnações</span>
+                    <GoPlay className='fas fa-Compras'></GoPlay>
+                    <span className='nav-item'>Sessão Virtual</span>
                 </a>
 
                 <a href="/esclarecimentos" className={this.state.linkMenu4}>
-                    <FaRegLightbulb className='fas fa-Notificacoes'></FaRegLightbulb>
-                    <span className='nav-item'>Esclarecimentos</span>
+                    <GoLaw className='fas fa-Notificacoes'></GoLaw>
+                    <span className='nav-item'>Normas Juridicas</span>
                 </a>
                 <a href="/login" className={this.state.linkMenu5}>
-                    <FaUser className='fas fa-Ajuda'></FaUser>
-                    <span className='nav-item'>Minha Conta</span>
+                    <GoBook className='fas fa-Ajuda'></GoBook>
+                    <span className='nav-item'>Comissões</span>
+                </a>
+                <a href="/login" className={this.state.linkMenu5}>
+                    <GoRepo className='fas fa-Ajuda'></GoRepo>
+                    <span className='nav-item'>Matérias</span>
                 </a>
                 <a href="/Ajuda" className={this.state.linkMenu5}>
-                    <FaQuestionCircle className='fas fa-Ajuda'></FaQuestionCircle>
+                    <GoQuestion  className='fas fa-Ajuda'></GoQuestion >
+                    <span className='nav-item'>Informações</span>
+                </a>
+                <a href="/Ajuda" className={this.state.linkMenu5}>
+                    <GoLightBulb  className='fas fa-Ajuda'></GoLightBulb >
                     <span className='nav-item'>Ajuda</span>
                 </a>
+                {/* <a href="/login" className={this.state.linkMenu5}>
+                    <GoSignIn  className='fas fa-Ajuda'></GoSignIn >
+                    <span className='nav-item'>Sair</span>
+                </a> */}
 
 
 

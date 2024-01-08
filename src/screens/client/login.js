@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 
 //Imagens
-import logo from '../../assets/e-compras-laranja-05.png';
+import logo from '../../assets/e-camara-16.png';
 
 // Icones
 
@@ -13,7 +13,7 @@ import logo from '../../assets/e-compras-laranja-05.png';
 class loginClient extends Component {
     render() {
         return (
-            <div className='App-header' >
+            <div className='App-header loginPage' >
                 <div className='Container' >
                     <img src={logo} alt="logo" className='logo logoLogin' />
                     <form className='formLogin'>

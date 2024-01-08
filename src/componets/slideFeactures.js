@@ -78,7 +78,7 @@ class slideFeactures extends Component {
                 <img class="imagDestaques" src={post.yoast_head_json.og_image[0].url} alt=""></img>
                 <div class="DestaquesDescricao" >
                     <h5>{post.yoast_head_json.title}</h5> 
-                    <p>{post.yoast_head_json.twitter_creator}</p> 
+                    {/* <p>{post.yoast_head_json.twitter_creator}</p>  */}
                 </div>
             </SplideSlide>
         )
