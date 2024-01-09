@@ -5,8 +5,7 @@ import utiliderImg from '../../assets/utilider.png';
 // Icones
 import { 
     FaHome,
-    FaShoppingCart,
-    FaShoppingBag,
+    FaShoppingCart
    
   } from "react-icons/fa";
 // Components
@@ -22,7 +21,7 @@ class pagamentoUtilider extends Component {
                 <div className='utilider-container'>
                 <div className='utilider-header'>
               <a href='/'  ><FaHome className='utilider-icon' /></a> 
-                <img className='utilider-img' src={utiliderImg}></img>
+                <img alt='logomarca' className='utilider-img' src={utiliderImg}></img>
                 <a href='/carrinho'  ><FaShoppingCart className='utilider-icon' /></a> 
               </div>
 

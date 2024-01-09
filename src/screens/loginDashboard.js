@@ -28,7 +28,7 @@ class loginDashboard extends Component {
                         
                         <input type="text" placeholder="E-mail" className='inputLoginDesktop ' />
                         <input type="password" placeholder="Senha" className='inputLoginDesktop ' />
-                        <a href='#' className='pDesktop' >Esqueceu a senha?</a>
+                        {/* <a href='' className='pDesktop' >Esqueceu a senha?</a> */}
                         <button className='buttonLoginDesktop'>Entrar</button>
                        
 

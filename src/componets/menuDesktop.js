@@ -6,15 +6,15 @@ import Logo from '../assets/logoED.png';
 
 // Icones
 import {
-    GoBookmark,
+    GoNote,
     GoGraph,
-    GoPlay,
+    GoBroadcast,
     GoLaw,
     GoBook,
     GoRepo,
     GoQuestion,
     GoLightBulb,
-    GoSignIn 
+    // GoSignIn     
 
 } from "react-icons/go";
 
@@ -73,7 +73,7 @@ class menuDesktop extends Component {
                 </a>
 
                 <a href="/consultas" className={this.state.linkMenu}>
-                    <GoBookmark className='fas fa-home'></GoBookmark>
+                    <GoNote className='fas fa-home'></GoNote>
                     <span className='nav-item'>Sessões</span> 
                 </a>
 
@@ -83,7 +83,7 @@ class menuDesktop extends Component {
                 </a>
 
                 <a href="/impulgnacoes" className={this.state.linkMenu3}>
-                    <GoPlay className='fas fa-Compras'></GoPlay>
+                    <GoBroadcast  className='fas fa-Compras'></GoBroadcast >
                     <span className='nav-item'>Sessão Virtual</span>
                 </a>
 
