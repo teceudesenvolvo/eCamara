@@ -864,6 +864,7 @@ video {
   width: 100%;
   height: 65%;
   margin-left: 10px;
+  cursor: pointer;
   
 }
 
@@ -880,6 +881,9 @@ video {
   font-size: 13px;
   font-weight: bold;
   color: #000;
+}
+.descricaoProduct-minhasCompras>p>a {
+  color: #008DC9;
 }
 
 .status {

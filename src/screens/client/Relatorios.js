@@ -19,7 +19,7 @@ class Exames extends Component {
           <TopBar />
         </div>
         <div className='favoritos agendarConsulta'>
-        <h1>Publicações</h1>
+        <h1>Relatórios</h1>
           <PubliList/> 
         </div>
       </div>
