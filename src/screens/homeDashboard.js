@@ -23,7 +23,7 @@ class homeDashboard extends Component {
             <div className='App-header' >
                 <div className='Home-Dach'>
                     <dvi className='header-Dach-div'>
-                        <h1>Nossos Parlamentares</h1>
+                        <h1>Nossos Representantes</h1>
                     </dvi>
 
                     <div className='HomeDesktopCarrosel'>

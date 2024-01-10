@@ -695,6 +695,9 @@ video {
 .splide__pagination__page.is-active {
   background: #FF7A00 !important;
 }
+.splide__pagination__page{
+  display: none;
+}
 
 .splide__track {
   margin-top: -50px;
@@ -1697,7 +1700,7 @@ video {
 
 .header-Dach-div {
   display: inline-flex;
-  align-items: center;
+  text-align: left;
   flex-direction: row;
   color: #1f1f1f;
   margin-left: 40px;
