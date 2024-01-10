@@ -5,12 +5,14 @@ import React, { Component } from 'react';
 
 // Icones
 import {
-  FaFilter,
-  FaNewspaper,
-  FaBan,
-  FaRegLightbulb,
-  FaBars
-} from "react-icons/fa";
+  GoNote,
+  GoBroadcast,
+  GoBook,
+  GoRepo,
+
+} from "react-icons/go";
+
+import { FaBars } from "react-icons/fa";
 
 // Components
 
@@ -34,13 +36,13 @@ class menu extends Component {
 
   btnHome = () => {
     switch (this.state.window) {
-      case `/consultas`:
+      case `/sessoes`:
         return this.setState({ linkMenu: 'linkMenu link-active' })
-      case `/publicacoes`:
+      case `/sessao-virtual`:
         return this.setState({ linkMenu2: 'linkMenu link-active' })
-      case `/impulgnacoes`:
+      case `/comissoes`:
         return this.setState({ linkMenu3: 'linkMenu link-active' })
-      case `/esclarecimentos`:
+      case `/materias`:
         return this.setState({ linkMenu4: 'linkMenu link-active' })
       case `/Mais`:
         return this.setState({ linkMenu5: 'linkMenu link-active' })
@@ -77,10 +79,10 @@ class menu extends Component {
     return (
       <nav className={this.state.menuClass}>
 
-        <a href='/consultas' className={this.state.linkMenu}><FaFilter /></a>
-        <a href='/publicacoes' className={this.state.linkMenu2}> < FaNewspaper /> </a>
-        <a href='/impulgnacoes' className={this.state.linkMenu3}> <FaBan /> </a>
-        <a href='/esclarecimentos' className={this.state.linkMenu4}> <FaRegLightbulb /> </a>
+        <a href='/sessoes' className={this.state.linkMenu}><GoNote /></a>
+        <a href='/sessao-virtual' className={this.state.linkMenu2}> < GoBroadcast /> </a>
+        <a href='/comissoes' className={this.state.linkMenu3}> <GoBook /> </a>
+        <a href='/materias' className={this.state.linkMenu4}> <GoRepo /> </a>
         <a href='/mais' className={this.state.linkMenu5}> <FaBars /> </a>
 
       </nav>

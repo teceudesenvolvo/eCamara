@@ -6,7 +6,6 @@ import React, { Component } from 'react';
 // Icones
 
 // Components
-import TopBar from '../../componets/topBarSearch'
 import ListSessoes from '../../componets/List_sessoes';
 
 
@@ -18,9 +17,6 @@ class Minhas_Compras extends Component {
     return (
 
       <div className='App-header' >
-        <div className='header-home'>
-          <TopBar />
-        </div>
         <div className='minhasCompras'>
           <ListSessoes />
         </div>

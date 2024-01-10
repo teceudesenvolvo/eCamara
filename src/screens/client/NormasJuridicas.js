@@ -7,8 +7,6 @@ import React, { Component } from 'react';
 
 
 // Components
-import TopBar from '../../componets/topBarSearch'
-
 import EsclarecimentosList from '../../componets/esclarecimentoList';
 
 //mudança de páginas
@@ -18,11 +16,9 @@ class categorias extends Component {
         return (
 
             <div className='App-header' >
-            <div className='header-home'>
-              <TopBar />
-            </div>
+            
             <div className='favoritos agendarConsulta'>
-            <h1>Esclarecimentos</h1>
+            <h1>Normas Juridicas</h1>
               <EsclarecimentosList/> 
             </div>
           </div>

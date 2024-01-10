@@ -12,11 +12,11 @@ import {
     GoLaw,
     GoBook,
     GoRepo,
-    GoQuestion,
-    GoLightBulb,
-    // GoSignIn     
+    GoLightBulb   
 
 } from "react-icons/go";
+
+import { FaRegUser } from "react-icons/fa";
 
 // Components
 
@@ -54,7 +54,7 @@ class menuDesktop extends Component {
                 return this.setState({ linkMenu5: 'aDesktop link-desktop-active' })
             case `/materias`:
                 return this.setState({ linkMenu6: 'aDesktop link-desktop-active' })
-            case `/informacoes`:
+            case `/perfil`:
                 return this.setState({ linkMenu7: 'aDesktop link-desktop-active' })
             case `/ajuda`:
                 return this.setState({ linkMenu8: 'aDesktop link-desktop-active' })
@@ -108,9 +108,9 @@ class menuDesktop extends Component {
                     <GoRepo className='fas fa-Ajuda'></GoRepo>
                     <span className='nav-item'>Matérias</span>
                 </a>
-                <a href="/informacoes" className={this.state.linkMenu7}>
-                    <GoQuestion  className='fas fa-Ajuda'></GoQuestion >
-                    <span className='nav-item'>Informações</span>
+                <a href="/perfil" className={this.state.linkMenu7}>
+                    <FaRegUser className='fas fa-Ajuda'></FaRegUser>
+                    <span className='nav-item'>Minha Conta</span>
                 </a>
                 <a href="/ajuda" className={this.state.linkMenu8}>
                     <GoLightBulb  className='fas fa-Ajuda'></GoLightBulb >

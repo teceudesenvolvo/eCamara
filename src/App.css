@@ -2116,7 +2116,7 @@ footer > p {
   height: 100vh;
   left: 0;
   background: #126B5E;
-  width: 40px;
+  width: 35px;
   overflow: hidden;
   transition: width 0.2 linear;
   box-shadow: 0 20px 35px rgba(0, 0, 0, 0.1);
@@ -2172,7 +2172,6 @@ footer > p {
 .aDesktop {
   position: relative;
   color: #fff;
-  font-size: 14px;
   display: flex;
   padding: 5px;
   width: 220px;
@@ -2191,18 +2190,20 @@ footer > p {
 }
 
 .fas {
-  font-size: 25px;
+  font-size: 18px;
   position: relative;
-  top: 14px;
+  top: 15px;
+  color: #fff;
   text-align: center;
   font-weight: lighter;
 }
 
 .nav-item {
+  font-size: 14px;
   position: relative;
   top: 5px;
-  padding: 15px;
-  margin-left: 5px;
+  padding: 10px 15px;
+  margin-left: 0px;
 }
 
 
