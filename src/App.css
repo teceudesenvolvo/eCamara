@@ -1788,8 +1788,8 @@ video {
 .balanco-legislativo-painel-item{
   text-align: left;
   background-color: #D9D9D9;
-  width: 619px;
-  height: 281px;
+  width: 100%;
+  height: auto;
   border-radius: 12px;
   color: #1f1f1f;
   margin: 15px;
@@ -2077,7 +2077,12 @@ footer > p {
 
 
 
-@media (max-width: 1000px) {
+@media (max-width: 800px) {
+
+  .Conteiner-Home-Dach{
+    padding-left: 0;
+  }
+
   .menuDesktop {
     display: none;
   }
