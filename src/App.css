@@ -2082,6 +2082,9 @@ footer > p {
   .Conteiner-Home-Dach{
     padding-left: 0;
   }
+  .balanco-legislativo-painel-item>div>div{
+    width: 90%;
+  }
 
   .menuDesktop {
     display: none;
