@@ -699,7 +699,7 @@ video {
   display: none;
 }
 
-.splide__track {
+.splide__track { 
   margin-top: -50px;
   overflow: hidden;
   position: relative;
