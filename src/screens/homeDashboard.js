@@ -6,7 +6,7 @@ import React, { Component } from 'react';
 
 // Icones
 import {
-    
+
 
 } from 'react-icons/fa';
 
@@ -27,50 +27,103 @@ class homeDashboard extends Component {
                             <h1>Balanço Legislativo</h1>
                         </dvi>
 
-                       
+
 
 
                     </div>
                     <div className='Conteiner-Home-Dach-list'>
                         <div className='Conteiner-Home-Dach'>
-                            <div>
+                            {/* Leis */}
+                            <div className='balanco-legislativo-painel-item'>
+                                <h1>Leis</h1>
                                 <div>
-                                    <p>Agendamentos de hoje</p>
-                                    <h1>15<span>Acompanhamento</span></h1>
-                                    <p>R$ 1.250,65</p>
-                                </div>
-                                <div>
-                                    <p>Tiket médio hoje</p>
-                                    <h1>R$ 65,00</h1>
-                                </div>
-                            </div>
-                            <div>
-                                <div>
-                                    <p>Agendamentos de Maio</p>
-                                    <h1>458<span>Acompanhamento</span></h1>
-                                    <p>R$ 27.758,65</p>
-                                </div>
-                                <div>
-                                    <p>Tiket médio Maio</p>
-                                    <h1>R$ 85,00</h1>
+                                    <div>
+                                        <p>Sancionadas</p>
+                                        <h2>234</h2>
+                                    </div>
+                                    <div>
+                                        <p>Promulgadas</p>
+                                        <h2>1739</h2>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
+
+
+                            {/* Proposições */}
+                            <div className='balanco-legislativo-painel-item'>
+                                <h1>Proposições</h1>
                                 <div>
-                                    <p>Visitas ao seus anuncios</p>
-                                    <h1>10<span>Acompanhamento</span></h1>
-                                    <p>Visitas ao anuncios</p>
+                                    <div>
+                                        <p>Projeto de Decreto Legislativo</p>
+                                        <h2>458</h2>
+                                        
+                                    </div>
+                                    
+                                    <div>
+                                        <p>Projetos de emenda à Lei Orgânica</p>
+                                        <h2>458</h2>
+                                        
+                                    </div>
+                                    
+                                    <div>
+                                        <p>Projetos de lei</p>
+                                        <h2>458</h2>
+                                        
+                                    </div>
+                                    
+                                    <div>
+                                        <p>Projetos de Resolução</p>
+                                        <h2>458</h2>
+                                        
+                                    </div>
+
+                                    <div>
+                                        <p>Lei complementar</p>
+                                        <h2>278</h2>
+                                    </div>
                                 </div>
+                            </div>
+
+                            {/* Envios ao Executivo */}
+                            <div className='balanco-legislativo-painel-item'>
+                                <h1>Envios ao Executivo</h1>
                                 <div>
-                                    <p>Cliques no anuncio</p>
-                                    <h1>2</h1>
+                                    <div>
+                                        <p>Requerimentos</p>
+                                        <h2>10</h2>
+                                        
+                                    </div>
+                                    <div>
+                                        <p>Indicações</p>
+                                        <h2>2</h2>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Comissões */}
+                            <div className='balanco-legislativo-painel-item'>
+                                <h1>Comissões</h1>
+                                <div>
+                                    <div>
+                                        <p>Permanentes</p>
+                                        <h2>10</h2>
+                                    </div>
+                                    <div>
+                                        <p>Temporárias</p>
+                                        <h2>2</h2>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
+
+
                     </div>
 
 
+                    <dvi className='header-Dach-div'>
+                        <h1>Nossos Parlamentares</h1>
+                    </dvi>
 
                     <div className='HomeDesktopCarrosel'>
                         <SlideFeacures />
