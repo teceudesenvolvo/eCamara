@@ -8,7 +8,6 @@ import React, { Component } from 'react';
 // Icones
 
 // Components
-import TopBar from '../../componets/topBarSearch'
 
 
 //mudança de páginas
@@ -18,33 +17,35 @@ class Mais extends Component {
     return (
 
       <div className='App-header MenuPage' >
-        <div className='header-home'>
-          <TopBar />
-        </div>
         <div className='Mais-content'>
           <div className='Mais-item'>
-            <a href='/consultas' className='Mais-icon' >
-              <span className='Mais-item-title'>Processos</span>
+            <a href='/sessoes' className='Mais-icon' >
+              <span className='Mais-item-title'>Sessões</span>
             </a>
           </div>
           <div className='Mais-item'>
-            <a href='/publicacoes' className='Mais-icon' >
-              <span className='Mais-item-title'>Publicações</span>
+            <a href='/relatorios' className='Mais-icon' >
+              <span className='Mais-item-title'>Relatórios</span>
             </a>
           </div>
           <div className='Mais-item'>
-            <a href='/impulgnacoes' className='Mais-icon' >
-              <span className='Mais-item-title'>Impulgnações</span>
+            <a href='/sessao-virtual' className='Mais-icon' >
+              <span className='Mais-item-title'>Sessão Virtual</span>
             </a>
           </div>
           <div className='Mais-item'>
-            <a href='/esclarecimentos' className='Mais-icon' >
-              <span className='Mais-item-title'>Esclarecimentos</span>
+            <a href='/normas' className='Mais-icon' >
+              <span className='Mais-item-title'>Normas Juridicas</span>
             </a> 
           </div>
           <div className='Mais-item'>
-            <a href='/recursos' className='Mais-icon' >
-              <span className='Mais-item-title'>Recursos</span>
+            <a href='/comissoes' className='Mais-icon' >
+              <span className='Mais-item-title'>Comissões</span>
+            </a> 
+          </div>
+          <div className='Mais-item'>
+            <a href='/materias' className='Mais-icon' >
+              <span className='Mais-item-title'>Matérias</span>
             </a> 
           </div>
           <div className='Mais-item'>
@@ -53,8 +54,8 @@ class Mais extends Component {
             </a>
           </div>
           <div className='Mais-item'>
-            <a href='/avalie' className='Mais-icon' >
-              <span className='Mais-item-title'>Avalie</span>
+            <a href='/ajuda' className='Mais-icon' >
+              <span className='Mais-item-title'>Ajuda</span>
             </a>
           </div>
         </div>

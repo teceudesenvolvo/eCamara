@@ -44,11 +44,11 @@ class menu extends Component {
         return this.setState({ linkMenu3: 'linkMenu link-active' })
       case `/materias`:
         return this.setState({ linkMenu4: 'linkMenu link-active' })
-      case `/Mais`:
-        return this.setState({ linkMenu5: 'linkMenu link-active' })
       case `/login`:
         return this.setState({ menuClass: 'menuNone' })
       case `/register`:
+        return this.setState({ menuClass: 'menuNone' })
+      case `/mais`:
         return this.setState({ menuClass: 'menuNone' })
       case `/`:
         return this.setState({ menuClass: 'menuNone' })
