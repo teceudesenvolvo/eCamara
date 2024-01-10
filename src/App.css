@@ -696,7 +696,7 @@ video {
   background: #FF7A00 !important;
 }
 .splide__pagination__page{
-  display: none;
+  display: none !important;
 }
 
 .splide__track { 
