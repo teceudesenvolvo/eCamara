@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 
 
 //Imagens
-import Logo from '../assets/logoED.png';
 
 // Icones
 import {
@@ -76,10 +75,7 @@ class menuDesktop extends Component {
         return (
             <nav className='menuDesktop'>
 
-                <a href='/' className="logoDesktopM" >
-                    <img src={Logo} alt="logomarca" ></img>
-                    {/* <h1 className='h1-logo'>| List</h1> */}
-                </a>
+                
 
                 <a href="/sessoes" className={this.state.linkMenu}>
                     <GoNote className='fas fa-home'></GoNote>
@@ -116,14 +112,7 @@ class menuDesktop extends Component {
                     <GoLightBulb  className='fas fa-Ajuda'></GoLightBulb >
                     <span className='nav-item'>Ajuda</span>
                 </a>
-                {/* <a href="/login" className={this.state.linkMenu5}>
-                    <GoSignIn  className='fas fa-Ajuda'></GoSignIn >
-                    <span className='nav-item'>Sair</span>
-                </a> */}
-
-
-
-
+                
             </nav>
 
         );

@@ -31,11 +31,11 @@ class slideFeactures extends Component {
         }
     }
     loadNoticias = async () => {
-        await axios.get(`https://www.maracanau.ce.gov.br/wp-json/wp/v2/posts`)
+        await axios.get(`https://sapl.saogoncalodoamarante.ce.leg.br/api/parlamentares/legislatura/19/parlamentares/`)
             .catch(err => console.log(`o erro foi esse aqui: ${err}`))
             .then(
                 res => {
-                const postsAll = res.data
+                const postsAll = res.data.results
                 let posts = []
                 for (let key in postsAll){
                     posts.push({
@@ -58,10 +58,6 @@ class slideFeactures extends Component {
     render() {
         const posts = this.state.posts
 
-        if(posts.length > 8){
-            posts.length = 20
-        }
-
         const listPosts = posts.map((post) =>
             <SplideSlide key={post.id} className="slidesFeacture"
                 onClick={
@@ -75,10 +71,10 @@ class slideFeactures extends Component {
                     }
                 }
             >
-                <img class="imagDestaques" src={post.yoast_head_json.og_image[0].url} alt=""></img>
+                <img class="imagDestaques" src={post.fotografia} alt=""></img>
                 <div class="DestaquesDescricao" >
-                    <h5>{post.yoast_head_json.title}</h5> 
-                    {/* <p>{post.yoast_head_json.twitter_creator}</p>  */}
+                    <h5>{post.nome_parlamentar}</h5> 
+                    <p>Partido: {post.partido}</p> 
                 </div>
             </SplideSlide>
         )

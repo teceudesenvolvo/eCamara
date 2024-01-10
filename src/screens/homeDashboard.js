@@ -3,15 +3,15 @@ import React, { Component } from 'react';
 
 
 //Imagens
-import Ellipse from '../assets/Ellipse.png';
+
 // Icones
 import {
-    FaStar,
+    
 
 } from 'react-icons/fa';
 
 // Components
-import MenuDashboard from '../componets/menuDashboard';
+import SlideFeacures from '../componets/slideFeactures';
 
 
 //mudança de páginas
@@ -21,23 +21,13 @@ class homeDashboard extends Component {
         return (
 
             <div className='App-header' >
-                <MenuDashboard />
                 <div className='Home-Dach'>
                     <div className='header-Dach'>
                         <dvi className='header-Dach-div'>
-                            <h1>Acompanhamento</h1>
-                            <p>tempo real</p>
+                            <h1>Balanço Legislativo</h1>
                         </dvi>
 
-                        <dvi className='header-Dach-div-'>
-                            <div >
-                                <p>Nome da Empresa</p>
-
-                                <p><FaStar color='#FF7A00' /> 4,9</p>
-                            </div>
-
-                            <img src={Ellipse} alt={Ellipse} ></img>
-                        </dvi>
+                       
 
 
                     </div>
@@ -82,8 +72,9 @@ class homeDashboard extends Component {
 
 
 
-
-
+                    <div className='HomeDesktopCarrosel'>
+                        <SlideFeacures />
+                    </div>
                 </div>
 
 
