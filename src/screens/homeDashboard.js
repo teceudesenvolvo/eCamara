@@ -22,9 +22,23 @@ class homeDashboard extends Component {
 
             <div className='App-header' >
                 <div className='Home-Dach'>
+                    <dvi className='header-Dach-div'>
+                        <h1>Nossos Parlamentares</h1>
+                    </dvi>
+
+                    <div className='HomeDesktopCarrosel'>
+                        <SlideFeacures />
+                    </div>
                     <div className='header-Dach'>
                         <dvi className='header-Dach-div'>
                             <h1>Balanço Legislativo</h1>
+                            <select className='select-input-ano inputLogin'>
+                                <option>2023</option>
+                                <option>2022</option>
+                                <option>2021</option>
+                                <option>2020</option>
+                                <option>2019</option>
+                            </select>
                         </dvi>
 
 
@@ -56,25 +70,25 @@ class homeDashboard extends Component {
                                     <div>
                                         <p>Projeto de Decreto Legislativo</p>
                                         <h2>458</h2>
-                                        
+
                                     </div>
-                                    
+
                                     <div>
                                         <p>Projetos de emenda à Lei Orgânica</p>
                                         <h2>458</h2>
-                                        
+
                                     </div>
-                                    
+
                                     <div>
                                         <p>Projetos de lei</p>
                                         <h2>458</h2>
-                                        
+
                                     </div>
-                                    
+
                                     <div>
                                         <p>Projetos de Resolução</p>
                                         <h2>458</h2>
-                                        
+
                                     </div>
 
                                     <div>
@@ -91,7 +105,7 @@ class homeDashboard extends Component {
                                     <div>
                                         <p>Requerimentos</p>
                                         <h2>10</h2>
-                                        
+
                                     </div>
                                     <div>
                                         <p>Indicações</p>
@@ -121,13 +135,7 @@ class homeDashboard extends Component {
                     </div>
 
 
-                    <dvi className='header-Dach-div'>
-                        <h1>Nossos Parlamentares</h1>
-                    </dvi>
 
-                    <div className='HomeDesktopCarrosel'>
-                        <SlideFeacures />
-                    </div>
                 </div>
 
 

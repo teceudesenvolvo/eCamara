@@ -1701,13 +1701,14 @@ video {
   flex-direction: row;
   color: #1f1f1f;
   margin-left: 40px;
-
+  width: 300px;
 }
 
 
 
 
 .header-Dach-div>h1 {
+  width: 100%;
   font-weight: bold;
 }
 
@@ -1805,6 +1806,7 @@ video {
 .balanco-legislativo-painel-item>div>div {
   margin-top: 30px;
   background-color: #CBCBCB;
+  color: #126b5e;
   width: 25%;
   height: 80px;
   border-radius: 10px;
@@ -1814,9 +1816,6 @@ video {
   flex-direction: column;
   font-size: 12px;
   padding: 10px;
-}
-.balanco-legislativo-painel-item>div>div{
-
 }
 
 
