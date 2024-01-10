@@ -710,7 +710,7 @@ video {
   flex-direction: column;
   align-items: center;
   width: 132px !important;
-  height: 320px !important;
+  height: 220px !important;
   background-color: #d9d9d9;
   border-radius: 12px !important;
   margin-right: 10px !important;
@@ -749,13 +749,13 @@ video {
   /* white-space: nowrap; */
   margin-top: 5px;
   color: #5a5a5a;
-  font-size: 15px;
+  font-size: 12px;
 }
 
 .DestaquesDescricao p{
   color: #003f36;
   font-size: 10px;
-  margin-top: -25px;
+  margin-top: -15px;
 }
 
 
@@ -1793,6 +1793,7 @@ video {
   border-radius: 12px;
   color: #1f1f1f;
   margin: 15px;
+  padding: 10px;
 }
 
 .balanco-legislativo-painel-item>div{
@@ -1804,7 +1805,7 @@ video {
 .balanco-legislativo-painel-item>div>div {
   margin-top: 30px;
   background-color: #CBCBCB;
-  width: 156px;
+  width: 25%;
   height: 80px;
   border-radius: 10px;
   margin: 10px;
