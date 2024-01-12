@@ -824,6 +824,38 @@ video {
   border-radius: 5px;
 }
 
+.section-header-sessao-virtual{
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 50px;
+  padding: 10px 10px 10px 5%;
+  align-content:left ;
+}
+.videoPlayerTramissao{
+  width: 50%;
+}
+.videoPlayerTramissao > div >div{
+  width: 90% !important;
+}
+.historico-sessao-virtual{
+  margin-left: 10px;
+  color: #1f1f1f;
+  text-align: left;
+  margin-top: -15px;
+  width: 45%;
+}
+.historicoItem{
+  width: 80%;
+  margin-left: 5px;
+  margin-bottom: 20px !important; 
+  height: auto !important;
+  padding: 5px;
+  list-style: none;
+  height: auto;
+}
+
+
 .minhasCompras {
     width: 90%;
     height: 50%;
