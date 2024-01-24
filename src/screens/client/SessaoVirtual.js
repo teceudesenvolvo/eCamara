@@ -63,7 +63,7 @@ class categorias extends Component {
 
 {/* A tabela de matérias */}
 
-<TableContainer component={Paper}>
+<TableContainer component={Paper} className='tabela-design'>
       <Table sx={{ minWidth: 650 }} aria-label="simple table">
         <TableHead className='tabela-header'>
           <TableRow>
