@@ -1,70 +1,66 @@
-# Sistema de Plenário Virtual da sua Câmara Municipal
+**README - Plenário Virtual na Câmara Municipal**
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+---
 
-## Available Scripts
+## Plenário Virtual na Câmara Municipal
 
-In the project directory, you can run:
+Bem-vindo ao repositório do projeto Plenário Virtual na Câmara Municipal. Este projeto visa implementar uma plataforma de sessões legislativas virtuais para a Câmara Municipal, proporcionando maior eficiência, acessibilidade e resiliência ao processo democrático.
 
-### `npm start`
+### Visão Geral
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+O Plenário Virtual é uma aplicação web destinada a oferecer uma experiência de participação remota nas sessões legislativas. O sistema possui três níveis de acesso: Usuário Comum, Vereadores e Presidente da Sessão, cada um com funcionalidades específicas para atender às suas necessidades.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Funcionalidades Principais
 
-### `npm test`
+- **Usuário Comum:**
+  - Acesso à transmissão ao vivo de sessões e audiências públicas.
+  - Formulários para inscrição de cidadãos para participação ou comentários.
+  - Acesso a documentos legislativos e resumos de sessões.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Vereadores:**
+  - Participação em sessões virtuais com vídeo, áudio, chat e controle de tempo.
+  - Emissão de votos durante as sessões virtuais.
+  - Repositório online de documentos legislativos, projetos de lei, relatórios.
+  - Configuração de audiências públicas virtuais.
 
-### `npm run build`
+- **Presidente da Sessão:**
+  - Controle total sobre a sessão, incluindo gerenciamento de participantes e moderação.
+  - Emissão e supervisão de votos, com capacidade para intervenções durante votações.
+  - Controle total sobre o repositório de documentos.
+  - Configuração completa de audiências públicas virtuais.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Como Contribuir
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. **Faça um Fork:** Crie uma cópia do projeto no seu próprio repositório.
+2. **Desenvolva:** Implemente novas funcionalidades ou correções de bugs no seu fork.
+3. **Envie um Pull Request:** Submeta suas alterações para revisão.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Instalação Local
 
-### `npm run eject`
+1. **Clone o Repositório:**
+   ```bash
+   git clone https://github.com/
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+2. **Instale as Dependências:**
+   ```bash
+   cd e-camara
+   npm install e-camara
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. **Execute o Projeto:**
+   ```bash
+   npm start
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Contato e Suporte
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Para dúvidas, sugestões ou relatar problemas, entre em contato conosco através do email [contato@eudesenvolvo.com](mailto:contato@eudesenvolvo.com).
 
-## Learn More
+### Licença
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Este projeto está licenciado sob a eudesenvolvo.com.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Agradecemos por contribuir para o Plenário Virtual na Câmara Municipal!
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
