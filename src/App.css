@@ -864,6 +864,39 @@ video {
   margin-top: -10px;
 }
 
+/* Tabela Materias da Sessão */
+.css-11xur9t-MuiPaper-root-MuiTableContainer-root{
+  width: 90% !important;
+  margin-top: 70px;
+  margin-bottom: 100px;
+  font-weight: 600 !important;
+}
+.tabela-header{
+  background-color: #7D7D7D;
+}
+.css-1ndpvdd-MuiTableCell-root{
+  color: #fff !important;
+}
+.votos{
+  border-radius: 5px;
+  width: 15px;
+  height: 15px;
+  border-left: 4px solid #fff !important;
+  border-radius: 15px;
+}
+.voto-sim{
+  background-color: #c3d90d;
+}
+
+.voto-nao{
+  background-color: #fdbeb1;
+}
+
+.voto-branco{
+  background-color: #d9d9d9;
+}
+
+
 
 .minhasCompras {
     width: 90%;
