@@ -835,7 +835,7 @@ video {
   margin-top: 50px;
  }
 .videoPlayerTramissao{
-  width: 50%;
+  width: 50%; 
 }
 .videoPlayerTramissao > div >div{
   width: 90% !important;
@@ -871,6 +871,13 @@ video {
   margin-bottom: 100px;
   font-weight: 600 !important;
 }
+.css-1gzy9y4{
+  color: #fff !important;
+}
+.css-13xy2my{
+  width: 90%;
+}
+
 .tabela-header{
   background-color: #7D7D7D;
 }
