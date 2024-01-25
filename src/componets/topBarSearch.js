@@ -17,6 +17,7 @@ class topBar extends Component {
         super(props)
         this.state = {
             window: window.location.pathname,
+            headerHome: 'header-home'
         }
     }
 
@@ -26,17 +27,29 @@ class topBar extends Component {
         } else {
             this.setState({ helloText: `Seja bem vindo.` })
         }
+        this.btnHome()
+    }
+
+    btnHome = () => {
+        switch (this.state.window) {
+            case `/login`:
+                return this.setState({ headerHome: 'menuNone' })
+            default:
+                return null
+        }
     }
 
 
     render() {
         return (
             <>
+            <nav className={this.state.headerHome}>
                 <div className='header-home'>
                     <p className='titleHeader'><img src={Logo} alt='Logomarca' onClick={()=> {window.location.href = "/"}}/></p>
                     {/* <input type="text" placeholder={`Pesquisar`} className='inputPesquisar' /> */}
                     {/* <FaSistrix className='PesquisarLogo' /> */}
                 </div>
+            </nav>
             </>
         );
     }

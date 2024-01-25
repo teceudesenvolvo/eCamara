@@ -7,7 +7,7 @@ import React, { Component } from 'react';
 
 
 // Components
-import EsclarecimentosList from '../../componets/esclarecimentoList';
+// import EsclarecimentosList from '../../componets/esclarecimentoList';
 
 //mudança de páginas
 
@@ -18,8 +18,8 @@ class categorias extends Component {
             <div className='App-header' >
             
             <div className='favoritos agendarConsulta'>
-            <h1>Normas Juridicas</h1>
-              <EsclarecimentosList/> 
+            <h1>Normas Juridicas (em breve)</h1>
+              
             </div>
           </div>
         );

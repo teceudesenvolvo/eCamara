@@ -886,11 +886,8 @@ video {
 }
 
 .votos{
-  border-radius: 5px;
   width: 15px;
   height: 15px;
-  border-left: 1px solid #fff !important;
-  border-radius: 15px;
 }
 .voto-sim{
   background-color: #c3d90d;

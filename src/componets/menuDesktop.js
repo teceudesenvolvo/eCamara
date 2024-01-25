@@ -34,6 +34,7 @@ class menuDesktop extends Component {
             linkMenu6: 'aDesktop',
             linkMenu7: 'aDesktop',
             linkMenu8: 'aDesktop',
+            menuDesktop: 'menuDesktop',
             window: window.location.pathname,
         }
     }
@@ -57,6 +58,8 @@ class menuDesktop extends Component {
                 return this.setState({ linkMenu7: 'aDesktop link-desktop-active' })
             case `/ajuda`:
                 return this.setState({ linkMenu8: 'aDesktop link-desktop-active' })
+            case `/login`:
+                return this.setState({ menuDesktop: 'menuNone' })
             default:
                 return null
         }
@@ -73,7 +76,7 @@ class menuDesktop extends Component {
 
     render() {
         return (
-            <nav className='menuDesktop'>
+            <nav className={this.state.menuDesktop}>
 
                 
 

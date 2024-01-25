@@ -58,6 +58,8 @@ class Notificacoes extends Component {
     return (
 
       <div className='App-header' >
+        <div className='favoritos agendarConsulta'>
+        {/* <h1>Matérias Legislativas</h1> */}
         {/* A tabela de matérias */}
 
 <TableContainer component={Paper} className='tabela-design'>
@@ -99,7 +101,7 @@ class Notificacoes extends Component {
         </TableBody>
       </Table>
     </TableContainer>
-        
+    </div>
       </div>
     );
   }

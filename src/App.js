@@ -45,9 +45,8 @@ import MenuDesktop from './componets/menuDesktop';
 function App() {
   return (
     <div className="App">
-      <div className='header-home'>
-          <TopBar />
-      </div>
+      
+      <TopBar />
       <Switch>
         {/* Acesso Comum */}
         <Route exact path="/" component={homeDashboard} />

@@ -5,7 +5,7 @@ import React, { Component } from 'react';
 // Icones
 
 // Components
-import PubliList from '../../componets/publiList';
+// import PubliList from '../../componets/publiList';
 
 //mudança de páginas
 
@@ -16,8 +16,7 @@ class Exames extends Component {
       <div className='App-header' >
         
         <div className='favoritos agendarConsulta'>
-        <h1>Relatórios</h1>
-          <PubliList/> 
+        <h1>Relatórios (em breve)</h1>
         </div>
       </div>
     );
