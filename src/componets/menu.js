@@ -50,8 +50,6 @@ class menu extends Component {
         return this.setState({ menuClass: 'menuNone' })
       case `/mais`:
         return this.setState({ menuClass: 'menuNone' })
-      case `/`:
-        return this.setState({ menuClass: 'menuNone' })
       default:
         return null
     }

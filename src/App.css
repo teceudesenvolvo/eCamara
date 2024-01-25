@@ -1762,7 +1762,6 @@ video {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  z-index: 7;
 }
 
 .header-Dach {
@@ -2176,9 +2175,26 @@ footer > p {
     display: none;
   }
 
+  .videoPlayerTramissao{
+    width: 95%;
+  }
+  .videoPlayer-view{
+    width: 100% !important;
+  }
+  .historico-sessao-virtual {
+    width: 98%;
+    margin-top: 20px;
+    margin-left: -60px;
+    margin-bottom: -80px;
+    color: #1f1f1f;
+    text-align: left;
+  }
+  .historicoItem {
+    width: 100%;
+  }
+  }
 
 
-}
 
 .menuDesktop {
   position: fixed !important;

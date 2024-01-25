@@ -53,7 +53,7 @@ class categorias extends Component {
 
           <div className='section-header-sessao-virtual'>
             <div className='videoPlayerTramissao'>
-              <ReactPlayer url='https://www.youtube.com/watch?v=KBWvFODawj0' />
+              <ReactPlayer className='videoPlayer-view' url='https://www.youtube.com/watch?v=KBWvFODawj0' />
             </div>
             
             <HistoricoSessao />

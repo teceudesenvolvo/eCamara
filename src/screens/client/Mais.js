@@ -48,11 +48,11 @@ class Mais extends Component {
               <span className='Mais-item-title'>Matérias</span>
             </a> 
           </div>
-          <div className='Mais-item'>
+          {/* <div className='Mais-item'>
             <a href='/perfil' className='Mais-icon' >
               <span className='Mais-item-title'>Minha Conta</span>
             </a>
-          </div>
+          </div> */}
           <div className='Mais-item'>
             <a href='/ajuda' className='Mais-icon' >
               <span className='Mais-item-title'>Ajuda</span>
