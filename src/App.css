@@ -292,6 +292,38 @@
   margin-bottom: 5px !important;
 }
 
+.profile-img{
+  width: 150px;
+  height: 150px;
+  background-color: #b4b4b4;
+  margin-top: 20px;
+  border-radius: 10px;
+}
+.profile-desc{
+  background-color: #fff;
+}
+.profile-desc-item{
+  font-size: 20px;
+  font-weight: 400;
+  color: #949494;
+  margin: 20px;
+  padding: 10px;
+  border-bottom: 1px solid #b4b4b4;
+}
+.profile-btn-div{
+  width: 80%;
+  display: inline-block;
+}
+.btnProfile{
+  width: 45% !important;
+}
+.btnProfileEdit{
+  background-color: #6e6e6e !important;
+}
+.profile-btn-exit{
+  color: #000;
+  font-size: 15px;
+}
 .receitaItem{
   height: 90px !important;
 }

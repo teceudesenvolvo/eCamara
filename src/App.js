@@ -48,20 +48,24 @@ function App() {
       
       <TopBar />
       <Switch>
-        {/* Acesso Comum */}
+        {/* Página Principal */}
         <Route exact path="/" component={homeDashboard} />
+        
         <Route path="/login" component={login} />
         <Route path="/register" component={register} />
-        <Route path="/novidades" component={Home} />
 
-        {/* Páginas Pai */}
+        {/* Perfis de Acesso */}
+        <Route path="/perfil" component={Perfil} />
+
+        {/*Menu Publico*/}
         <Route path="/Sessoes" component={Sessoes} />
         <Route path="/Relatorios" component={Relatorios} />
         <Route path="/Sessao-Virtual" component={SessaoVirtual} />
         <Route path="/Normas" component={NormasJuridicas} />
+        <Route path="/Comissoes" component={Comissoes} />
+        <Route path="/Materias" component={Materias} />
 
         {/* Páginas Mobile */}
-        <Route path="/Materias" component={Materias} />
         <Route path="/Mais" component={Mais} />
         
         {/* Páginas Filho */}
@@ -71,17 +75,21 @@ function App() {
         <Route path="/pesquisar" component={Pesquisar} />
 
 
+        
         <Route path="/pagamento" component={pagamento} />
-        <Route path="/Perfil" component={Perfil} />
+
+        
+        {/* Páginas de Formulários */}
+        <Route path="/protocolar-materia" component={addProducts} />
         <Route path="/loginDashboard" component={loginDashboard} />
         <Route path="/registerDashboard" component={registerDashboard} />
         <Route path="/registerEndereco" component={registerEndereco} />
         <Route path="/registerLoja" component={registerLoja} />
-        <Route path="/addProducts" component={addProducts} />
+
+
+
         <Route path="/servicosDashboard" component={servicosDashboard} />
-        <Route path="/Comissoes" component={Comissoes} />
-
-
+        <Route path="/novidades" component={Home} />
 
 
       </Switch>

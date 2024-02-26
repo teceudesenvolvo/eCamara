@@ -107,10 +107,10 @@ class menuDesktop extends Component {
                     <GoRepo className='fas fa-Ajuda'></GoRepo>
                     <span className='nav-item'>Matérias</span>
                 </a>
-                {/* <a href="/perfil" className={this.state.linkMenu7}>
+                <a href="/perfil" className={this.state.linkMenu7}>
                     <FaRegUser className='fas fa-Ajuda'></FaRegUser>
                     <span className='nav-item'>Minha Conta</span>
-                </a> */}
+                </a>
                 <a href="/ajuda" className={this.state.linkMenu8}>
                     <GoLightBulb  className='fas fa-Ajuda'></GoLightBulb >
                     <span className='nav-item'>Ajuda</span>
