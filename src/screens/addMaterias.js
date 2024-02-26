@@ -21,14 +21,53 @@ class addProducts extends Component {
                 <MenuDashboard />
                 <div className='conteinar-Add-Products'>
                     <div>
+                        <form>
+                            
+                        <h1>Adicionar Matéria</h1>
+                        <input type="text" placeholder="Titulo" className='conteinar-Add-Products-select' />
+                        <input type="text" placeholder="Ementa" className='conteinar-Add-Products-select' />
+                        <select placeholder='Tipo de Materia' className='conteinar-Add-Products-select'>
+                            <option>Tipo de Materia</option>
+                            <option>Projeto de Lei Legislativo</option>
+                            <option>Proj. Lei Legislativo Substitutivo</option>
+                            <option>Proj. Lei Complementar Legislativo</option>
+                            <option>Projeto de Decreto Legislativo</option>
+                            <option>Projeto de Lei Executivo Substitutivo</option>
+                            <option>Projeto de Lei Complementar Executivo</option>
+                            <option>Razões do Veto</option>
+                            <option>Requerimento Urgência</option>
+                            <option>Projeto de Emenda</option>
+                            <option>Pedido de Prorrogação</option>
+                            <option>Emenda</option>
+                            <option>Parecer</option>
+                            <option>Projeto de Resolução</option>
+                            <option>Requerimento</option>
+                            <option>Moção</option>
+                        </select>
 
-                        <h1>Adicionar Serviço</h1>
-                        <input type="text" placeholder="Nome Do Serviço" />
-                        <input type="text" placeholder="Tempo" />
-                        <input type="text" placeholder="Preço" />
-                        <textarea placeholder="Descrição"></textarea>
+                        <select className='conteinar-Add-Products-select'>
+                            <option>Tipo de Apresentação</option>
+                        </select>
+                        
+                        <select className='conteinar-Add-Products-select'>
+                            <option>Materia polêmica?</option>
+                            <option>Sim</option>
+                            <option>Não</option>
+                        </select>
+                        
+                        <select className='conteinar-Add-Products-select'>
+                            <option>É Complementar?</option>
+                            <option>Sim</option>
+                            <option>Não</option>
+                        </select>
 
-                        <button type="submit" name="Add" value="Add" >Salvar</button>
+                        
+                        <input type="file" className='conteinar-Add-Products-select' />
+
+
+                        </form>
+
+                        <button type="submit" name="Add" value="Add" className='btnProtocolar' >Protocolar</button>
                     </div>
                     <div className='addImg'>
 

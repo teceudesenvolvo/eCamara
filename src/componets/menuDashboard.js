@@ -79,7 +79,7 @@ class menuDashboard extends Component {
             
                 <a href="/juizo-materia" className={this.state.linkMenu5}>
                     <FaPencilAlt  className='fas fa-Ajuda'></FaPencilAlt >
-                    <span className='nav-item'>Sanção/Veto</span>
+                    <span className='nav-item'>Parecer</span>
                 </a>
                 
                 <a href="/perfil" className={this.state.linkMenu6}>

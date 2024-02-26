@@ -18,12 +18,12 @@ import Paper from '@mui/material/Paper';
 import MenuDashboard from '../componets/menuDashboard';
 
 // Dados da tabela
-function createData(numero, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data) {
-    return { numero, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data };
+function createData(numero, materia, situacao, autor, apresentacao, tramitacao, exercicio, status) {
+    return { numero, materia, situacao, autor, apresentacao, tramitacao, exercicio, status };
 }
 
 const rows = [
-    createData('4', 'IND 4/2024', 'Em Votação', 1, 10, 5, 'Teste', 'Escrita', 'Ordinária', 2024, '10/01/2024'),
+    createData('4', 'IND 4/2024', 'Em Votação', 'Teste', 'Escrita', 'Ordinária', 2024, 'Aguardando Presidente'),
 ];
 
 class loginDashboard extends Component {
@@ -45,7 +45,7 @@ class loginDashboard extends Component {
                                 <TableCell align="center">Apresentação</TableCell>
                                 <TableCell align="center">Tramitação</TableCell>
                                 <TableCell align="center">Exercício</TableCell>
-                                <TableCell align="center">Votação</TableCell>
+                                <TableCell align="center">Situação</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -62,7 +62,7 @@ class loginDashboard extends Component {
                                     <TableCell align="center">{row.apresentacao}</TableCell>
                                     <TableCell align="center">{row.tramitacao}</TableCell>
                                     <TableCell align="center">{row.exercicio}</TableCell>
-                                    <TableCell align="center">{row.data}</TableCell>
+                                    <TableCell align="center">{row.status}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

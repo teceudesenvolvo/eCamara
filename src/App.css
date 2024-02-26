@@ -2108,7 +2108,6 @@ video {
   display: flex;
   flex-direction: row;
   align-items: center;
-  background-color: #1F1F1F;
   z-index: 7;
 }
 
@@ -2155,17 +2154,27 @@ video {
   align-items: center;
   justify-content: center;
   background-color: #454545;
+  color: #8a8a8a;
 
 }
 
-.conteinar-Add-Products>div>input {
+.conteinar-Add-Products>div>form>input {
   width: 70%;
   height: 40px;
   border: 0;
   border-bottom: 1px solid #BCBCBC;
   margin-bottom: 20px;
-  background-color: #1f1f1f;
-  color: #fff;
+}
+
+.conteinar-Add-Products-select {
+  width: 70%;
+  height: 40px;
+  border: 0;
+  border-bottom: 1px solid #BCBCBC;
+  margin-bottom: 20px;
+}
+.btnProtocolar{
+  cursor: pointer;
 }
 
 textarea {
