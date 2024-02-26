@@ -1771,12 +1771,12 @@ video {
   bottom: 0;
   height: 100vh;
   left: 0;
-  background: #363636;
+  background: #126B5E;
   width: 40px;
   overflow: hidden;
   transition: width 0.2 linear;
   box-shadow: 0 20px 35px rgba(0, 0, 0, 0.1);
-  z-index: 8;
+  z-index: 21;
 
 
 }
@@ -1936,8 +1936,16 @@ video {
 
 
 
-/* Dashboard Notificação */
+/* Dashboard Materias */
 
+.materias-dash-btn-div{
+  width: 40%;
+  display: inline-block;
+  margin-bottom: -50px;
+}
+.btnMateriasDash{
+  width: 40% !important;
+}
 
 .header-order {
   position: fixed;

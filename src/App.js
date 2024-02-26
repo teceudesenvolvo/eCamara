@@ -5,6 +5,7 @@ import { Switch, Route } from 'react-router-dom'
 
 //Screen Navigate
 import homeDashboard from '../src/screens/homeDashboard';
+
   // Páginas Principais
 import Sessoes from './screens/client/Sessoes';
 import Relatorios from './screens/client/Relatorios';
@@ -22,18 +23,18 @@ import Carrinho from './screens/client/carrinho';
 import pagamento from './screens/client/pagamento';
 import Pesquisar from './screens/client/pesquisa';
 import Perfil from './screens/client/Perfil';
-import addProducts from '../src/screens/addProducts';
-import servicosDashboard from '../src/screens/ServicosDashboard';
 
-
-
-// SingIn / SignUp
-import login from './screens/client/login';
-import register from './screens/client/register';
-import loginDashboard from './screens/loginDashboard';
+import addMateria from './screens/addMaterias';
+import materiasDash from './screens/materiasDash';
 import registerDashboard from './screens/registerDashboard';
 import registerEndereco from './screens/registerEndereco';
 import registerLoja from './screens/resgisterLoja';
+import juizoMateria from './screens/juizoMateria';
+
+
+// SingIn / SignUp
+import register from './screens/client/register';
+import login from './screens/client/login';
 
 
 // Navigate Components
@@ -77,18 +78,18 @@ function App() {
 
         
         <Route path="/pagamento" component={pagamento} />
+        <Route path="/materias-dash" component={materiasDash} />
 
         
         {/* Páginas de Formulários */}
-        <Route path="/protocolar-materia" component={addProducts} />
-        <Route path="/loginDashboard" component={loginDashboard} />
+        <Route path="/protocolar-materia" component={addMateria} />
         <Route path="/registerDashboard" component={registerDashboard} />
         <Route path="/registerEndereco" component={registerEndereco} />
+        <Route path="/juizo-materia" component={juizoMateria} />
         <Route path="/registerLoja" component={registerLoja} />
 
 
 
-        <Route path="/servicosDashboard" component={servicosDashboard} />
         <Route path="/novidades" component={Home} />
 
 

@@ -6,11 +6,13 @@ import Logo from '../assets/logoLaranga.png';
 
 // Icones
 import {
-    FaHome,
-    FaBell,
-    FaCog
+    FaAddressBook ,
+    FaPlusCircle ,
+    FaPencilAlt ,
+    FaRegUser
 
 } from "react-icons/fa";
+
 
 // Components
 
@@ -26,6 +28,7 @@ class menuDashboard extends Component {
             linkMenu3: 'aDesktop',
             linkMenu4: 'aDesktop',
             linkMenu5: 'aDesktop',
+            linkMenu6: 'aDesktop',
             window: window.location.pathname,
         }
     }
@@ -33,16 +36,18 @@ class menuDashboard extends Component {
 
     btnHome = () => {
         switch (this.state.window) {
-            case `/homeDashboard`:
+            case `/materias-dash`:
                 return this.setState({ linkMenu: 'aDesktop link-desktop-active' })
             case `/favoritos`:
                 return this.setState({ linkMenu2: 'aDesktop link-desktop-active' })
             case `/Compras`:
                 return this.setState({ linkMenu3: 'aDesktop link-desktop-active' })
-            case `/NotDashboard`:
+            case `/protocolar-materia`:
                 return this.setState({ linkMenu4: 'aDesktop link-desktop-active' })
-            case `/servicosDashboard`:
+            case `/juizo-materia`:
                 return this.setState({ linkMenu5: 'aDesktop link-desktop-active' })
+            case `/perfil`:
+                return this.setState({ linkMenu6: 'aDesktop link-desktop-active' })
             default:
                 return null
         }
@@ -61,20 +66,25 @@ class menuDashboard extends Component {
         return (
             <nav className='menuDashboard'>
 
-                <a href="/homeDashboard" className={this.state.linkMenu}>
-                    <FaHome className='fas fa-home'></FaHome>
-                    <span className='nav-item'>Home</span>
+                <a href="/materias-dash" className={this.state.linkMenu}>
+                    <FaAddressBook className='fas fa-home'></FaAddressBook>
+                    <span className='nav-item'>Minhas Materias</span>
                 </a>
 
              
-                <a href="/NotDashboard" className={this.state.linkMenu4}>
-                    <FaBell className='fas fa-Notificacoes'></FaBell>
-                    <span className='nav-item'>Notificações</span>
+                <a href="/protocolar-materia" className={this.state.linkMenu4}>
+                    <FaPlusCircle  className='fas fa-Notificacoes'></FaPlusCircle >
+                    <span className='nav-item'>Protocolar Matéria</span>
                 </a>
             
-                <a href="/servicosDashboard" className={this.state.linkMenu5}>
-                    <FaCog className='fas fa-Ajuda'></FaCog>
-                    <span className='nav-item'>Add</span>
+                <a href="/juizo-materia" className={this.state.linkMenu5}>
+                    <FaPencilAlt  className='fas fa-Ajuda'></FaPencilAlt >
+                    <span className='nav-item'>Sanção/Veto</span>
+                </a>
+                
+                <a href="/perfil" className={this.state.linkMenu6}>
+                    <FaRegUser className='fas fa-Ajuda'></FaRegUser>
+                    <span className='nav-item'>Minha Conta</span>
                 </a>
 
 

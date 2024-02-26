@@ -8,7 +8,7 @@ import Profile from '../../assets/face.png'
 // Icones
 
 // Components
-
+import MenuDashboard from '../../componets/menuDashboard';
 
 //mudança de páginas
 
@@ -17,6 +17,8 @@ class Perfil extends Component {
         return (
 
             <div className='App-header' >
+                 <MenuDashboard />
+
                 <div className='favoritos agendarConsulta'>
 
 
