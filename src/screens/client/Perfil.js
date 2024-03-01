@@ -30,10 +30,10 @@ class Perfil extends Component {
                         <li className="profile-desc">
                             <div className='profile-desc' >
                                 <p className='profile-desc-item' >Nome Completo</p>
-                                <p className='profile-desc-item' >Prefeito</p>
+                                <p className='profile-desc-item' >Cargo</p>
                                 <p className='profile-desc-item' >teste@teste.com</p>
                                 <p className='profile-desc-item' >85 99999-1213</p>
-                                <p className='profile-desc-item' >03/11/1997</p>
+                                <p className='profile-desc-item' >2020/2024</p>
                             </div>
                         </li>
                     </ul>

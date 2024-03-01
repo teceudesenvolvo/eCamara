@@ -43,6 +43,9 @@ import Menu from './componets/menu';
 import MenuDesktop from './componets/menuDesktop';
 
 
+import testeGeneratePDF from './screens/testePage'
+
+
 function App() {
   return (
     <div className="App">
@@ -87,6 +90,11 @@ function App() {
         <Route path="/registerEndereco" component={registerEndereco} />
         <Route path="/juizo-materia" component={juizoMateria} />
         <Route path="/registerLoja" component={registerLoja} />
+        
+        
+        <Route path="/testePage" component={testeGeneratePDF} />
+
+
 
 
 
