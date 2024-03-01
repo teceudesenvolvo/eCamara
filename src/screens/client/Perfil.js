@@ -4,6 +4,7 @@ import React, { Component } from 'react';
 
 //Imagens
 import Profile from '../../assets/face.png'
+import Assinatura from '../../assets/assinatura-teste.png'
 
 // Icones
 
@@ -17,7 +18,7 @@ class Perfil extends Component {
         return (
 
             <div className='App-header' >
-                 <MenuDashboard />
+                <MenuDashboard />
 
                 <div className='favoritos agendarConsulta'>
 
@@ -34,6 +35,11 @@ class Perfil extends Component {
                                 <p className='profile-desc-item' >teste@teste.com</p>
                                 <p className='profile-desc-item' >85 99999-1213</p>
                                 <p className='profile-desc-item' >2020/2024</p>
+                                <p className='profile-desc-item' > 
+                                    <img src={Assinatura} width={200} />
+                                    {/* <input type="file" onChange={this.handleFileChange} onFocus={this.handleGeneratePDF} /> */}
+                                </p>
+
                             </div>
                         </li>
                     </ul>

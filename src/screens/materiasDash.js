@@ -56,7 +56,7 @@ class loginDashboard extends Component {
                                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                                 >
                                     <TableCell align="center">{row.numero}</TableCell>
-                                    <TableCell align="center"><a href='/materia'>{row.materia}</a></TableCell>
+                                    <TableCell align="center"><a href='/materia' className='btnMateria'>{row.materia}</a></TableCell>
                                     <TableCell align="center">{row.situacao}</TableCell>
                                     <TableCell align="center">{row.autor}</TableCell>
                                     <TableCell align="center">{row.apresentacao}</TableCell>

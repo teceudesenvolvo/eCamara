@@ -55,7 +55,12 @@ class AddProducts extends Component {
                     alignment: 'center'
                 },
                 { text: ementa },
-                { text: 'Tipo de Materia: ' + tipoMateria, style: 'descricoes' },
+                {
+                    text: [
+                        { text: 'Tipo de Materia: ', bold: true },
+                        { text:  tipoMateria },
+                    ], style: 'descricoes'
+                },
                 { text: 'Materia Polêmica: ' + materiaPolemica, style: 'descricoes' },
                 { text: 'Materia Complementar: ' + isComplementar, style: 'descricoes' },
                 {
@@ -100,88 +105,88 @@ class AddProducts extends Component {
             this.setState({ pdfData: data });
         });
 
-        
+
     };
 
     componentDidMount = () => {
         this.handleGeneratePDF();
-        setInterval( this.handleGeneratePDF, 30000);
+        setInterval(this.handleGeneratePDF, 30000);
     }
 
-    
 
 
-render() {
-    const { pdfData } = this.state;
-    console.log(pdfData)
 
-    return (
-        <div className='App-header' >
-            <MenuDashboard />
-            <div className='conteinar-Add-Products'>
-                <div>
-                    <form>
-                        <h1>Adicionar Matéria</h1>
-                        <input type="text" name="titulo" placeholder="Titulo" onChange={(event) => { this.setState({ titulo: event.target.value }) }} />
-                        <textarea name="ementa" placeholder="Ementa" onChange={(event) => this.setState({ ementa: event.target.value })} onFocus={this.handleGeneratePDF} />
+    render() {
+        const { pdfData } = this.state;
+        console.log(pdfData)
 
-                        <select placeholder='Tipo de Materia' className='conteinar-Add-Products-select' onChange={(event) => this.setState({ tipoMateria: event.target.value })} onFocus={this.handleGeneratePDF}>
-                            <option>Tipo de Materia</option>
-                            <option>Projeto de Lei Legislativo</option>
-                            <option>Proj. Lei Legislativo Substitutivo</option>
-                            <option>Proj. Lei Complementar Legislativo</option>
-                            <option>Projeto de Decreto Legislativo</option>
-                            <option>Projeto de Lei Executivo Substitutivo</option>
-                            <option>Projeto de Lei Complementar Executivo</option>
-                            <option>Razões do Veto</option>
-                            <option>Requerimento Urgência</option>
-                            <option>Projeto de Emenda</option>
-                            <option>Pedido de Prorrogação</option>
-                            <option>Emenda</option>
-                            <option>Parecer</option>
-                            <option>Projeto de Resolução</option>
-                            <option>Requerimento</option>
-                            <option>Moção</option>
-                        </select>
+        return (
+            <div className='App-header' >
+                <MenuDashboard />
+                <div className='conteinar-Add-Products'>
+                    <div>
+                        <form>
+                            <h1>Adicionar Matéria</h1>
+                            <input type="text" name="titulo" placeholder="Titulo" onChange={(event) => { this.setState({ titulo: event.target.value }) }} />
+                            <textarea name="ementa" placeholder="Ementa" onChange={(event) => this.setState({ ementa: event.target.value })} onFocus={this.handleGeneratePDF} />
 
-                        <select className='conteinar-Add-Products-select' onChange={(event) => this.setState({ materiaPolemica: event.target.value })} onFocus={this.handleGeneratePDF} >
-                            <option>Materia polêmica?</option>
-                            <option>Sim</option>
-                            <option>Não</option>
-                        </select>
+                            <select placeholder='Tipo de Materia' className='conteinar-Add-Products-select' onChange={(event) => this.setState({ tipoMateria: event.target.value })} onFocus={this.handleGeneratePDF}>
+                                <option>Tipo de Materia</option>
+                                <option>Projeto de Lei Legislativo</option>
+                                <option>Proj. Lei Legislativo Substitutivo</option>
+                                <option>Proj. Lei Complementar Legislativo</option>
+                                <option>Projeto de Decreto Legislativo</option>
+                                <option>Projeto de Lei Executivo Substitutivo</option>
+                                <option>Projeto de Lei Complementar Executivo</option>
+                                <option>Razões do Veto</option>
+                                <option>Requerimento Urgência</option>
+                                <option>Projeto de Emenda</option>
+                                <option>Pedido de Prorrogação</option>
+                                <option>Emenda</option>
+                                <option>Parecer</option>
+                                <option>Projeto de Resolução</option>
+                                <option>Requerimento</option>
+                                <option>Moção</option>
+                            </select>
 
-                        <select className='conteinar-Add-Products-select' onChange={(event) => this.setState({ isComplementar: event.target.value })} onFocus={this.handleGeneratePDF}>
-                            <option>É Complementar?</option>
-                            <option>Sim</option>
-                            <option>Não</option>
-                        </select>
+                            <select className='conteinar-Add-Products-select' onChange={(event) => this.setState({ materiaPolemica: event.target.value })} onFocus={this.handleGeneratePDF} >
+                                <option>Materia polêmica?</option>
+                                <option>Sim</option>
+                                <option>Não</option>
+                            </select>
+
+                            <select className='conteinar-Add-Products-select' onChange={(event) => this.setState({ isComplementar: event.target.value })} onFocus={this.handleGeneratePDF}>
+                                <option>É Complementar?</option>
+                                <option>Sim</option>
+                                <option>Não</option>
+                            </select>
 
 
-                        <input type="file" onChange={this.handleFileChange} onFocus={this.handleGeneratePDF} />
-                    </form>
-                    <button type="button" onClick={this.handleGeneratePDF}>Protocolar Materia</button>
-                </div>
-                <div className='addImg'>
-                    {pdfData && (
-                        <iframe
-                            title="Preview PDF"
-                            src={`data:application/pdf;base64,${pdfData}`}
-                            width="600"
-                            height="400"
-                            frameBorder="0"
-                            className='addImg'
-                        />
-                    )}
-                    {!pdfData && (
-                        <div>
-                            <img src={camera} alt={camera} />
-                        </div>
-                    )}
+                            <input type="file" onChange={this.handleFileChange} onFocus={this.handleGeneratePDF} />
+                        </form>
+                        <button type="button" onClick={this.handleGeneratePDF}>Protocolar Materia</button>
+                    </div>
+                    <div className='addImg'>
+                        {pdfData && (
+                            <iframe
+                                title="Preview PDF"
+                                src={`data:application/pdf;base64,${pdfData}`}
+                                width="600"
+                                height="400"
+                                frameBorder="0"
+                                className='addImg'
+                            />
+                        )}
+                        {!pdfData && (
+                            <div>
+                                <img src={camera} alt={camera} />
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
-    );
-}
+        );
+    }
 }
 
 export default AddProducts;
