@@ -36,7 +36,7 @@ class Perfil extends Component {
                                 <p className='profile-desc-item' >85 99999-1213</p>
                                 <p className='profile-desc-item' >2020/2024</p>
                                 <p className='profile-desc-item' > 
-                                    <img src={Assinatura} width={200} />
+                                    <img alt='assinatura' src={Assinatura} width={200} />
                                     {/* <input type="file" onChange={this.handleFileChange} onFocus={this.handleGeneratePDF} /> */}
                                 </p>
 
