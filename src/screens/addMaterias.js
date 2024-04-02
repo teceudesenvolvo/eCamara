@@ -5,6 +5,7 @@ import pdfFonts from 'pdfmake/build/vfs_fonts';
 // Importando imagem
 import camera from '../assets/Camera.png';
 import logo from '../assets/logo.png'
+import signature from '../assets/assinatura-teste-1.png'
 
 import MenuDashboard from '../componets/menuDashboard'
 
@@ -71,6 +72,22 @@ class AddProducts extends Component {
                     text: 'Data: 00/00/0000',
                     style: 'descricoes'
                 },
+                {
+                    image: signature,
+                    width: 150,
+                    alignment: 'center',
+                    style: 'assinatura'
+                },
+                {
+                    text: '___________________________________________________',
+                    alignment: 'center',
+                    style: 'underline'
+                },
+                {
+                    text: 'Nome Completo (autor)',
+                    alignment: 'center',
+                    style: 'small'
+                },
             ],
             styles: {
                 header: {
@@ -96,6 +113,12 @@ class AddProducts extends Component {
                 },
                 small: {
                     fontSize: 8
+                },
+                assinatura: {
+                    marginTop: 80
+                },
+                underline: {
+                    marginTop: -20
                 }
             }
         };
