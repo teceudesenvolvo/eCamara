@@ -40,7 +40,6 @@ class loginDashboard extends Component {
                             <TableRow>
                                 <TableCell align="center">Protocolo</TableCell>
                                 <TableCell align="center">Materia</TableCell>
-                                <TableCell align="center">Situação</TableCell>
                                 <TableCell align="center">Autor</TableCell>
                                 <TableCell align="center">Apresentação</TableCell>
                                 <TableCell align="center">Tramitação</TableCell>
@@ -57,7 +56,6 @@ class loginDashboard extends Component {
                                 >
                                     <TableCell align="center">{row.numero}</TableCell>
                                     <TableCell align="center"><a href='/materia' className='btnMateria'>{row.materia}</a></TableCell>
-                                    <TableCell align="center">{row.situacao}</TableCell>
                                     <TableCell align="center">{row.autor}</TableCell>
                                     <TableCell align="center">{row.apresentacao}</TableCell>
                                     <TableCell align="center">{row.tramitacao}</TableCell>
