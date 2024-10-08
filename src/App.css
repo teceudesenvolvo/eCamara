@@ -927,6 +927,12 @@ video {
   background-color: #c3d90d;
 }
 
+.labelform-materia{
+  color: #000 !important;
+  font-size: 12px;
+  text-align: initial;
+}
+
 .voto-nao{
   background-color: #fdbeb1;
 }
@@ -2109,7 +2115,6 @@ video {
   min-height: 100vh;
   display: flex;
   flex-direction: row;
-  align-items: center;
   z-index: 7;
 }
 
@@ -2140,7 +2145,7 @@ video {
 .addImg {
   margin-top: 10px;
   width: 90%;
-  height: 50%;
+  height: 2140px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
