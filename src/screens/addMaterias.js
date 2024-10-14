@@ -28,7 +28,7 @@ class AddProducts extends Component {
             
             // Outras Informações
             apelido: '',
-            prazo: '',
+            prazo: 'em',
             materiaPolemica: '',
             objeto: '',
             regTramita: '',
@@ -41,7 +41,6 @@ class AddProducts extends Component {
             tipoMateriaExt:'',
             numeroMateriaExt: '',
             anoMateriaExt: '',
-            localOrigemMateriaExt: '',
             dataMateriaExt: '',
             
             // Dados Textuais
@@ -61,13 +60,16 @@ class AddProducts extends Component {
     };
 
     handleGeneratePDF = () => {
-        const { titulo, ementa, tipoMateria, materiaPolemica, isComplementar } = this.state;
+        const { tipoMateria, ano, numero, dataApresenta, protocolo, tipoApresentacao, tipoAutor, autor, apelido,
+            prazo, materiaPolemica, objeto, regTramita, status, dataPrazo, publicacao, isComplementar, tipoMateriaExt,
+            numeroMateriaExt, anoMateriaExt, dataMateriaExt, titulo, ementa, indexacao, observacao
+         } = this.state;
 
         const docDefinition = {
             content: [
                 {
                     image: logo,
-                    width: 150,
+                    width: 80,
                     alignment: 'center'
                 },
                 {
@@ -76,7 +78,7 @@ class AddProducts extends Component {
                     style: 'timbrado'
                 },
                 {
-                    text: 'Protocolo: 2024/02/0003213124',
+                    text: `Protocolo: ${protocolo}`,
                     alignment: 'center'
                 },
                 {
@@ -84,23 +86,52 @@ class AddProducts extends Component {
                     style: 'header',
                     alignment: 'center'
                 },
-                { text: ementa },
+                {
+                    text: 'Identificação da Materia',
+                    alignment: 'center',
+                    style: 'timbrado'
+                },
+                
                 {
                     text: [
                         { text: 'Tipo de Materia: ', bold: true },
                         { text:  tipoMateria },
                     ], style: 'descricoes'
                 },
-                { text: 'Materia Polêmica: ' + materiaPolemica, style: 'descricoes' },
-                { text: 'Materia Complementar: ' + isComplementar, style: 'descricoes' },
+                { text: 'Ano: ' + ano },
+                { text: 'Numero: ' + numero },
+                { text: 'Data: ' + dataApresenta },
+                { text: 'Apresentação: ' + tipoApresentacao },
+                { text: 'Materia Polêmica: ' + materiaPolemica },
+                { text: 'Materia Complementar: ' + isComplementar },
+                { text: 'Autor: ' + tipoAutor + " " + autor },
+
                 {
-                    text: 'Autor: Prefeito Municipal',
-                    style: 'descricoes'
+                    text: 'Informações Complementares',
+                    alignment: 'center',
+                    style: 'timbrado'
                 },
-                {
-                    text: 'Data: 00/00/0000',
-                    style: 'descricoes'
-                },
+                { text: 'Apelido: ' + apelido },
+                { text: 'Prazo: ' + prazo + ' dias' },
+                { text: 'Matéria Polêmica: ' + materiaPolemica },
+                { text: 'objeto: ' + objeto },
+                { text: 'Regime de Tramitação: ' + regTramita },
+                { text: 'Situação' + status },
+                { text: 'Fim do Prazo: ' + dataPrazo },
+                { text: 'Publicação: ' + publicacao },
+                { text: 'Matéria Complementar: ' + isComplementar },
+                
+                // Origem Externa
+                { text: tipoMateriaExt },
+                { text: numeroMateriaExt },
+                { text: anoMateriaExt },
+                { text: dataMateriaExt },
+
+
+                
+                { text: 'Ementa: ' + ementa, style: 'descricoes' },
+                { text: 'Indexação: ' + indexacao, style: 'descricoes' },
+                { text: 'Observação: ' + observacao, style: 'descricoes' },
                 {
                     image: signature,
                     width: 150,
@@ -113,7 +144,7 @@ class AddProducts extends Component {
                     style: 'underline'
                 },
                 {
-                    text: 'Nome Completo (autor)',
+                    text: autor,
                     alignment: 'center',
                     style: 'small'
                 },
@@ -144,7 +175,7 @@ class AddProducts extends Component {
                     fontSize: 8
                 },
                 assinatura: {
-                    marginTop: 80
+                    marginTop: 50
                 },
                 underline: {
                     marginTop: -20
@@ -198,11 +229,11 @@ class AddProducts extends Component {
                                 <option>Requerimento</option>
                                 <option>Moção</option>
                             </select>
-                            <input type='number' name="ano" placeholder="Ano da Materia" onChange={(event) => { this.setState({ ano: event.target.value }) }}  />
-                            <input type="text" name="numero" placeholder="Número da Matéria" onChange={(event) => { this.setState({ numero: event.target.value }) }} />
+                            <input type='number' name="ano" placeholder="Ano da Materia" onChange={(event) => { this.setState({ ano: event.target.value }) }} onFocus={this.handleGeneratePDF} />
+                            <input type="text" name="numero" placeholder="Número da Matéria" onChange={(event) => { this.setState({ numero: event.target.value }) }} onFocus={this.handleGeneratePDF}/>
                             <br/><label className='labelform-materia'>Data da Apresentação</label><br/>
                             <input type="date" name="dataApresentação" placeholder='Data da Apresentação' onChange={(event) => { this.setState({ dataApresenta: event.target.value }) }}  />
-                            <input type='text' name="protocolo" placeholder="Protocolo da Matéria" onChange={(event) => { this.setState({ protocolo: event.target.value }) }}  />
+                            {/* <input type='text' name="protocolo" placeholder="Protocolo da Matéria" onChange={(event) => { this.setState({ protocolo: event.target.value }) }}  /> */}
 
                             <select name="tipo_apresentacao" class="conteinar-Add-Products-select" onChange={(event) => this.setState({ tipoApresentacao: event.target.value })} onFocus={this.handleGeneratePDF}> 
                                 <option value="" selected="">Tipo de Apresentação</option> 
@@ -212,30 +243,30 @@ class AddProducts extends Component {
 
                             <select name="tipo_autor" class="conteinar-Add-Products-select" onChange={(event) => this.setState({ tipoAutor: event.target.value })} onFocus={this.handleGeneratePDF}> 
                                 <option value="" selected="">Tipo de Autor</option> 
-                                <option value="3">Bancada</option> 
-                                <option value="9">Bloco Parlamentar</option> 
-                                <option value="2">Comissão</option> 
-                                <option value="4">Externo</option> 
-                                <option value="6">Frente Parlamentar</option> 
-                                <option value="5">Mesa Diretora</option> 
-                                <option value="7">Órgão</option> 
-                                <option value="1">Parlamentar</option>
+                                <option value="Bancada">Bancada</option> 
+                                <option value="Bloco Parlamentar">Bloco Parlamentar</option> 
+                                <option value="Comissão">Comissão</option> 
+                                <option value="Externo">Externo</option> 
+                                <option value="Frente Parlamentar">Frente Parlamentar</option> 
+                                <option value="Mesa Diretora">Mesa Diretora</option> 
+                                <option value="Órgão">Órgão</option> 
+                                <option value="Parlamentar">Parlamentar</option>
                             </select>     
-                            <input type='text' name="autor" placeholder="Autor" onChange={(event) => { this.setState({ autor: event.target.value }) }}  />     
+                            <input type='text' name="autor" placeholder="Autor" onChange={(event) => { this.setState({ autor: event.target.value }) }} onFocus={this.handleGeneratePDF} />     
 
                             <br/><label className='labelform-materia'>Texto Original</label><br/>
                             <input type="file" onChange={this.handleFileChange} onFocus={this.handleGeneratePDF} />
                             
                             <p>Outras Informações</p>
-                            <input type='text' name="Apelido" placeholder="Apelido" onChange={(event) => { this.setState({ apelido: event.target.value }) }}  />     
-                            <input type='number' name="Dias de Prazo" placeholder="Dias de Prazo" onChange={(event) => { this.setState({ prazo: event.target.value }) }}  />     
+                            <input type='text' name="Apelido" placeholder="Apelido" onChange={(event) => { this.setState({ apelido: event.target.value }) }} onFocus={this.handleGeneratePDF} />     
+                            <input type='number' name="Dias de Prazo" placeholder="Dias de Prazo" onChange={(event) => { this.setState({ prazo: event.target.value }) }}  onFocus={this.handleGeneratePDF}/>     
 
                             <select className='conteinar-Add-Products-select' onChange={(event) => this.setState({ materiaPolemica: event.target.value })} onFocus={this.handleGeneratePDF} >
                                 <option value="">Materia polêmica?</option>
                                 <option value="sim">Sim</option>
                                 <option value="não">Não</option>
                             </select>
-                            <input type='text' name="Objeto" placeholder="Objeto" onChange={(event) => { this.setState({ objeto: event.target.value }) }}  />     
+                            <input type='text' name="Objeto" placeholder="Objeto" onChange={(event) => { this.setState({ objeto: event.target.value }) }} onFocus={this.handleGeneratePDF} />     
                             
                             <select name="regime_tramitacao" class="conteinar-Add-Products-select" onChange={(event) => this.setState({ regTramita: event.target.value })} onFocus={this.handleGeneratePDF}> 
                                 <option value="" selected="">Regime de Tramitação</option> 
@@ -282,15 +313,15 @@ class AddProducts extends Component {
                                 <option value="Requerimento de CPI">Requerimento de CPI</option>
                             </select>
                             
-                            <input type='number' name="Numero da Materia" placeholder="Numero da Materia Externa" onChange={(event) => { this.setState({ numeroMateriaExt: event.target.value }) }}  />     
-                            <input type='number' name="ano" placeholder="Ano da Materia Externa" onChange={(event) => { this.setState({ anoMateriaExt: event.target.value }) }}  />
+                            <input type='number' name="Numero da Materia" placeholder="Numero da Materia Externa" onChange={(event) => { this.setState({ numeroMateriaExt: event.target.value }) }} onFocus={this.handleGeneratePDF} />     
+                            <input type='number' name="ano" placeholder="Ano da Materia Externa" onChange={(event) => { this.setState({ anoMateriaExt: event.target.value }) }} onFocus={this.handleGeneratePDF} />
                             <br/><label className='labelform-materia'>Data da Materia</label><br/>
-                            <input type='date' name="Data Materia" placeholder="Data Materia Externa" onChange={(event) => { this.setState({ apelido: event.target.value }) }}  />     
+                            <input type='date' name="Data Materia" placeholder="Data Materia Externa" onChange={(event) => { this.setState({ apelido: event.target.value }) }} onFocus={this.handleGeneratePDF} />     
 
                             
 
                             <p>Dados Textuais</p>
-                            <input type="text" name="titulo" placeholder="Titulo" onChange={(event) => { this.setState({ titulo: event.target.value }) }} />
+                            <input type="text" name="titulo" placeholder="Titulo" onChange={(event) => { this.setState({ titulo: event.target.value }) }} onFocus={this.handleGeneratePDF} />
                             <textarea name="ementa" placeholder="Ementa" onChange={(event) => this.setState({ ementa: event.target.value })} onFocus={this.handleGeneratePDF} />
                             <textarea name="Indexação" placeholder="Indexação" onChange={(event) => this.setState({ indexacao: event.target.value })} onFocus={this.handleGeneratePDF} />
                             <textarea name="Observação" placeholder="Observação" onChange={(event) => this.setState({ observacao: event.target.value })} onFocus={this.handleGeneratePDF} />

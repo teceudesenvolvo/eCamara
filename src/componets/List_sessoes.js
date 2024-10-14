@@ -50,7 +50,7 @@ class ProductsList_minhaConsultas extends Component {
             >
                 <div className='areaTextDescProduct-minhasCompras' >
                     <div className='descricaoProduct-minhasCompras'>
-                        <p><a href='/sessoes' color='blue'><b>{processo.sessao}</b></a></p>
+                        <p><a href='/sessao-virtual' color='blue'><b>{processo.sessao}</b></a></p>
                         <p className='status'><b>Abertura:</b> {processo.abertura}</p>
                         <p><b>Legislatura:</b> {processo.Legislatura}</p>
                         <p><b>Sessão Legislativa:</b> {processo.sessaoleg}</p>

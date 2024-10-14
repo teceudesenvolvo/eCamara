@@ -7,7 +7,7 @@ import React, { Component } from 'react';
 import {
     GoNote,
     GoGraph,
-    GoBroadcast,
+    // GoBroadcast,
     GoLaw,
     GoBook,
     GoRepo,
@@ -90,10 +90,10 @@ class menuDesktop extends Component {
                     <span className='nav-item'>Relatórios</span>
                 </a>
 
-                <a href="/sessao-virtual" className={this.state.linkMenu3}>
-                    <GoBroadcast  className='fas fa-Compras'></GoBroadcast >
-                    <span className='nav-item'>Sessão Virtual</span>
-                </a>
+                 {/* <a href="/sessao-virtual" className={this.state.linkMenu3}>
+                     <GoBroadcast  className='fas fa-Compras'></GoBroadcast >
+                     <span className='nav-item'>Sessão Virtual</span>
+                </a> */}
 
                 <a href="/normas" className={this.state.linkMenu4}>
                     <GoLaw className='fas fa-Notificacoes'></GoLaw>

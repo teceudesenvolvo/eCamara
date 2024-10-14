@@ -29,7 +29,7 @@ class loginClient extends Component {
                         }
                         />
                     </form>
-                    <p>Não tem uma conta? <a href='/register' className='linkLogin'>Crie uma</a></p>
+                    {/* <p>Não tem uma conta? <a href='/register' className='linkLogin'>Crie uma</a></p> */}
                 </div>
             </div>
         );
