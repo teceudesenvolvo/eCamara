@@ -1,66 +1,61 @@
-**README - Plenário Virtual na Câmara Municipal**
+# Dispositiva Seguros
+
+Bem-vindo ao site oficial da **Dispositiva Seguros**: [www.dispositivaseguros.com.br](https://www.dispositivaseguros.com.br).
+
+A Dispositiva Seguros é uma empresa dedicada a oferecer soluções inovadoras e personalizadas para proteger o que é mais importante para você. Com uma abordagem moderna e tecnológica, garantimos segurança, tranquilidade e suporte especializado em todos os momentos.
 
 ---
 
-## Plenário Virtual na Câmara Municipal
+## 📌 Sobre a Dispositiva Seguros
 
-Bem-vindo ao repositório do projeto Plenário Virtual na Câmara Municipal. Este projeto visa implementar uma plataforma de sessões legislativas virtuais para a Câmara Municipal, proporcionando maior eficiência, acessibilidade e resiliência ao processo democrático.
+Somos mais do que uma corretora de seguros. Nosso compromisso é oferecer produtos que atendam às suas necessidades de forma clara, ágil e eficiente. Através de parcerias sólidas com as principais seguradoras do mercado, garantimos qualidade e atendimento diferenciado.
 
-### Visão Geral
-
-O Plenário Virtual é uma aplicação web destinada a oferecer uma experiência de participação remota nas sessões legislativas. O sistema possui três níveis de acesso: Usuário Comum, Vereadores e Presidente da Sessão, cada um com funcionalidades específicas para atender às suas necessidades.
-
-### Funcionalidades Principais
-
-- **Usuário Comum:**
-  - Acesso à transmissão ao vivo de sessões e audiências públicas.
-  - Formulários para inscrição de cidadãos para participação ou comentários.
-  - Acesso a documentos legislativos e resumos de sessões.
-
-- **Vereadores:**
-  - Participação em sessões virtuais com vídeo, áudio, chat e controle de tempo.
-  - Emissão de votos durante as sessões virtuais.
-  - Repositório online de documentos legislativos, projetos de lei, relatórios.
-  - Configuração de audiências públicas virtuais.
-
-- **Presidente da Sessão:**
-  - Controle total sobre a sessão, incluindo gerenciamento de participantes e moderação.
-  - Emissão e supervisão de votos, com capacidade para intervenções durante votações.
-  - Controle total sobre o repositório de documentos.
-  - Configuração completa de audiências públicas virtuais.
-
-### Como Contribuir
-
-1. **Faça um Fork:** Crie uma cópia do projeto no seu próprio repositório.
-2. **Desenvolva:** Implemente novas funcionalidades ou correções de bugs no seu fork.
-3. **Envie um Pull Request:** Submeta suas alterações para revisão.
-
-### Instalação Local
-
-1. **Clone o Repositório:**
-   ```bash
-   git clone https://github.com/
-   ```
-
-2. **Instale as Dependências:**
-   ```bash
-   cd e-camara
-   npm install e-camara
-   ```
-
-3. **Execute o Projeto:**
-   ```bash
-   npm start
-   ```
-
-### Contato e Suporte
-
-Para dúvidas, sugestões ou relatar problemas, entre em contato conosco através do email [contato@eudesenvolvo.com](mailto:contato@eudesenvolvo.com).
-
-### Licença
-
-Este projeto está licenciado sob a eudesenvolvo.com.
-
-Agradecemos por contribuir para o Plenário Virtual na Câmara Municipal!
+### 🔑 Valores
+- **Transparência:** Comunicação clara e objetiva.
+- **Segurança:** Soluções robustas e confiáveis.
+- **Inovação:** Uso de tecnologia para otimizar processos.
+- **Compromisso:** Atendimento humano e acolhedor.
 
 ---
+
+## 🌟 Serviços
+
+- **Seguro Residencial:** Proteção completa para seu lar.
+- **Seguro Veicular:** Cobertura ideal para seu veículo.
+- **Seguro Empresarial:** Soluções sob medida para empresas.
+- **Planos de Saúde:** Cuidados com a sua saúde e de sua família.
+- **Seguros Especiais:** Atendimento para demandas específicas.
+
+**Descubra a solução certa para você no nosso site: [www.dispositivaseguros.com.br](https://www.dispositivaseguros.com.br).**
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+O site da Dispositiva Seguros foi desenvolvido para oferecer uma navegação intuitiva e funcional. Entre as tecnologias utilizadas, destacamos:
+- **Front-end:** HTML5, CSS3 e JavaScript.
+- **Back-end:** [Especificar, se conhecido].
+- **Hospedagem:** [Especificar serviço de hospedagem].
+
+---
+
+## 📞 Contato
+
+Precisa de ajuda ou tem alguma dúvida? Fale conosco:
+
+- **Telefone:** [Adicionar número]
+- **E-mail:** [Adicionar e-mail]
+- **Redes sociais:**
+  - [Instagram](#)
+  - [Facebook](#)
+
+---
+
+## 🤝 Trabalhe Conosco
+
+Faça parte da nossa equipe! Envie seu currículo ou proposta de parceria através do e-mail: [Adicionar e-mail para recrutamento].
+
+---
+
+**© 2024 Dispositiva Seguros**  
+Cuidamos de você e do que mais importa. 🌟
