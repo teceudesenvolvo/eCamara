@@ -12,8 +12,10 @@ import Relatorios from './screens/client/Relatorios';
 import SessaoVirtual from './screens/client/SessaoVirtual';
 import NormasJuridicas from './screens/client/NormasJuridicas'
 import Comissoes from './screens/client/Comissoes'
-  // News
+
+// News
 import Home from '../src/screens/home';
+
   // Páginas Secundárias
 import Materias from './screens/client/Materias';
 import Mais from './screens/client/Mais';
