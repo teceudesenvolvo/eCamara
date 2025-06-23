@@ -33,11 +33,7 @@ class homeDashboard extends Component {
                         <dvi className='header-Dach-div'>
                             <h1>Balanço Legislativo</h1>
                             <select className='select-input-ano inputLogin'>
-                                <option>2023</option>
-                                <option>2022</option>
-                                <option>2021</option>
-                                <option>2020</option>
-                                <option>2019</option>
+                                <option>2025</option>
                             </select>
                         </dvi>
 

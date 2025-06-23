@@ -31,7 +31,7 @@ class slideFeactures extends Component {
         }
     }
     loadNoticias = async () => {
-        await axios.get(`https://sapl.saogoncalodoamarante.ce.leg.br/api/parlamentares/legislatura/19/parlamentares/?get_all=true`)
+        await axios.get(`https://sapl.saogoncalodoamarante.ce.leg.br/api/parlamentares/legislatura/20/parlamentares/?get_all=true`)
             .catch(err => console.log(`o erro foi esse aqui: ${err}`))
             .then(
                 res => {
