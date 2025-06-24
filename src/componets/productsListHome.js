@@ -22,54 +22,54 @@ class ProductsList extends Component {
             .catch(err => console.log(`o erro foi esse aqui: ${err}`))
             .then(
                 res => {
-                const postsAll = res.data
-                let posts = []
-                for (let key in postsAll){
-                    posts.push({
-                        ...postsAll[key],
-                        id: key
-                    })
-                }
-                this.setState({posts: posts})
-                console.log(res.data)
-            })
+                    const postsAll = res.data
+                    let posts = []
+                    for (let key in postsAll) {
+                        posts.push({
+                            ...postsAll[key],
+                            id: key
+                        })
+                    }
+                    this.setState({ posts: posts })
+                    console.log(res.data)
+                })
 
     }
 
-    componentDidMount(){
+    componentDidMount() {
         const loadPage = () => this.loadNoticias()
         loadPage()
     }
 
 
-   
+
 
 
     render() {
         const posts = this.state.posts.reverse()
-        
-        if(posts.length > 4){
+
+        if (posts.length > 4) {
             posts.length = 4
         }
-        
-        const listPosts = posts.map((post) => 
-        <li key={(post.id)} className="productItem"
-        onClick={
-          () => {
-              window.location.href = "/Servico"
-            // this.setState({id: aviso.id}, () => {
-            // (this.props.clickButton(this.state))
-        //   }
-        }
-        }
-        >
-                <img alt='imagem do serviço' src={post.yoast_head_json.og_image[0].url} width="50%" className='imgProduct'/>
-            <div className='areaTextDescProduct' >
-                <p className='descricaoProduct' >{post.yoast_head_json.title}</p>
-                <p className='descricaoProduct authorProduct' >{post.yoast_head_json.og_site_name}</p>
-            </div>
-      </li>
-    )
+
+        const listPosts = posts.map((post) =>
+            <li key={(post.id)} className="productItem"
+                onClick={
+                    () => {
+                        window.location.href = "/Servico"
+                        // this.setState({id: aviso.id}, () => {
+                        // (this.props.clickButton(this.state))
+                        //   }
+                    }
+                }
+            >
+                <img alt='imagem do serviço' src={post.yoast_head_json.og_image[0].url} width="50%" className='imgProduct' />
+                <div className='areaTextDescProduct' >
+                    <p className='descricaoProduct' >{post.yoast_head_json.title}</p>
+                    <p className='descricaoProduct authorProduct' >{post.yoast_head_json.og_site_name}</p>
+                </div>
+            </li>
+        )
 
 
         return (

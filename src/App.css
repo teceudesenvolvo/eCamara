@@ -1473,6 +1473,199 @@ video {
 }
 
 
+/* Estilos do Conteúdo Principal */
+.main-content {
+    flex-grow: 1; /* Ocupa o espaço restante */
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+/* Estilos do Cabeçalho */
+.header {
+    background-color: #ffffff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center; /* Centraliza o logo horizontalmente */
+    align-items: center;
+}
+
+.header .logo {
+    max-height: 40px; /* Altura máxima do logotipo */
+    width: auto;
+}
+
+/* Estilos da Seção de Filtro (Sessão e Indicadores) */
+.filter-section {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Espaçamento entre os elementos */
+    margin-bottom: 20px;
+    background-color: #ffffff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.session-selector select {
+    padding: 10px 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fdfdfd;
+    font-size: 16px;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+.status-indicators {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Espaçamento entre os indicadores */
+}
+
+.status-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%; /* Faz um círculo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.status-item.gray {
+    background-color: #aebfd4; /* Cor cinza */
+}
+
+.status-item.green {
+    background-color: #4CAF50; /* Cor verde */
+}
+
+.status-item.red {
+    background-color: #f44336; /* Cor vermelha */
+}
+
+.status-text {
+    font-size: 16px;
+    color: #555;
+    margin-right: 10px; /* Espaçamento após o texto do status */
+}
+
+/* Estilos da Seção de Matérias */
+.materials-section {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.materials-section h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 22px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.material-card {
+    display: flex;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background-color: #fdfdfd;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    align-items: center; /* Alinha os itens no topo */
+}
+
+.material-details {
+    flex: 3; /* Ocupa mais espaço */
+    padding-right: 20px;
+}
+
+.material-code {
+    color: #007bff; /* Cor do link */
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 18px;
+    margin: 20px;
+    display: block;
+}
+
+.material-code:hover {
+    text-decoration: underline;
+}
+
+.material-description {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.voting-results {
+    flex: 1; /* Ocupa menos espaço */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Alinha o conteúdo à direita */
+    text-align: right;
+    padding-left: 20px;
+    border-left: 1px solid #eee; /* Separador visual */
+}
+
+.vote-summary p {
+    margin: 3px 0;
+    font-size: 14px;
+    color: #444;
+}
+
+.vote-summary p:first-child {
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.vote-actions {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Espaçamento entre os botões/links */
+    align-items: flex-end;
+}
+
+.button-aprovado {
+    background-color: #4CAF50; /* Cor verde para Aprovado */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.button-aprovado:hover {
+    background-color: #45a049;
+}
+
+.link-ver-votos {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 14px;
+    transition: text-decoration 0.3s ease;
+}
+
+.link-ver-votos:hover {
+    text-decoration: underline;
+}
+
+
+
+
 
 .utilider-Pag-Tilulo {
   height: 100%;
