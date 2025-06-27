@@ -29,6 +29,7 @@ class Perfil extends Component {
                         {/* Informações Pessoais */}
                         <img className='profile-img' src={Profile} alt='imagem do perfil'></img>
                         <li className="profile-desc">
+                            
                             <div className='profile-desc' >
                                 <p className='profile-desc-item' >Nome Completo</p>
                                 <p className='profile-desc-item' >Cargo</p>
