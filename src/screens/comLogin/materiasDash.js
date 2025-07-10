@@ -15,7 +15,7 @@ import Paper from '@mui/material/Paper';
 
 
 // Components
-import MenuDashboard from '../componets/menuDashboard';
+import MenuDashboard from '../../componets/menuDashboard';
 
 // Dados da tabela
 function createData(numero, materia, situacao, autor, apresentacao, tramitacao, exercicio, status) {

@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 
 //Imagens
-import logo from '../../assets/e-camara-16.png';
+import logo from '../assets/e-camara-16.png';
 
 // Icones
 

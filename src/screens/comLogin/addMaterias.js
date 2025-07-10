@@ -3,11 +3,11 @@ import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 // Importando imagem
-import camera from '../assets/Camera.png';
-import logo from '../assets/logo.png';
-import signature from '../assets/assinatura-teste-1.png'; // Imagem da assinatura
+import camera from '../../assets/Camera.png';
+import logo from '../../assets/logo.png';
+import signature from '../../assets/assinatura-teste-1.png'; // Imagem da assinatura
 
-import MenuDashboard from '../componets/menuDashboard'; // Certifique-se de que este caminho está correto
+import MenuDashboard from '../../componets/menuDashboard'; // Certifique-se de que este caminho está correto
 
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
