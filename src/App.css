@@ -2926,12 +2926,13 @@ footer>p {
   height: 100vh;
   left: 0;
   background: #126B5E;
-  width: 35px;
+  width: 45px;
   overflow: hidden;
   transition: width 0.2 linear;
   box-shadow: 0 20px 35px rgba(0, 0, 0, 0.1);
   transition: all 0.5s ease;
   z-index: 20;
+  border-radius: 0px 10px 10px 0px;
 
 
 }
@@ -3000,11 +3001,18 @@ footer>p {
   top: 15px;
   text-align: center;
   font-weight: lighter;
+  padding: 5px 5px;
 }
 
 
 .link-desktop-active {
   color: #043a32 !important;
+}
+
+.link-desktop-active > svg {
+  color: white;
+  background: #ff7006;
+  border-radius: 5px;
 }
 
 
@@ -3013,7 +3021,7 @@ footer>p {
   font-size: 14px;
   position: relative;
   top: 5px;
-  padding: 10px 15px;
+  padding: 16px 10px 0px 15px;
   margin-left: 0px;
 }
 
