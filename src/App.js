@@ -2,63 +2,55 @@ import './App.css';
 
 import { Switch, Route } from 'react-router-dom'
 
-
 //Screen Navigate
-import homeDashboard from '../src/screens/homeDashboard';
+import HomeDashboard from './screens/homeDashboard';
 
-  // Páginas Principais
-import Sessoes from './screens/client/Sessoes';
-import Relatorios from './screens/client/Relatorios';
-import SessaoVirtual from './screens/client/SessaoVirtual';
-import NormasJuridicas from './screens/client/NormasJuridicas'
-import Comissoes from './screens/client/Comissoes'
+// Páginas Principais
+import Sessoes from './screens/semLogin/Sessoes';
+import Relatorios from './screens/semLogin/Relatorios';
+import SessaoVirtual from './screens/semLogin/SessaoVirtual';
+import NormasJuridicas from './screens/semLogin/NormasJuridicas';
+import Comissoes from './screens/semLogin/Comissoes';
 
 // News
-import Home from '../src/screens/home';
+import Home from './screens/home';
 
-  // Páginas Secundárias
-import Materias from './screens/client/Materias';
-import Mais from './screens/client/Mais';
-import Servico from './screens/client/Servico';
-import Produto from './screens/client/Produto';
-import Carrinho from './screens/client/carrinho';
-import pagamento from './screens/client/pagamento';
-import Pesquisar from './screens/client/pesquisa';
-import Perfil from './screens/client/Perfil';
+// Páginas Secundárias
+import Materias from './screens/semLogin/Materias';
+import Mais from './screens/semLogin/Mais';
+import Servico from './screens/semLogin/Servico';
+import Produto from './screens/semLogin/Produto';
+import Perfil from './screens/semLogin/Perfil';
 
-import addMateria from './screens/addMaterias';
-import materiasDash from './screens/materiasDash';
-import registerDashboard from './screens/registerDashboard';
-import registerEndereco from './screens/registerEndereco';
-import registerLoja from './screens/resgisterLoja';
-import juizoMateria from './screens/juizoMateria';
-
+import AddMateria from './screens/addMaterias';
+import MateriasDash from './screens/materiasDash';
+import RegisterDashboard from './screens/registerDashboard';
+import RegisterEndereco from './screens/registerEndereco';
+// Corrected path for RegisterLoja
+import RegisterLoja from './screens/semLogin/registerLoja'; 
+import JuizoMateria from './screens/juizoMateria';
 
 // SingIn / SignUp
-import register from './screens/client/register';
-import login from './screens/client/login';
-
+import Register from './screens/semLogin/register';
+import Login from './screens/semLogin/login';
 
 // Navigate Components
-import TopBar from '../src/componets/topBarSearch'
-import Menu from './componets/menu';
-import MenuDesktop from './componets/menuDesktop';
+// Corrected paths for TopBar, Menu, and MenuDesktop
+import TopBar from './components/topBarSearch';
+import Menu from './components/menu';
+import MenuDesktop from './components/menuDesktop';
 
-
-import testeGeneratePDF from './screens/testePage'
-
+import TesteGeneratePDF from './screens/testePage';
 
 function App() {
   return (
     <div className="App">
-      
       <TopBar />
       <Switch>
         {/* Página Principal */}
-        <Route exact path="/" component={homeDashboard} />
-        
-        <Route path="/login" component={login} />
-        <Route path="/register" component={register} />
+        <Route exact path="/" component={HomeDashboard} />
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
 
         {/* Perfis de Acesso */}
         <Route path="/perfil" component={Perfil} />
@@ -77,40 +69,22 @@ function App() {
         {/* Páginas Filho */}
         <Route path="/Servico" component={Servico} />
         <Route path="/Produto" component={Produto} />
-        <Route path="/Carrinho" component={Carrinho} />
-        <Route path="/pesquisar" component={Pesquisar} />
+        <Route path="/materias-dash" component={MateriasDash} />
 
-
-        
-        <Route path="/pagamento" component={pagamento} />
-        <Route path="/materias-dash" component={materiasDash} />
-
-        
         {/* Páginas de Formulários */}
-        <Route path="/protocolar-materia" component={addMateria} />
-        <Route path="/registerDashboard" component={registerDashboard} />
-        <Route path="/registerEndereco" component={registerEndereco} />
-        <Route path="/juizo-materia" component={juizoMateria} />
-        <Route path="/registerLoja" component={registerLoja} />
-        
-        
-        <Route path="/testePage" component={testeGeneratePDF} />
-
-
-
-
-
+        <Route path="/protocolar-materia" component={AddMateria} />
+        <Route path="/registerDashboard" component={RegisterDashboard} />
+        <Route path="/registerEndereco" component={RegisterEndereco} />
+        <Route path="/juizo-materia" component={JuizoMateria} />
+        <Route path="/registerLoja" component={RegisterLoja} />
+        <Route path="/testePage" component={TesteGeneratePDF} />
         <Route path="/novidades" component={Home} />
-
-
       </Switch>
       <Menu />
       <MenuDesktop />
       <footer className='footer'>
         <p> Copyright &copy; 2023 - eudesenvolvo</p>
       </footer>
-
-
     </div>
   );
 }
