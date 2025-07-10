@@ -26,8 +26,7 @@ import AddMateria from './screens/addMaterias';
 import MateriasDash from './screens/materiasDash';
 import RegisterDashboard from './screens/registerDashboard';
 import RegisterEndereco from './screens/registerEndereco';
-// Corrected path for RegisterLoja
-import RegisterLoja from './screens/semLogin/registerLoja'; 
+
 import JuizoMateria from './screens/juizoMateria';
 
 // SingIn / SignUp
@@ -35,10 +34,9 @@ import Register from './screens/semLogin/register';
 import Login from './screens/semLogin/login';
 
 // Navigate Components
-// Corrected paths for TopBar, Menu, and MenuDesktop
-import TopBar from './components/topBarSearch';
-import Menu from './components/menu';
-import MenuDesktop from './components/menuDesktop';
+import TopBar from './componets/topBarSearch';
+import Menu from './componets/menu';
+import MenuDesktop from './componets/menuDesktop';
 
 import TesteGeneratePDF from './screens/testePage';
 
@@ -76,7 +74,6 @@ function App() {
         <Route path="/registerDashboard" component={RegisterDashboard} />
         <Route path="/registerEndereco" component={RegisterEndereco} />
         <Route path="/juizo-materia" component={JuizoMateria} />
-        <Route path="/registerLoja" component={RegisterLoja} />
         <Route path="/testePage" component={TesteGeneratePDF} />
         <Route path="/novidades" component={Home} />
       </Switch>
