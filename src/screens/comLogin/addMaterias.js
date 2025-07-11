@@ -9,7 +9,7 @@ import signature from '../../assets/assinatura-teste-1.png'; // Imagem da assina
 
 import MenuDashboard from '../../componets/menuDashboard'; // Certifique-se de que este caminho está correto
 
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
+pdfMake.vfs = pdfFonts.vfs;
 
 class AddProducts extends Component {
     constructor(props) {

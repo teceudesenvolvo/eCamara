@@ -1,74 +1,86 @@
 import React, { Component } from 'react';
 
-//Imagen
+// Material-UI Table Components
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
 
-// Icones
-
-
-// Components
-
-//mudança de páginas
 
 class ProductsList_minhaConsultas extends Component {
     state = {
-        processos: [
+        sessoes: [ // Renamed 'processos' to 'sessoes' for clarity
             {
                 id: '1',
-                sessao: '3ª Sessão Extraordinária do 2º Semestre de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
-                abertura: '27 de Dezembro de 2023',
-                Legislatura: '19ª (2021 - 2024) (Atual)',
-                sessaoleg: '3º (2023 - 2023) ',
-                tipo: 'Sessão Extraordinária',
+                sessao: '1ª Sessão Ordinária do 2º Semestre de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
+                abertura: '23/03/2025',
+                tipo: 'Ordinária',
+                exercicio: '2025',
+                materias: '15',
             },
             {
                 id: '2',
-                sessao: '13ª Sessão Ordinária do 2º Semestre de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
-                abertura: '14 de Dezembro de 2023',
-                Legislatura: '19ª (2021 - 2024) (Atual)',
-                sessaoleg: '3º (2023 - 2023) ',
-                tipo: 'Sessão Ordinária',
+                sessao: '1ª Sessão Ordinária do 2º Semestre de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
+                abertura: '23/03/2025',
+                tipo: 'Ordinária',
+                exercicio: '2025',
+                materias: '15',
+            },
+            {
+                id: '3',
+                sessao: '1ª Sessão Ordinária do 2º Semestre de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
+                abertura: '23/03/2025',
+                tipo: 'Ordinária',
+                exercicio: '2025',
+                materias: '15',
             },
         ]
     }
 
-
-
-
     render() {
-        const processos = this.state.processos
-
-        const listCategories = processos.map((processo) =>
-            <li key={(processo.id)} className="productItem-minhasCompras"
-                onClick={
-                    () => {
-                        // window.location.href = "/Servico"
-                        // this.setState({id: aviso.id}, () => {
-                        // (this.props.clickButton(this.state))
-                        //   }
-                    }
-                }
-            >
-                <div className='areaTextDescProduct-minhasCompras' >
-                    <div className='descricaoProduct-minhasCompras'>
-                        <p><a href='/sessao-virtual' color='blue'><b>{processo.sessao}</b></a></p>
-                        <p className='status'><b>Abertura:</b> {processo.abertura}</p>
-                        <p><b>Legislatura:</b> {processo.Legislatura}</p>
-                        <p><b>Sessão Legislativa:</b> {processo.sessaoleg}</p>
-                        <p><b>Tipo:</b> {processo.tipo}</p>
-                    </div>
-                    <div className='status'></div>
-                </div>
-            </li>
-        )
-
+        const { sessoes } = this.state;
 
         return (
-            <>
-                <ul className='vistosHome consultas'>
-                    {listCategories}
-                </ul>
-            </>
-
+            <div className="sessoes-table-wrapper"> {/* Wrapper for overall layout */}
+                <TableContainer component={Paper} className='sessoes-table-container'>
+                    <Table sx={{ minWidth: 650 }} aria-label="sessoes table">
+                        <TableHead className='sessoes-table-header'>
+                            <TableRow>
+                                <TableCell align="left">ID</TableCell> {/* Align left as per image */}
+                                <TableCell align="left">Sessão</TableCell>
+                                <TableCell align="left">Abertura</TableCell>
+                                <TableCell align="left">Tipo</TableCell>
+                                <TableCell align="left">Exercício</TableCell>
+                                <TableCell align="left">Matérias</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {sessoes.map((sessao) => (
+                                <TableRow
+                                    key={sessao.id}
+                                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                                >
+                                    <TableCell component="th" scope="row" align="left">
+                                        {sessao.id}
+                                    </TableCell>
+                                    <TableCell align="left">
+                                        <a href='/sessao-virtual' className="sessao-link">
+                                            {sessao.sessao}
+                                        </a>
+                                    </TableCell>
+                                    <TableCell align="left">{sessao.abertura}</TableCell>
+                                    <TableCell align="left">{sessao.tipo}</TableCell>
+                                    <TableCell align="left">{sessao.exercicio}</TableCell>
+                                    <TableCell align="left">{sessao.materias}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </div>
         );
     }
 }
