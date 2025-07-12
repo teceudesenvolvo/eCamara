@@ -72,8 +72,56 @@ function App() {
       </Switch>
       <Menu />
       <MenuDesktop />
+      
+      {/* Rodapé Melhorado */}
       <footer className='footer'>
-        <p> Copyright &copy; 2023 - eudesenvolvo</p>
+        <div className='footer-content'>
+          <div className='footer-section'>
+            <h4>eCâmara</h4>
+            <p>Plenário Virtual da Câmara Municipal</p>
+            <p>Democratizando o acesso à participação legislativa</p>
+          </div>
+          
+          <div className='footer-section'>
+            <h4>Links Úteis</h4>
+            <ul>
+              <li><a href="/Sessoes">Sessões</a></li>
+              <li><a href="/Relatorios">Relatórios</a></li>
+              <li><a href="/Normas">Normas Jurídicas</a></li>
+              <li><a href="/Comissoes">Comissões</a></li>
+            </ul>
+          </div>
+          
+          <div className='footer-section'>
+            <h4>Transparência</h4>
+            <ul>
+              <li><a href="/Materias">Matérias</a></li>
+              <li><a href="/Sessao-Virtual">Sessão Virtual</a></li>
+              <li><a href="/novidades">Novidades</a></li>
+            </ul>
+          </div>
+          
+          <div className='footer-section'>
+            <h4>Contato</h4>
+            <p>📧 contato@ecamara.gov.br</p>
+            <p>📞 (11) 3000-0000</p>
+            <p>📍 Câmara Municipal</p>
+          </div>
+        </div>
+        
+        <div className='footer-bottom'>
+          <div className='footer-bottom-content'>
+            <p>&copy; 2025 eCâmara - Todos os direitos reservados</p>
+            <p>Desenvolvido por <strong>Blu Sistemas</strong></p>
+            <div className='footer-links'>
+              <a href="/politica-privacidade">Política de Privacidade</a>
+              <span>|</span>
+              <a href="/termos-uso">Termos de Uso</a>
+              <span>|</span>
+              <a href="/acessibilidade">Acessibilidade</a>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );

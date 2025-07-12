@@ -7,11 +7,9 @@ import React, { Component } from 'react';
 import {
     GoNote,
     GoGraph,
-    // GoBroadcast,
     GoLaw,
     GoBook,
-    GoRepo,
-    GoLightBulb   
+    GoRepo   
 
 } from "react-icons/go";
 
@@ -107,14 +105,11 @@ class menuDesktop extends Component {
                     <GoRepo className='fas fa-Ajuda'></GoRepo>
                     <span className='nav-item'>Matérias</span>
                 </a>
-                <a href="/perfil" className={this.state.linkMenu7}>
+                <a href="/login" className={this.state.linkMenu7}>
                     <FaRegUser className='fas fa-Ajuda'></FaRegUser>
-                    <span className='nav-item'>Minha Conta</span>
+                    <span className='nav-item'>Entrar</span>
                 </a>
-                <a href="/ajuda" className={this.state.linkMenu8}>
-                    <GoLightBulb  className='fas fa-Ajuda'></GoLightBulb >
-                    <span className='nav-item'>Ajuda</span>
-                </a>
+                
                 
             </nav>
 
