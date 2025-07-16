@@ -23,14 +23,14 @@
 
 
 .App-header {
-  background-color: #fff;
+  background-color: #818181;
   min-height: 100vh;
   padding-bottom: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
   font-size: calc(10px + 2vmin);
-  color: white;
+  color: #aaaaaa;
 }
 
 .App-link {
@@ -923,78 +923,101 @@ video {
 /* Tabela Materias da Sessão */
 
 .sessoes-table-wrapper {
-    display: flex;
-    justify-content: center; /* Center the table horizontally */
-    padding: 20px;
-    background-color: #f0f2f5; /* Light background for the page */
-    min-height: 100vh; /* Ensure it takes full height */
+  display: flex;
+  justify-content: center;
+  /* Center the table horizontally */
+  padding: 20px;
+  background-color: #f0f2f5;
+  /* Light background for the page */
+  min-height: 100vh;
+  /* Ensure it takes full height */
 }
 
 .sessoes-table-container {
-    width: 100%;
-    max-width: 1200px; /* Max width for the table */
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* More prominent shadow */
-    overflow: hidden; /* Ensures rounded corners are applied */
+  width: 100%;
+  max-width: 1200px;
+  /* Max width for the table */
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* More prominent shadow */
+  overflow: hidden;
+  /* Ensures rounded corners are applied */
 }
 
-.MuiTable-root { /* Targeting the Material-UI Table root */
-    background-color: #ffffff;
-    font-family: 'Inter', sans-serif; /* Using Inter font */
+.MuiTable-root {
+  /* Targeting the Material-UI Table root */
+  background-color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  /* Using Inter font */
 }
 
 .sessoes-table-header {
-    background-color: #e0e5e9; /* Lighter grey header background */
+  background-color: #e0e5e9;
+  /* Lighter grey header background */
 }
 
-.MuiTableCell-head { /* Targeting Material-UI TableCell in header */
-    padding: 12px 16px;
-    font-weight: 600; /* Slightly bolder font */
-    color: #333; /* Darker text color */
-    border-bottom: 1px solid #dcdcdc; /* Lighter border */
-    text-align: left; /* Ensure headers are left-aligned */
+.MuiTableCell-head {
+  /* Targeting Material-UI TableCell in header */
+  padding: 12px 16px;
+  font-weight: 600;
+  /* Slightly bolder font */
+  color: #333;
+  /* Darker text color */
+  border-bottom: 1px solid #dcdcdc;
+  /* Lighter border */
+  text-align: left;
+  /* Ensure headers are left-aligned */
 }
 
-.MuiTableCell-body { /* Targeting Material-UI TableCell in body */
-    padding: 10px 16px;
-    color: #555;
-    border-bottom: 1px solid #f0f0f0; /* Very light border for body rows */
+.MuiTableCell-body {
+  /* Targeting Material-UI TableCell in body */
+  padding: 10px 16px;
+  color: #555;
+  border-bottom: 1px solid #f0f0f0;
+  /* Very light border for body rows */
 }
 
 .MuiTableRow-root:last-child .MuiTableCell-body {
-    border-bottom: none; /* No border for the last row */
+  border-bottom: none;
+  /* No border for the last row */
 }
 
 .MuiTableRow-root:hover {
-    background-color: #f8f9fa; /* Subtle hover effect */
+  background-color: #f8f9fa;
+  /* Subtle hover effect */
 }
 
 .sessao-link {
-    color: #007bff; /* Standard blue link color */
-    text-decoration: none;
-    font-weight: 500;
+  color: #007bff;
+  /* Standard blue link color */
+  text-decoration: none;
+  font-weight: 500;
 }
 
 .sessao-link:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .sessoes-table-container {
-        margin: 10px;
-        box-shadow: none; /* Remove shadow on smaller screens */
-    }
+  .sessoes-table-container {
+    margin: 10px;
+    box-shadow: none;
+    /* Remove shadow on smaller screens */
+  }
 
-    .MuiTable-root {
-        min-width: unset; /* Allow table to shrink */
-    }
+  .MuiTable-root {
+    min-width: unset;
+    /* Allow table to shrink */
+  }
 
-    .MuiTableCell-head,
-    .MuiTableCell-body {
-        padding: 8px 10px; /* Smaller padding on mobile */
-        font-size: 0.85em; /* Smaller font size */
-    }
+  .MuiTableCell-head,
+  .MuiTableCell-body {
+    padding: 8px 10px;
+    /* Smaller padding on mobile */
+    font-size: 0.85em;
+    /* Smaller font size */
+  }
 }
 
 .tabela-design {
@@ -1956,326 +1979,184 @@ video {
 
 
 /* Perfil.css */
+/* Perfil.css */
 
-/* --- Layout Geral --- */
+/* --- Layout Geral da Página --- */
 .profile-page-container {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f0f2f5;
-  /* Cor de fundo suave */
-  font-family: 'Inter', sans-serif;
-  /* Usando Inter como padrão */
+    display: flex; /* Permite que o MenuDashboard e o conteúdo principal fiquem lado a lado */
+    min-height: 100vh;
+    background-color: #e6e6e6; /* Fundo cinza claro da imagem */
+    font-family: 'Inter', sans-serif; /* Garante a fonte Inter */
+    overflow: hidden; /* Evita barras de rolagem indesejadas */
 }
 
 .profile-main-content {
-  flex-grow: 1;
-  padding: 30px;
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-  /* Espaçamento entre as seções principais */
+    flex-grow: 1; /* Ocupa o espaço restante após o MenuDashboard */
+    display: flex;
+    justify-content: center; /* Centraliza o cartão de perfil horizontalmente */
+    align-items: center; /* Centraliza o cartão de perfil verticalmente */
+    padding: 20px; /* Espaçamento interno */
+    background-color: #f0f2f5; /* Fundo branco/claro para a área do conteúdo principal */
 }
 
-/* --- Top Bar (Cabeçalho Dashboard) --- */
-.profile-top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e0e6ed;
-  /* Linha sutil de separação */
+/* --- Cartão de Perfil --- */
+.profile-card {
+    background-color: #ffffff; /* Fundo branco do cartão */
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Sombra suave */
+    padding: 30px;
+    width: 100%;
+    max-width: 400px; /* Largura máxima do cartão */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centraliza os itens dentro do cartão */
 }
 
-.top-bar-left .dashboard-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
-
-.top-bar-left .dashboard-date {
-  font-size: 14px;
-  color: #777;
-  margin-top: 5px;
-}
-
-.top-bar-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.header-icon {
-  font-size: 20px;
-  color: #555;
-  cursor: pointer;
-}
-
-.user-profile-summary {
-  display: flex;
-  align-items: center;
-  background-color: #e0e6ed;
-  padding: 8px 12px;
-  border-radius: 20px;
-  cursor: pointer;
-  gap: 8px;
-}
-
-.user-initials {
-  width: 30px;
-  height: 30px;
-  background-color: #6a1b9a;
-  /* Cor roxa */
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.user-name {
-  font-weight: 600;
-  color: #333;
-}
-
-.dropdown-arrow {
-  font-size: 12px;
-  color: #777;
-}
-
-/* --- Welcome Card --- */
-.welcome-card {
-  background: linear-gradient(to right, #8e24aa, #ab47bc);
-  /* Gradiente roxo */
-  border-radius: 15px;
-  padding: 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: white;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  /* Garante que a ilustração não vaze */
-  position: relative;
-}
-
-.welcome-text-section {
-  max-width: 60%;
-  z-index: 1;
-  /* Garante que o texto fique acima da ilustração */
-}
-
-.welcome-title {
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.welcome-subtitle {
-  font-size: 16px;
-  line-height: 1.5;
-  opacity: 0.9;
-}
-
-.welcome-illustration-section {
-  position: absolute;
-  /* Posicionamento absoluto para a ilustração */
-  right: -50px;
-  /* Ajuste a posição para fora ou dentro conforme a imagem */
-  bottom: -30px;
-  width: 300px;
-  /* Largura da ilustração */
-  height: auto;
-  opacity: 0.8;
-}
-
-.dashboard-illustration {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* --- Overview/Informações Essenciais --- */
-.overview-heading {
-  font-size: 22px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.profile-info-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  /* Responsivo para cartões */
-  gap: 20px;
-}
-
-.info-card {
-  background-color: white;
-  border-radius: 10px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.info-card .card-value {
-  font-size: 16px;
-  color: #666;
-  margin-bottom: 5px;
-  font-weight: 500;
-}
-
-.info-card .card-label {
-  font-size: 22px;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
-
-/* Cores específicas para os cartões */
-.info-card-yellow {
-  border-bottom: 4px solid #fbc02d;
-}
-
-/* Laranja/Amarelo escuro */
-.info-card-purple {
-  border-bottom: 4px solid #6a1b9a;
-}
-
-/* Roxo */
-.info-card-pink {
-  border-bottom: 4px solid #ec407a;
-}
-
-/* Rosa */
-.info-card-gray {
-  border-bottom: 4px solid #9e9e9e;
-}
-
-/* Cinza */
-.info-card-orange {
-  border-bottom: 4px solid #fb8c00;
-}
-
-/* Laranja */
-
-
-/* --- Seção de Imagem de Perfil e Assinatura --- */
-.profile-details-section {
-  display: flex;
-  gap: 30px;
-  background-color: white;
-  border-radius: 15px;
-  padding: 30px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-}
-
-.profile-image-container,
-.signature-container {
-  flex: 1;
-  /* Divide o espaço igualmente */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.profile-image-container {
-  border-right: 1px solid #eee;
-  /* Separador */
-  padding-right: 30px;
-}
-
-.signature-container {
-  padding-left: 30px;
-}
-
-.profile-section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 15px;
+/* --- Imagem de Perfil --- */
+.profile-image-wrapper {
+    position: relative; /* Para posicionar o ícone de edição */
+    margin-bottom: 30px;
 }
 
 .profile-img {
-  width: 150px;
-  /* Tamanho da imagem de perfil */
-  height: 150px;
-  border-radius: 50%;
-  /* Torna-a circular */
-  object-fit: cover;
-  /* Garante que a imagem preencha o círculo */
-  border: 4px solid #fff;
-  /* Borda branca */
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+    width: 150px;
+    height: 150px;
+    border-radius: 10px; /* Bordas levemente arredondadas */
+    object-fit: cover; /* Garante que a imagem preencha o espaço */
+    border: 3px solid #f0f0f0; /* Borda clara ao redor da imagem */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Sombra para a imagem */
 }
 
-.signature-img {
-  max-width: 200px;
-  height: auto;
-  margin-bottom: 20px;
-  border: 1px dashed #ccc;
-  /* Borda tracejada para assinatura */
-  padding: 10px;
-  border-radius: 8px;
+.edit-icon-overlay {
+    position: absolute;
+    bottom: 5px; /* Posição na parte inferior da imagem */
+    right: 5px; /* Posição na parte direita da imagem */
+    background-color: #6e6e6e; /* Cor cinza do ícone de edição */
+    color: white;
+    border-radius: 50%; /* Torna o ícone redondo */
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Sombra para o ícone */
 }
 
-.upload-signature-btn {
-  background-color: #424242;
-  /* Cinza escuro */
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 500;
-  transition: background-color 0.3s ease;
+/* --- Seção de Informações do Perfil --- */
+.profile-info-section {
+    width: 100%;
+    margin-bottom: 30px;
 }
 
-.upload-signature-btn:hover {
-  background-color: #555;
+.info-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #e0e0e0; /* Borda inferior para separar os itens */
+    text-align: center; /* Centraliza o texto */
+}
+
+.info-item.no-border {
+    border-bottom: none; /* Remove a borda do último item */
+}
+
+.info-label {
+    margin: 0;
+    color: #555555; /* Cor do texto das informações */
+    font-size: 16px;
+    font-weight: 500; /* Levemente mais grosso */
 }
 
 /* --- Botões de Ação --- */
 .profile-action-buttons {
-  display: flex;
-  justify-content: center;
-  /* Centraliza os botões */
-  gap: 20px;
-  margin-top: 20px;
+    display: flex;
+    gap: 15px; /* Espaçamento entre os botões */
+    width: 100%;
+    justify-content: center; /* Centraliza os botões */
 }
 
-.btnProfile {
-  background-color: #6a1b9a;
-  /* Roxo */
-  color: white;
-  padding: 12px 30px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+.profile-btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    flex: 1; /* Faz os botões ocuparem espaço igual */
+    max-width: 150px; /* Limita a largura dos botões */
 }
 
-.btnProfile:hover {
-  background-color: #8e24aa;
-  /* Roxo mais claro no hover */
-  transform: translateY(-2px);
+.profile-btn-edit {
+    background-color: #6e6e6e; /* Cor cinza para o botão Editar */
+    color: white;
 }
 
-/* Pode manter ou remover as classes originais se elas não forem mais usadas ou entrarem em conflito */
-/* .btnProfileEdit, .btnHomeAcess, .btnCadastroHome, .buttonLogin */
-/* Eu os removi para simplificar e usar apenas as classes específicas para o Perfil */
+.profile-btn-edit:hover {
+    background-color: #5a5a5a;
+    transform: translateY(-2px);
+}
+
+.profile-btn-save {
+    background-color: #ff740f; /* Cor laranja para o botão Salvar */
+    color: white;
+}
+
+.profile-btn-save:hover {
+    background-color: #e66a00;
+    transform: translateY(-2px);
+}
+
+/* --- Link Sair da Conta (Removido pois não está na imagem) --- */
+/* .profile-logout-link {
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.profile-logout-link a {
+    color: #dc3545;
+    text-decoration: none;
+}
+
+.profile-logout-link a:hover {
+    text-decoration: underline;
+} */
+
+/* --- Responsividade Básica --- */
+@media (max-width: 768px) {
+    .profile-main-content {
+        padding: 15px;
+    }
+
+    .profile-card {
+        padding: 20px;
+    }
+
+    .profile-img {
+        width: 120px;
+        height: 120px;
+    }
+
+    .edit-icon-overlay {
+        width: 25px;
+        height: 25px;
+        font-size: 14px;
+    }
+
+    .info-label {
+        font-size: 14px;
+    }
+
+    .profile-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    .profile-action-buttons {
+        flex-direction: column; /* Botões empilhados em telas menores */
+        gap: 10px;
+    }
+}
 
 
 .profile-logout-link {
@@ -2510,14 +2391,14 @@ video {
   transition: width 0.2 linear;
   box-shadow: 0 20px 35px rgba(0, 0, 0, 0.1);
   z-index: 21;
-
+  transition: all 0.5s ease;
 
 }
 
 
 .menuDashboard:hover {
-  width: 170px;
-  transition: all 0.5s ease;
+  width: 200px;
+
 }
 
 /* Dashboard Home */
@@ -2842,68 +2723,37 @@ video {
   display: flex;
   flex-direction: row;
   z-index: 7;
+  margin-bottom: 10%;
 }
 
-.conteinar-Add-Products>div {
-  width: 50%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-
-.conteinar-Add-Products>div>h1 {
-  margin-left: 15%;
-  width: 70%;
-  text-align: start;
-}
-
-.conteinar-Add-Products>div>button {
-  width: 70%;
-  height: 40px;
-  border: 0;
-  color: white;
-  background-color: #ff7b00;
-
-}
-
-.addImg {
-  margin-top: 10px;
+.conteinar-Add-Products>div>form>input, .conteinar-Add-Products>div>form>select, .conteinar-Add-Products>div>form>textarea {
   width: 90%;
-  height: 2140px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-
-}
-
-.addImg>div {
-  width: 80%;
-  min-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #8a8a8a;
-
-}
-
-.conteinar-Add-Products>div>form>input {
-  width: 70%;
   height: 40px;
   border: 0;
   border-bottom: 1px solid #BCBCBC;
   margin-bottom: 20px;
 }
 
+.conteinar-Add-Products>div {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+.conteinar-Add-Products>div>h1, .conteinar-Add-Products>div>h3 {
+  margin-left: 15%;
+  width: 70%;
+  text-align: start;
+  color: #BCBCBC;
+}
+
+
 .conteinar-Add-Products>div>form>textarea {
   background-color: #fff;
   color: #242424;
-  width: 70%;
   height: 40px;
   border: 0;
   border-bottom: 1px solid #BCBCBC;
@@ -2916,6 +2766,155 @@ video {
   border: 0;
   border-bottom: 1px solid #BCBCBC;
   margin-bottom: 20px;
+}
+
+.btn-visualizar-pdf, .btn-assinar{
+  background-color: #a3a3a3 !important;
+}
+
+.conteinar-Add-Products>div>button {
+  cursor: pointer;
+  width: 72%;
+  height: 40px;
+  border: 0;
+  color: white;
+  background-color: #ff7b00;
+}
+
+/* PDF Preview */
+.addImg {
+  position: relative;
+  top: -370px;
+  width: 70%;
+  height: 2500px;
+  min-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 70px;
+  overflow-y: hidden !important;
+  background: #EAEAEA !important;
+}
+
+.addImg>iframe {
+  width: 100%;
+  min-height: 35%;
+  margin-top: 300px;
+  color: #8a8a8a;
+  overflow-y: hidden !important;
+}
+
+.toolbar:root{
+  background: #EAEAEA !important;
+}
+
+
+
+/* PDF Popup Styles */
+.pdf-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Dark overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top of other content */
+}
+
+.pdf-popup-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 800px; /* Max width for the popup content */
+    height: 80%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.pdf-popup-close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001; /* Ensure close button is above iframe */
+}
+
+.pdf-popup-close-button:hover {
+    background-color: #cc0000;
+}
+
+.preview-pdf-button {
+    background-color: #007bff; /* Blue button */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 20px;
+}
+
+.preview-pdf-button:hover {
+    background-color: #0056b3;
+}
+
+/* Ensure iframe inside popup takes full available space */
+.pdf-popup-content iframe {
+    flex-grow: 1;
+    border: 1px solid #eee;
+}
+
+/* CSS para o botão flutuante */
+.preview-pdf-button-fixed {
+    position: fixed; /* Fixa o botão na tela */
+    bottom: 20px;    /* 20px da parte inferior */
+    right: 20px;     /* 20px da parte direita */
+    background-color: #007bff; /* Cor de fundo azul */
+    color: white;    /* Cor do texto branca */
+    padding: 15px 25px; /* Preenchimento para um botão maior */
+    border: none;
+    border-radius: 50px; /* Borda arredondada para um visual de pílula/círculo */
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra para destacá-lo */
+    z-index: 999; /* Garante que o botão fique acima de outros elementos */
+    transition: background-color 0.3s ease, transform 0.3s ease; /* Transição suave */
+}
+
+.preview-pdf-button-fixed:hover {
+    background-color: #0056b3; /* Escurece no hover */
+    transform: translateY(-2px); /* Efeito de "subida" no hover */
+}
+
+/* Os estilos do popup (pdf-popup-overlay, pdf-popup-content, pdf-popup-close-button)
+   já foram fornecidos anteriormente e devem ser mantidos. */
+
+/* Ajuste o .addImg se necessário para não ter o botão dentro dele */
+.addImg {
+    /* Mantenha apenas os estilos para a imagem da câmera e texto */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* Outros estilos que você já tem para .addImg */
 }
 
 .btnProtocolar {
@@ -3044,24 +3043,24 @@ textarea {
     padding: 2rem 1rem;
     gap: 1.5rem;
   }
-  
+
   .footer-section {
     text-align: center;
   }
-  
+
   .footer-bottom {
     padding: 1rem;
   }
-  
+
   .footer-bottom-content {
     gap: 0.75rem;
   }
-  
+
   .footer-links {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .footer-links span {
     display: none;
   }
@@ -3071,11 +3070,11 @@ textarea {
   .footer-content {
     padding: 1.5rem 1rem;
   }
-  
+
   .footer-section h4 {
     font-size: 1.1rem;
   }
-  
+
   .footer-section p,
   .footer-section ul li a {
     font-size: 0.85rem;
@@ -3090,12 +3089,12 @@ textarea {
 }
 
 /* Fazer o conteúdo principal crescer para empurrar o footer para baixo */
-.App > *:not(.footer) {
+.App>*:not(.footer) {
   flex-grow: 1;
 }
 
 .footer {
-  
+
   color: #fff !important;
   font-size: 12px;
   padding: 10px;
@@ -3400,7 +3399,7 @@ footer>p {
     left: 50% !important;
   }
 
-  
+
 
   .favoritos {
     width: 90%;

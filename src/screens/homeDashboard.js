@@ -28,11 +28,12 @@ class homeDashboard extends Component {
             labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
             datasets: [
                 {
-                    label: 'Número de Matérias',
+                    label: 'Quantidade de Matérias',
                     data: [65, 59, 80, 81, 56, 55, 40, 60, 75, 70, 85, 90], // Dados fictícios para cada mês
-                    backgroundColor: 'rgba(255, 123, 0, 0.7)', // Cor laranja do balanço legislativo
+                    backgroundColor: 'rgb(255, 124, 1)', // Cor laranja do balanço legislativo
                     borderColor: 'rgba(255, 123, 0, 1)',
                     borderWidth: 1,
+                    borderRadius: 12,
                 },
             ],
         };

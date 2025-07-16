@@ -53,8 +53,9 @@ class AddProducts extends Component {
 
             // Para Assinatura Digital
             isSigned: false, // Booleano para controlar se o documento está assinado
-            // 'signaturePassword' e 'signatureError' foram removidos
-            // 'CORRECT_SIGNATURE_PASSWORD' foi removido
+
+            // Controle do preview PDF
+            showPdfPopup: false, // Estado para controlar a visibilidade do popup do PDF
         };
     }
 
@@ -86,6 +87,15 @@ class AddProducts extends Component {
         });
     };
 
+    // Abre o popup do PDF
+    openPdfPopup = () => {
+        this.setState({ showPdfPopup: true });
+    };
+
+    // Fecha o popup do PDF
+    closePdfPopup = () => {
+        this.setState({ showPdfPopup: false });
+    };
 
     handleGeneratePDF = () => {
         // Desestruturar todos os dados do estado
@@ -162,7 +172,6 @@ class AddProducts extends Component {
             anoMateriaExt && { text: [{ text: 'Ano Matéria Externa: ', bold: true }, anoMateriaExt], style: 'infoText' },
             dataMateriaExt && { text: [{ text: 'Data Matéria Externa: ', bold: true }, dataMateriaExt], style: 'infoText' },
             (tipoMateriaExt || numeroMateriaExt || anoMateriaExt || dataMateriaExt) && { text: '\n' },
-
 
             // Dados Textuais
             {
@@ -271,7 +280,7 @@ class AddProducts extends Component {
     };
 
     render() {
-        const { pdfData, isSigned } = this.state; // 'signaturePassword' e 'signatureError' não são mais necessários
+        const { pdfData, isSigned, showPdfPopup } = this.state;
 
         return (
             <div className='App-header'>
@@ -282,7 +291,6 @@ class AddProducts extends Component {
                             <h1>Adicionar Matéria</h1>
                             <p>Identificação Básica</p>
                             <select
-                                placeholder='Tipo de Materia'
                                 className='conteinar-Add-Products-select'
                                 name="tipoMateria"
                                 value={this.state.tipoMateria}
@@ -402,39 +410,58 @@ class AddProducts extends Component {
                             <textarea name="indexacao" placeholder="Indexação" value={this.state.indexacao} onChange={this.handleInputChange} />
                             <textarea name="observacao" placeholder="Observação" value={this.state.observacao} onChange={this.handleInputChange} />
 
-                            <h3>Assinatura Digital</h3>
-                            {isSigned ? (
-                                <p style={{ color: 'green', fontWeight: 'bold' }}>Documento Assinado Digitalmente por Blu Legis</p>
-                            ) : (
-                                <>
-                                    <button type="button" onClick={this.handleSignDocument}>
-                                        Assinar Documento (Teste)
-                                    </button>
-                                </>
-                            )}
                         </form>
-                        <button type="button" onClick={this.handleGeneratePDF} style={{ marginTop: '20px' }}>
-                            Atualizar PDF Manualmente (Opcional)
+                        {isSigned ? (
+                            <p style={{ color: 'green', fontSize: '12px' }}>Documento Assinado Digitalmente por Blu Legis</p>
+                        ) : (
+                            <>
+                                <button className='btn-assinar' type="button" onClick={this.handleSignDocument}>
+                                    Assinar Documento
+                                </button>
+                            </>
+                        )}
+                        {/* Novo botão para visualizar PDF, dentro do fluxo do formulário */}
+                        {pdfData && (
+                            <button type="button" className='btn-visualizar-pdf' onClick={this.openPdfPopup} style={{ marginTop: '20px' }}>
+                                Visualizar PDF
+                            </button>
+                        )}
+                        {/* Botão "Gerar Protocolo" que navega para /materias-dash */}
+                        <button type="button" onClick={() => this.props.history.push('/materias-dash')} style={{ marginTop: '20px', marginRight: '10px' }}>
+                            Protocolar Matéria
                         </button>
+
                     </div>
-                    <div className='addImg'>
-                        {pdfData ? (
+                    {/* O botão flutuante "Visualizar PDF" permanece fixo no canto da tela */}
+                    {pdfData ? (
+                        <button type="button" onClick={this.openPdfPopup} className="preview-pdf-button-fixed">
+                            Visualizar PDF
+                        </button>
+                    ) : (
+                        <div className='addImg'> {/* Mantém a div addImg para a imagem da câmera quando o PDF não é gerado */}
+                            <img src={camera} alt="Câmera" />
+                            <p>Preencha o formulário para gerar o PDF.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Popup de Preview do PDF */}
+                {showPdfPopup && pdfData && (
+                    <div className="pdf-popup-overlay">
+                        <div className="pdf-popup-content">
+                            <button className="pdf-popup-close-button" onClick={this.closePdfPopup}>
+                                X
+                            </button>
                             <iframe
                                 title="Preview PDF"
                                 src={`data:application/pdf;base64,${pdfData}`}
-                                width="600"
-                                height="800"
+                                width="100%"
+                                height="100%"
                                 frameBorder="0"
-                                className='addImg'
                             />
-                        ) : (
-                            <div>
-                                <img src={camera} alt="Câmera" />
-                                <p>Preencha o formulário para gerar o PDF.</p>
-                            </div>
-                        )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         );
     }

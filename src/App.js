@@ -78,8 +78,7 @@ function App() {
         <div className='footer-content'>
           <div className='footer-section'>
             <h4>eCâmara</h4>
-            <p>Plenário Virtual da Câmara Municipal</p>
-            <p>Democratizando o acesso à participação legislativa</p>
+            <p>Plenário Virtual da Câmara Municipal Democratizando o acesso à participação legislativa</p>
           </div>
           
           <div className='footer-section'>
