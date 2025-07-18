@@ -724,9 +724,6 @@ video {
   margin-left: 5%;
 }
 
-.splide__arrow {
-  display: none !important;
-}
 
 .splide.is-initialized,
 .splide.is-rendered {
@@ -743,9 +740,7 @@ video {
   background: #FF7A00 !important;
 }
 
-.splide__pagination__page {
-  display: none !important;
-}
+
 
 .splide__track {
   width: 77% !important;
@@ -3548,18 +3543,10 @@ footer>p {
     /* Torna as setas circulares */
     width: 40px;
     height: 40px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     /* Sombra para destacá-las */
     opacity: 1;
     /* Garante que estejam sempre visíveis */
     transition: background-color 0.3s ease, transform 0.2s ease;
-  }
-
-  .splide__arrow:hover {
-    background-color: rgba(255, 255, 255, 1);
-    /* Fundo totalmente branco no hover */
-    transform: scale(1.05);
-    /* Pequeno efeito de escala no hover */
   }
 
   .splide__arrow svg {
@@ -3570,12 +3557,15 @@ footer>p {
   }
 
   .splide__arrow--prev {
-    left: -20px;
+    top: 11em !important;
+    left: -2px;
     /* Ajusta a posição da seta esquerda */
   }
 
   .splide__arrow--next {
-    right: -20px;
+    top: 11em !important;
+    left: 71.5%;
+    z-index: 1;
     /* Ajusta a posição da seta direita */
   }
 
