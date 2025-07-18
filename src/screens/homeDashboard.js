@@ -1,6 +1,16 @@
 import React, { Component } from 'react';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement, // Importar PointElement para gráficos de linha
+    LineElement,  // Importar LineElement para gráficos de linha
+    Title,
+    Tooltip,
+    Legend,
+    Filler // Importar Filler para preenchimento de área
+} from 'chart.js';
+import { Line } from 'react-chartjs-2'; // Mudar de Bar para Line
 
 // Imagens (não alterado)
 // Icones (não alterado)
@@ -11,29 +21,33 @@ import {
 // Components (não alterado)
 import SlideFeacures from '../componets/slideFeactures'; // Componente para o carrossel de representantes
 
-// Registrar os componentes do Chart.js
+// Registrar os componentes do Chart.js necessários para um gráfico de linha
 ChartJS.register(
     CategoryScale,
     LinearScale,
-    BarElement,
+    PointElement,
+    LineElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler // Registrar Filler para preenchimento de área
 );
 
 class homeDashboard extends Component {
     render() {
-        // Dados de exemplo para o gráfico de produtividade
+        // Dados de exemplo para o gráfico de produtividade (ajustado para linha)
         const data = {
             labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
             datasets: [
                 {
-                    label: 'Quantidade de Matérias',
-                    data: [65, 59, 80, 81, 56, 55, 40, 60, 75, 70, 85, 90], // Dados fictícios para cada mês
-                    backgroundColor: 'rgb(255, 124, 1)', // Cor laranja do balanço legislativo
-                    borderColor: 'rgba(255, 123, 0, 1)',
-                    borderWidth: 1,
-                    borderRadius: 12,
+                    label: 'Número de matérias',
+                    data: [1, 2, 10, 9, 12, 18, 1, 65, 3, 2, 8, 33, 1], // Dados fictícios para cada ponto do gráfico de linha
+                    borderColor: '#006400', // Cor da linha (verde escuro)
+                    backgroundColor: 'rgba(0, 100, 0, 0.2)', // Cor de preenchimento da área (verde claro com transparência)
+                    fill: true, // Habilita o preenchimento da área abaixo da linha
+                    tension: 0.4, // Suaviza a linha do gráfico
+                    pointRadius: 0, // Remove os pontos na linha para um visual mais limpo
+                    pointHitRadius: 10, // Aumenta a área clicável dos pontos (mesmo invisíveis)
                 },
             ],
         };
@@ -43,13 +57,14 @@ class homeDashboard extends Component {
             responsive: true,
             plugins: {
                 legend: {
-                    position: 'top',
+                    display: false, // Oculta a legenda, como na imagem
                 },
                 title: {
                     display: false, // O título já está no H1 acima
-                    text: 'Produtividade Mensal',
                 },
                 tooltip: {
+                    mode: 'index',
+                    intersect: false,
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
@@ -67,14 +82,33 @@ class homeDashboard extends Component {
             scales: {
                 x: {
                     grid: {
-                        display: false // Remove as linhas de grade do eixo X
+                        display: true, // Mantém as linhas de grade do eixo X para referência visual
+                        drawBorder: false,
+                        color: 'rgba(0, 0, 0, 0.05)' // Cor suave para as linhas de grade
+                    },
+                    ticks: {
+                        color: '#555', // Cor dos rótulos do eixo X
                     }
                 },
                 y: {
                     beginAtZero: true,
+                    grid: {
+                        drawBorder: false,
+                        color: 'rgba(0, 0, 0, 0.05)' // Cor suave para as linhas de grade
+                    },
                     ticks: {
                         callback: function(value) {
                             return new Intl.NumberFormat('pt-BR').format(value); // Formata os números do eixo Y
+                        },
+                        color: '#555', // Cor dos rótulos do eixo Y
+                    },
+                    title: {
+                        display: true,
+                        text: 'Número de matérias', // Título do eixo Y
+                        color: '#555',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
                         }
                     }
                 }
@@ -123,15 +157,7 @@ class homeDashboard extends Component {
                     </div>
 
                     {/* Seção Nossos Representantes */}
-                    <div className='header-Dach'>
-                        <div className='header-Dach-div'>
-                            <h1>Nossos Representantes</h1>
-                        </div>
-                    </div>
-                    <div className='HomeDesktopCarrosel'>
-                        {/* O componente SlideFeacures deve ser responsável por renderizar o carrossel de representantes */}
-                        <SlideFeacures />
-                    </div>
+                    
 
                     {/* Seção Produtividade */}
                     <div className='header-Dach'>
@@ -140,8 +166,18 @@ class homeDashboard extends Component {
                         </div>
                     </div>
                     <div className='Conteiner-Home-Dach-list'>
-                        {/* Gráfico de barras de produtividade */}
-                        <Bar data={data} options={options} />
+                        {/* Gráfico de linha de produtividade */}
+                        <Line height={65} data={data} options={options} />
+                    </div>
+
+                    <div className='header-Dach'>
+                        <div className='header-Dach-div'>
+                            <h1>Nossos Representantes</h1>
+                        </div>
+                    </div>
+                    <div className='HomeDesktopCarrosel'>
+                        {/* O componente SlideFeacures deve ser responsável por renderizar o carrossel de representantes */}
+                        <SlideFeacures />
                     </div>
 
                 </div>

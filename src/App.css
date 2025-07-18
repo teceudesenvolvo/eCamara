@@ -749,11 +749,11 @@ video {
 
 .splide__track {
   width: 77% !important;
-  margin-top: -50px;
+  margin-top: -75px;
   overflow: hidden;
   position: relative;
   z-index: 0;
-  margin-left: -25px;
+  margin-left: -40px;
 }
 
 .slidesFeacture {
@@ -1983,128 +1983,162 @@ video {
 
 /* --- Layout Geral da Página --- */
 .profile-page-container {
-    display: flex; /* Permite que o MenuDashboard e o conteúdo principal fiquem lado a lado */
-    min-height: 100vh;
-    background-color: #e6e6e6; /* Fundo cinza claro da imagem */
-    font-family: 'Inter', sans-serif; /* Garante a fonte Inter */
-    overflow: hidden; /* Evita barras de rolagem indesejadas */
+  display: flex;
+  /* Permite que o MenuDashboard e o conteúdo principal fiquem lado a lado */
+  min-height: 100vh;
+  background-color: #e6e6e6;
+  /* Fundo cinza claro da imagem */
+  font-family: 'Inter', sans-serif;
+  /* Garante a fonte Inter */
+  overflow: hidden;
+  /* Evita barras de rolagem indesejadas */
 }
 
 .profile-main-content {
-    flex-grow: 1; /* Ocupa o espaço restante após o MenuDashboard */
-    display: flex;
-    justify-content: center; /* Centraliza o cartão de perfil horizontalmente */
-    align-items: center; /* Centraliza o cartão de perfil verticalmente */
-    padding: 20px; /* Espaçamento interno */
-    background-color: #f0f2f5; /* Fundo branco/claro para a área do conteúdo principal */
+  flex-grow: 1;
+  /* Ocupa o espaço restante após o MenuDashboard */
+  display: flex;
+  justify-content: center;
+  /* Centraliza o cartão de perfil horizontalmente */
+  align-items: center;
+  /* Centraliza o cartão de perfil verticalmente */
+  padding: 20px;
+  /* Espaçamento interno */
+  background-color: #f0f2f5;
+  /* Fundo branco/claro para a área do conteúdo principal */
 }
 
 /* --- Cartão de Perfil --- */
 .profile-card {
-    background-color: #ffffff; /* Fundo branco do cartão */
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Sombra suave */
-    padding: 30px;
-    width: 100%;
-    max-width: 400px; /* Largura máxima do cartão */
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Centraliza os itens dentro do cartão */
+  background-color: #ffffff;
+  /* Fundo branco do cartão */
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  /* Sombra suave */
+  padding: 30px;
+  width: 100%;
+  max-width: 400px;
+  /* Largura máxima do cartão */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Centraliza os itens dentro do cartão */
 }
 
 /* --- Imagem de Perfil --- */
 .profile-image-wrapper {
-    position: relative; /* Para posicionar o ícone de edição */
-    margin-bottom: 30px;
+  position: relative;
+  /* Para posicionar o ícone de edição */
+  margin-bottom: 30px;
 }
 
 .profile-img {
-    width: 150px;
-    height: 150px;
-    border-radius: 10px; /* Bordas levemente arredondadas */
-    object-fit: cover; /* Garante que a imagem preencha o espaço */
-    border: 3px solid #f0f0f0; /* Borda clara ao redor da imagem */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Sombra para a imagem */
+  width: 150px;
+  height: 150px;
+  border-radius: 10px;
+  /* Bordas levemente arredondadas */
+  object-fit: cover;
+  /* Garante que a imagem preencha o espaço */
+  border: 3px solid #f0f0f0;
+  /* Borda clara ao redor da imagem */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* Sombra para a imagem */
 }
 
 .edit-icon-overlay {
-    position: absolute;
-    bottom: 5px; /* Posição na parte inferior da imagem */
-    right: 5px; /* Posição na parte direita da imagem */
-    background-color: #6e6e6e; /* Cor cinza do ícone de edição */
-    color: white;
-    border-radius: 50%; /* Torna o ícone redondo */
-    width: 30px;
-    height: 30px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 16px;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Sombra para o ícone */
+  position: absolute;
+  bottom: 5px;
+  /* Posição na parte inferior da imagem */
+  right: 5px;
+  /* Posição na parte direita da imagem */
+  background-color: #6e6e6e;
+  /* Cor cinza do ícone de edição */
+  color: white;
+  border-radius: 50%;
+  /* Torna o ícone redondo */
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  /* Sombra para o ícone */
 }
 
 /* --- Seção de Informações do Perfil --- */
 .profile-info-section {
-    width: 100%;
-    margin-bottom: 30px;
+  width: 100%;
+  margin-bottom: 30px;
 }
 
 .info-item {
-    padding: 12px 0;
-    border-bottom: 1px solid #e0e0e0; /* Borda inferior para separar os itens */
-    text-align: center; /* Centraliza o texto */
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e0e0;
+  /* Borda inferior para separar os itens */
+  text-align: center;
+  /* Centraliza o texto */
 }
 
 .info-item.no-border {
-    border-bottom: none; /* Remove a borda do último item */
+  border-bottom: none;
+  /* Remove a borda do último item */
 }
 
 .info-label {
-    margin: 0;
-    color: #555555; /* Cor do texto das informações */
-    font-size: 16px;
-    font-weight: 500; /* Levemente mais grosso */
+  margin: 0;
+  color: #555555;
+  /* Cor do texto das informações */
+  font-size: 16px;
+  font-weight: 500;
+  /* Levemente mais grosso */
 }
 
 /* --- Botões de Ação --- */
 .profile-action-buttons {
-    display: flex;
-    gap: 15px; /* Espaçamento entre os botões */
-    width: 100%;
-    justify-content: center; /* Centraliza os botões */
+  display: flex;
+  gap: 15px;
+  /* Espaçamento entre os botões */
+  width: 100%;
+  justify-content: center;
+  /* Centraliza os botões */
 }
 
 .profile-btn {
-    padding: 12px 25px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    flex: 1; /* Faz os botões ocuparem espaço igual */
-    max-width: 150px; /* Limita a largura dos botões */
+  padding: 12px 25px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  flex: 1;
+  /* Faz os botões ocuparem espaço igual */
+  max-width: 150px;
+  /* Limita a largura dos botões */
 }
 
 .profile-btn-edit {
-    background-color: #6e6e6e; /* Cor cinza para o botão Editar */
-    color: white;
+  background-color: #6e6e6e;
+  /* Cor cinza para o botão Editar */
+  color: white;
 }
 
 .profile-btn-edit:hover {
-    background-color: #5a5a5a;
-    transform: translateY(-2px);
+  background-color: #5a5a5a;
+  transform: translateY(-2px);
 }
 
 .profile-btn-save {
-    background-color: #ff740f; /* Cor laranja para o botão Salvar */
-    color: white;
+  background-color: #ff740f;
+  /* Cor laranja para o botão Salvar */
+  color: white;
 }
 
 .profile-btn-save:hover {
-    background-color: #e66a00;
-    transform: translateY(-2px);
+  background-color: #e66a00;
+  transform: translateY(-2px);
 }
 
 /* --- Link Sair da Conta (Removido pois não está na imagem) --- */
@@ -2124,38 +2158,39 @@ video {
 
 /* --- Responsividade Básica --- */
 @media (max-width: 768px) {
-    .profile-main-content {
-        padding: 15px;
-    }
+  .profile-main-content {
+    padding: 15px;
+  }
 
-    .profile-card {
-        padding: 20px;
-    }
+  .profile-card {
+    padding: 20px;
+  }
 
-    .profile-img {
-        width: 120px;
-        height: 120px;
-    }
+  .profile-img {
+    width: 120px;
+    height: 120px;
+  }
 
-    .edit-icon-overlay {
-        width: 25px;
-        height: 25px;
-        font-size: 14px;
-    }
+  .edit-icon-overlay {
+    width: 25px;
+    height: 25px;
+    font-size: 14px;
+  }
 
-    .info-label {
-        font-size: 14px;
-    }
+  .info-label {
+    font-size: 14px;
+  }
 
-    .profile-btn {
-        padding: 10px 20px;
-        font-size: 14px;
-    }
+  .profile-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
 
-    .profile-action-buttons {
-        flex-direction: column; /* Botões empilhados em telas menores */
-        gap: 10px;
-    }
+  .profile-action-buttons {
+    flex-direction: column;
+    /* Botões empilhados em telas menores */
+    gap: 10px;
+  }
 }
 
 
@@ -2498,8 +2533,8 @@ video {
 .HomeDesktopCarrosel {
   justify-content: center;
   align-items: center;
-  width: 132%;
-  margin-left: -5.5%;
+  width: 145%;
+  margin-left: -11.5%;
 }
 
 
@@ -2726,7 +2761,9 @@ video {
   margin-bottom: 10%;
 }
 
-.conteinar-Add-Products>div>form>input, .conteinar-Add-Products>div>form>select, .conteinar-Add-Products>div>form>textarea {
+.conteinar-Add-Products>div>form>input,
+.conteinar-Add-Products>div>form>select,
+.conteinar-Add-Products>div>form>textarea {
   width: 90%;
   height: 40px;
   border: 0;
@@ -2743,7 +2780,8 @@ video {
 }
 
 
-.conteinar-Add-Products>div>h1, .conteinar-Add-Products>div>h3 {
+.conteinar-Add-Products>div>h1,
+.conteinar-Add-Products>div>h3 {
   margin-left: 15%;
   width: 70%;
   text-align: start;
@@ -2768,7 +2806,8 @@ video {
   margin-bottom: 20px;
 }
 
-.btn-visualizar-pdf, .btn-assinar{
+.btn-visualizar-pdf,
+.btn-assinar {
   background-color: #a3a3a3 !important;
 }
 
@@ -2805,7 +2844,7 @@ video {
   overflow-y: hidden !important;
 }
 
-.toolbar:root{
+.toolbar:root {
   background: #EAEAEA !important;
 }
 
@@ -2813,95 +2852,112 @@ video {
 
 /* PDF Popup Styles */
 .pdf-popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); /* Dark overlay */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Ensure it's on top of other content */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  /* Dark overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  /* Ensure it's on top of other content */
 }
 
 .pdf-popup-content {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    width: 90%;
-    max-width: 800px; /* Max width for the popup content */
-    height: 80%;
-    display: flex;
-    flex-direction: column;
-    position: relative;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 800px;
+  /* Max width for the popup content */
+  height: 80%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
 .pdf-popup-close-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1001; /* Ensure close button is above iframe */
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+  /* Ensure close button is above iframe */
 }
 
 .pdf-popup-close-button:hover {
-    background-color: #cc0000;
+  background-color: #cc0000;
 }
 
 .preview-pdf-button {
-    background-color: #007bff; /* Blue button */
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    margin-top: 20px;
+  background-color: #007bff;
+  /* Blue button */
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 20px;
 }
 
 .preview-pdf-button:hover {
-    background-color: #0056b3;
+  background-color: #0056b3;
 }
 
 /* Ensure iframe inside popup takes full available space */
 .pdf-popup-content iframe {
-    flex-grow: 1;
-    border: 1px solid #eee;
+  flex-grow: 1;
+  border: 1px solid #eee;
 }
 
 /* CSS para o botão flutuante */
 .preview-pdf-button-fixed {
-    position: fixed; /* Fixa o botão na tela */
-    bottom: 20px;    /* 20px da parte inferior */
-    right: 20px;     /* 20px da parte direita */
-    background-color: #007bff; /* Cor de fundo azul */
-    color: white;    /* Cor do texto branca */
-    padding: 15px 25px; /* Preenchimento para um botão maior */
-    border: none;
-    border-radius: 50px; /* Borda arredondada para um visual de pílula/círculo */
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: bold;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra para destacá-lo */
-    z-index: 999; /* Garante que o botão fique acima de outros elementos */
-    transition: background-color 0.3s ease, transform 0.3s ease; /* Transição suave */
+  position: fixed;
+  /* Fixa o botão na tela */
+  bottom: 20px;
+  /* 20px da parte inferior */
+  right: 20px;
+  /* 20px da parte direita */
+  background-color: #007bff;
+  /* Cor de fundo azul */
+  color: white;
+  /* Cor do texto branca */
+  padding: 15px 25px;
+  /* Preenchimento para um botão maior */
+  border: none;
+  border-radius: 50px;
+  /* Borda arredondada para um visual de pílula/círculo */
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  /* Sombra para destacá-lo */
+  z-index: 999;
+  /* Garante que o botão fique acima de outros elementos */
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  /* Transição suave */
 }
 
 .preview-pdf-button-fixed:hover {
-    background-color: #0056b3; /* Escurece no hover */
-    transform: translateY(-2px); /* Efeito de "subida" no hover */
+  background-color: #0056b3;
+  /* Escurece no hover */
+  transform: translateY(-2px);
+  /* Efeito de "subida" no hover */
 }
 
 /* Os estilos do popup (pdf-popup-overlay, pdf-popup-content, pdf-popup-close-button)
@@ -2909,12 +2965,12 @@ video {
 
 /* Ajuste o .addImg se necessário para não ter o botão dentro dele */
 .addImg {
-    /* Mantenha apenas os estilos para a imagem da câmera e texto */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    /* Outros estilos que você já tem para .addImg */
+  /* Mantenha apenas os estilos para a imagem da câmera e texto */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Outros estilos que você já tem para .addImg */
 }
 
 .btnProtocolar {
@@ -3339,6 +3395,246 @@ footer>p {
     margin-left: 5px;
     margin-bottom: 10px !important;
     height: auto !important;
+  }
+
+
+  /* SlideFeactures.css */
+
+  /* --- Container Principal do Splide --- */
+  .splide-container {
+    padding: 20px 0;
+    /* Espaçamento superior e inferior para o carrossel */
+    width: 100%;
+    max-width: 90%;
+    /* Limita a largura para centralizar e dar respiro */
+    margin: 0 auto;
+    /* Centraliza o container */
+  }
+
+  /* --- Estilo do Slide Individual (Card do Representante) --- */
+  .representative-card-slide {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    /* Espaçamento interno para o card dentro do slide */
+  }
+
+  .representative-card {
+    background-color: #ffffff;
+    /* Fundo branco do card */
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    /* Sombra suave */
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    /* Ocupa a largura disponível no slide */
+    max-width: 280px;
+    /* Largura máxima para o card individual */
+    height: auto;
+    /* Altura automática baseada no conteúdo */
+    min-height: 180px;
+    /* Altura mínima para consistência */
+    transition: transform 0.2s ease-in-out;
+    /* Animação suave no hover */
+  }
+
+  .representative-card:hover {
+    transform: translateY(-5px);
+    /* Efeito de "levantar" no hover */
+  }
+
+  /* --- Cabeçalho do Card (Imagem e Info) --- */
+  .representative-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 100%;
+    justify-content: center;
+    /* Centraliza o cabeçalho */
+    flex-direction: column;
+    /* Empilha imagem e info em telas menores */
+    text-align: center;
+  }
+
+  .representative-image-wrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    /* Torna a imagem circular */
+    overflow: hidden;
+    /* Garante que a imagem seja cortada em círculo */
+    border: 2px solid #e0e0e0;
+    /* Borda clara ao redor da imagem */
+    margin-bottom: 10px;
+    /* Espaçamento entre imagem e nome */
+  }
+
+  .representative-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Garante que a imagem preencha o círculo */
+  }
+
+  .representative-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Centraliza o texto */
+  }
+
+  .representative-name {
+    font-size: 15px;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+    align-items: center !important;
+    white-space: nowrap; 
+    width: 17ch; 
+    overflow: hidden;
+    text-overflow: ellipsis !important; 
+  }
+
+  .verified-icon {
+    font-size: 0.8em;
+    /* Tamanho do ícone de verificação */
+    color: #4CAF50;
+    /* Cor verde para o ícone de verificação */
+  }
+
+  .representative-role {
+    font-size: 12px;
+    color: #777;
+    margin: 5px 0 0 0;
+  }
+
+  /* --- Estatísticas do Representante --- */
+  .representative-stats {
+    display: flex;
+    justify-content: space-around;
+    /* Distribui as estatísticas horizontalmente */
+    width: 100%;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+    /* Linha divisória sutil */
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 12px;
+    color: #555;
+    margin: 0;
+  }
+
+  .stat-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+  }
+
+  /* --- Estilos das Setas de Navegação do Splide --- */
+  /* Sobrescreve os estilos padrão do Splide para as setas */
+  .splide__arrow {
+    background-color: rgba(255, 255, 255, 0.8);
+    /* Fundo branco semi-transparente */
+    border-radius: 50%;
+    /* Torna as setas circulares */
+    width: 40px;
+    height: 40px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    /* Sombra para destacá-las */
+    opacity: 1;
+    /* Garante que estejam sempre visíveis */
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+
+  .splide__arrow:hover {
+    background-color: rgba(255, 255, 255, 1);
+    /* Fundo totalmente branco no hover */
+    transform: scale(1.05);
+    /* Pequeno efeito de escala no hover */
+  }
+
+  .splide__arrow svg {
+    fill: #888;
+    /* Cor cinza para o ícone da seta */
+    width: 1.2em;
+    height: 1.2em;
+  }
+
+  .splide__arrow--prev {
+    left: -20px;
+    /* Ajusta a posição da seta esquerda */
+  }
+
+  .splide__arrow--next {
+    right: -20px;
+    /* Ajusta a posição da seta direita */
+  }
+
+  /* --- Responsividade --- */
+  @media (max-width: 768px) {
+    .splide-container {
+      max-width: 95%;
+      /* Ocupa mais largura em telas menores */
+    }
+
+    .representative-card {
+      padding: 15px;
+      min-height: 160px;
+    }
+
+    .representative-image-wrapper {
+      width: 70px;
+      height: 70px;
+    }
+
+    .representative-name {
+      font-size: 1.1em;
+    }
+
+    .representative-role {
+      font-size: 0.85em;
+    }
+
+    .representative-stats {
+      flex-direction: column;
+      /* Empilha as estatísticas em telas muito pequenas */
+      gap: 5px;
+    }
+
+    .stat-item {
+      font-size: 0.8em;
+    }
+
+    .stat-value {
+      font-size: 1.1em;
+    }
+
+    .splide__arrow {
+      width: 35px;
+      height: 35px;
+    }
+
+    .splide__arrow svg {
+      width: 1em;
+      height: 1em;
+    }
+
+    .splide__arrow--prev {
+      left: -10px;
+    }
+
+    .splide__arrow--next {
+      right: -10px;
+    }
   }
 
 
