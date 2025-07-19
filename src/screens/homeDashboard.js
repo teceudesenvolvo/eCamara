@@ -45,7 +45,7 @@ class homeDashboard extends Component {
                     borderColor: '#006400', // Cor da linha (verde escuro)
                     backgroundColor: 'rgba(0, 100, 0, 0.2)', // Cor de preenchimento da área (verde claro com transparência)
                     fill: true, // Habilita o preenchimento da área abaixo da linha
-                    tension: 0.4, // Suaviza a linha do gráfico
+                    tension: 0, // Suaviza a linha do gráfico
                     pointRadius: 0, // Remove os pontos na linha para um visual mais limpo
                     pointHitRadius: 10, // Aumenta a área clicável dos pontos (mesmo invisíveis)
                 },
