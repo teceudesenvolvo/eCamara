@@ -1973,8 +1973,337 @@ video {
 /* Perfil */
 
 
-/* Perfil.css */
-/* Perfil.css */
+/* Container geral da página de perfil */
+.profile-page-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  /* Fundo cinza claro */
+}
+
+/* Conteúdo principal (à direita da sidebar) */
+.profile-main-content {
+  flex-grow: 1;
+  /* Ocupa o espaço restante */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  /* Espaçamento entre as seções */
+}
+
+/* Cabeçalho do Perfil (nome, foto, ícones de contato) */
+.profile-header-card {
+  width: 90%;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  /* Permite quebrar linha em telas menores */
+}
+
+.profile-header-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.profile-header-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f0f2f5;
+}
+
+.profile-header-text {
+  text-align: left;
+}
+
+.profile-header-name {
+  font-size: 1.8em;
+  color: #333;
+  margin: 0;
+}
+
+.profile-header-details {
+  font-size: 1em;
+  color: #666;
+  margin: 0;
+}
+
+.profile-header-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+  /* Para quebrar abaixo em telas menores */
+}
+
+.action-icon {
+  font-size: 1.5em;
+  /* Tamanho dos ícones */
+  color: #007bff;
+  /* Cor para os ícones */
+  cursor: pointer;
+  transition: color 0.2s ease-in-out;
+}
+
+.action-icon:hover {
+  color: #0056b3;
+}
+
+/* Contêiner para os cards de dados (Legislatura e Exercício) */
+.profile-data-cards-container {
+  width: 93%;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  /* Permite que os cards quebrem linha */
+  justify-content: space-between;
+  /* Espaço entre os cards */
+}
+
+.profile-data-card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  flex: 1 1 calc(50% - 10px);
+  /* Dois cards por linha, com gap de 20px */
+  box-sizing: border-box;
+  min-width: 300px;
+  /* Largura mínima para evitar que fiquem muito pequenos */
+}
+
+.profile-data-card h3 {
+  font-size: 1.3em;
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.progress-item {
+  margin-bottom: 15px;
+}
+
+.progress-item p {
+  margin: 0 0 5px 0;
+  font-size: 0.95em;
+  color: #555;
+}
+
+.progress-bar-container {
+  width: 100%;
+  background-color: #e0e0e0;
+  border-radius: 5px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: #4CAF50;
+  /* Cor padrão para barras de progresso */
+  border-radius: 5px;
+}
+
+/* Seção de cabeçalho genérico para listas e gráficos */
+.profile-section-header {
+  font-size: 12px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 0px;
+  /* Já tem gap no main-content */
+}
+
+.profile-section-header h3 {
+  font-size: 1.5em;
+  color: #333;
+  margin: 0;
+}
+
+/* Lista de Matérias */
+.matters-list-container {
+  width: 93%;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 15px 0;
+  /* Padding lateral será no item */
+}
+
+.matter-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.matter-item:last-child {
+  border-bottom: none;
+}
+
+.matter-item:hover {
+  background-color: #f9f9f9;
+}
+
+.matter-title-date {
+  text-align: left;
+  flex-grow: 1;
+  margin-right: 15px;
+}
+
+.matter-type {
+  font-weight: bold;
+  color: #007bff;
+  margin: 0 0 5px 0;
+  font-size: 0.95em;
+}
+
+.matter-description {
+  font-size: 0.9em;
+  color: #555;
+  margin: 0;
+}
+
+.matter-status-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  /* Não encolher em telas menores */
+}
+
+.matter-date {
+  font-size: 0.85em;
+  color: #888;
+}
+
+.matter-view-button {
+  background-color: #28a745;
+  /* Cor verde para o botão "Ver" */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.8em;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.matter-view-button:hover {
+  background-color: #218838;
+}
+
+
+/* Contêiner dos gráficos */
+.charts-container {
+  width: 93%;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.chart-card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  flex: 1 1 calc(50% - 10px);
+  /* Dois gráficos por linha */
+  box-sizing: border-box;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  /* Para empilhar título e gráfico */
+}
+
+.chart-card h4 {
+  font-size: 1.2em;
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+  .profile-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-header-actions {
+    margin-top: 15px;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .profile-data-card {
+    flex: 1 1 100%;
+    /* Uma coluna para cards de dados em telas menores */
+  }
+
+  .chart-card {
+    flex: 1 1 100%;
+    /* Uma coluna para gráficos em telas menores */
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-page-wrapper {
+    flex-direction: column;
+    /* Empilha sidebar e conteúdo principal */
+  }
+
+  .profile-main-content {
+    padding: 15px;
+  }
+
+  .profile-header-img {
+    width: 70px;
+    height: 70px;
+  }
+
+  .profile-header-name {
+    font-size: 1.5em;
+  }
+
+  .matter-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .matter-status-button {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-main-content {
+    padding: 10px;
+    gap: 15px;
+  }
+
+  .profile-header-card,
+  .profile-data-card,
+  .matters-list-container,
+  .chart-card,
+  .satisfaction-section,
+  .profile-footer {
+    padding: 15px;
+  }
+}
 
 /* --- Layout Geral da Página --- */
 .profile-page-container {
@@ -3488,10 +3817,10 @@ footer>p {
     color: #333;
     margin: 0;
     align-items: center !important;
-    white-space: nowrap; 
-    width: 17ch; 
+    white-space: nowrap;
+    width: 17ch;
     overflow: hidden;
-    text-overflow: ellipsis !important; 
+    text-overflow: ellipsis !important;
   }
 
   .verified-icon {
