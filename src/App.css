@@ -977,11 +977,6 @@ video {
   /* No border for the last row */
 }
 
-.MuiTableRow-root:hover {
-  background-color: #f8f9fa;
-  /* Subtle hover effect */
-}
-
 .sessao-link {
   color: #007bff;
   /* Standard blue link color */
@@ -1025,7 +1020,7 @@ video {
 }
 
 .tabela-header {
-  background-color: #7D7D7D;
+  background-color: #e6e6e6;
   color: #fff !important;
 }
 
