@@ -15,7 +15,7 @@ import { Line } from 'react-chartjs-2'; // Mudar de Bar para Line
 // Imagens (não alterado)
 // Icones (não alterado)
 import {
-    // Adicione aqui os ícones necessários, por exemplo: FaFileAlt, FaBalanceScale, etc.
+    FaRobot, FaFileSignature, FaComments, FaGavel
 } from 'react-icons/fa';
 
 // Components (não alterado)
@@ -118,6 +118,36 @@ class homeDashboard extends Component {
         return (
             <div className='App-header'>
                 <div className='Home-Dach'>
+                    {/* Hero Section Camara AI */}
+                    <div className="hero-section-ai">
+                        <h1>Camara AI</h1>
+                        <p>Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.</p>
+                    </div>
+
+                    {/* Ferramentas Inteligentes (Baseado no README) */}
+                    <div className="ai-tools-section">
+                        <div className="ai-tool-card">
+                            <FaRobot className="ai-icon" />
+                            <h3>Copilot Legislativo</h3>
+                            <p>Escrita assistida de leis e requerimentos com IA.</p>
+                        </div>
+                        <div className="ai-tool-card">
+                            <FaFileSignature className="ai-icon" />
+                            <h3>Assinatura Digital</h3>
+                            <p>Integração segura ICP-Brasil e Gov.br.</p>
+                        </div>
+                        <div className="ai-tool-card">
+                            <FaComments className="ai-icon" />
+                            <h3>Entenda a Lei</h3>
+                            <p>Chatbot explicativo para o cidadão (RAG).</p>
+                        </div>
+                        <div className="ai-tool-card">
+                            <FaGavel className="ai-icon" />
+                            <h3>Sanção e Veto</h3>
+                            <p>Workflow integrado com o Executivo.</p>
+                        </div>
+                    </div>
+
                     {/* Cabeçalho do Balanço Legislativo */}
                     <div className='header-Dach'>
                         <div className='header-Dach-div'>

@@ -18,8 +18,6 @@ import Home from './screens/home';
 // Páginas Secundárias
 import Materias from './screens/semLogin/Materias';
 import Mais from './screens/semLogin/Mais';
-import Servico from './screens/0 - semUso/Servico';
-import Produto from './screens/0 - semUso/Produto';
 import Perfil from './screens/comLogin/Perfil';
 
 import AddMateria from './screens/comLogin/addMaterias';
@@ -61,8 +59,6 @@ function App() {
         <Route path="/Mais" component={Mais} />
 
         {/* Páginas Filho */}
-        <Route path="/Servico" component={Servico} />
-        <Route path="/Produto" component={Produto} />
         <Route path="/materias-dash" component={MateriasDash} />
 
         {/* Páginas de Formulários */}

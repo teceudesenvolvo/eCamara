@@ -1,66 +1,35 @@
-**README - Plenário Virtual na Câmara Municipal**
+Projeto: Camara AI
+Descrição: Plataforma de governança legislativa 4.0 que automatiza a criação de leis, gere o fluxo de tramitação e promove a participação cidadã direta, integrando IA generativa e assinaturas digitais de ponta a ponta.
 
----
+🏗️ Arquitetura Técnica
+Base Legada: Inspirado no projeto eCamara (PHP/Laravel).
 
-## Plenário Virtual na Câmara Municipal
+Backend (API): Firebase (Cloud Functions em Node.js) + Laravel 11 (Headless para regras complexas e auditoria SQL).
 
-Bem-vindo ao repositório do projeto Plenário Virtual na Câmara Municipal. Este projeto visa implementar uma plataforma de sessões legislativas virtuais para a Câmara Municipal, proporcionando maior eficiência, acessibilidade e resiliência ao processo democrático.
+Frontend Web: React-Dom (Vite) para administração e redação técnica.
 
-### Visão Geral
+Frontend Mobile: React Native (Expo) para vereadores e cidadãos.
 
-O Plenário Virtual é uma aplicação web destinada a oferecer uma experiência de participação remota nas sessões legislativas. O sistema possui três níveis de acesso: Usuário Comum, Vereadores e Presidente da Sessão, cada um com funcionalidades específicas para atender às suas necessidades.
+Banco de Dados: Híbrido (Firestore para Real-time/NoSQL e PostgreSQL para registros jurídicos).
 
-### Funcionalidades Principais
+IA: Google Gemini 1.5 Pro / GPT-4o integrado via LangChain para análise vetorial (RAG) da Lei Orgânica e Regimentos.
 
-- **Usuário Comum:**
-  - Acesso à transmissão ao vivo de sessões e audiências públicas.
-  - Formulários para inscrição de cidadãos para participação ou comentários.
-  - Acesso a documentos legislativos e resumos de sessões.
+🚀 Funcionalidades Chave
+Copilot Legislativo: Escrita assistida de Projetos de Lei e Requerimentos seguindo a LC 95/98 e normas técnicas.
 
-- **Vereadores:**
-  - Participação em sessões virtuais com vídeo, áudio, chat e controle de tempo.
-  - Emissão de votos durante as sessões virtuais.
-  - Repositório online de documentos legislativos, projetos de lei, relatórios.
-  - Configuração de audiências públicas virtuais.
+Assinatura Ponta a Ponta: Integração com ICP-Brasil (Certificado em Nuvem) para vereadores e Gov.br (Prata/Ouro) para cidadãos.
 
-- **Presidente da Sessão:**
-  - Controle total sobre a sessão, incluindo gerenciamento de participantes e moderação.
-  - Emissão e supervisão de votos, com capacidade para intervenções durante votações.
-  - Controle total sobre o repositório de documentos.
-  - Configuração completa de audiências públicas virtuais.
+IA para o Cidadão ("Entenda a Lei"): Chatbot RAG que traduz o "juridiquês" e explica impactos locais de cada projeto.
 
-### Como Contribuir
+Participação Popular: Feed estilo social para votação consultiva e proposição de ideias legislativas.
 
-1. **Faça um Fork:** Crie uma cópia do projeto no seu próprio repositório.
-2. **Desenvolva:** Implemente novas funcionalidades ou correções de bugs no seu fork.
-3. **Envie um Pull Request:** Submeta suas alterações para revisão.
+Workflow de Sanção/Veto: Ponte digital direta entre o Legislativo e o Executivo (Prefeitura).
 
-### Instalação Local
+🛠️ Stack de Desenvolvimento
+Linguagens: TypeScript (Frontend/Functions), PHP (Core Legislativo).
 
-1. **Clone o Repositório:**
-   ```bash
-   git clone https://github.com/
-   ```
+Estilização: Tailwind CSS (Web) e NativeWind (Mobile).
 
-2. **Instale as Dependências:**
-   ```bash
-   cd e-camara
-   npm install e-camara
-   ```
+Segurança: Autenticação via Firebase Auth + Custom Provider Gov.br.
 
-3. **Execute o Projeto:**
-   ```bash
-   npm start
-   ```
-
-### Contato e Suporte
-
-Para dúvidas, sugestões ou relatar problemas, entre em contato conosco através do email [contato@eudesenvolvo.com](mailto:contato@eudesenvolvo.com).
-
-### Licença
-
-Este projeto está licenciado sob a eudesenvolvo.com.
-
-Agradecemos por contribuir para o Plenário Virtual na Câmara Municipal!
-
----
+Infra: Google Cloud Platform / Firebase.
