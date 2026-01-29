@@ -3,7 +3,7 @@ import '../App.css'
 
 //Imagens
 
-import Logo from '../assets/e-camara-16.png'
+// import Logo from '../assets/e-camara-16.png'
 
 // Icones
 
@@ -17,7 +17,7 @@ class topBar extends Component {
         super(props)
         this.state = {
             window: window.location.pathname,
-            headerHome: 'header-home'
+            headerHome: 'menuNone'
         }
     }
 
@@ -45,7 +45,7 @@ class topBar extends Component {
             <>
             <nav className={this.state.headerHome}>
                 <div className='header-home'>
-                    <p className='titleHeader'><img src={Logo} alt='Logomarca' onClick={()=> {window.location.href = "/"}}/></p>
+                    <p className='titleHeader' style={{ color: 'white', fontSize: '20px', fontWeight: 'bold' }} onClick={() => { window.location.href = "/" }}>Camara AI</p>
                     {/* <input type="text" placeholder={`Pesquisar`} className='inputPesquisar' /> */}
                     {/* <FaSistrix className='PesquisarLogo' /> */}
                 </div>

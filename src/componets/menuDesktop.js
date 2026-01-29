@@ -1,120 +1,71 @@
-import React, { Component } from 'react';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { 
+    FaHome, FaGavel, FaFileAlt, FaVideo, FaUsers, FaBook, 
+    FaRobot, FaFileSignature, FaChartLine 
+} from 'react-icons/fa';
+import '../App.css';
 
+const MenuDesktop = () => {
+    const location = useLocation();
 
-//Imagens
+    // Função auxiliar para verificar se a rota está ativa
+    const isActive = (path) => location.pathname === path ? 'link-desktop-active' : '';
 
-// Icones
-import {
-    GoNote,
-    GoGraph,
-    GoLaw,
-    GoBook,
-    GoRepo   
+    return (
+        <div className="menuDesktop">
+            <div className="logoDesktop">
+                {/* Você pode descomentar a imagem se tiver o logo importado */}
+                {/* <img src={logo} alt="Logo" /> */}
+                <h1 className="h1-logo">Camara AI</h1> 
+            </div>
 
-} from "react-icons/go";
+            <nav className="nav-desktop">
+                <Link to="/" className={`aDesktop ${isActive('/')}`}>
+                    <FaHome className="icon-desktop" />
+                    <span className="text-desktop">Início</span>
+                </Link>
 
-import { FaRegUser } from "react-icons/fa";
+                <div className="divider-desktop">Legislativo</div>
 
-// Components
+                <Link to="/Sessoes" className={`aDesktop ${isActive('/Sessoes')}`}>
+                    <FaGavel className="icon-desktop" />
+                    <span className="text-desktop">Sessões</span>
+                </Link>
+                <Link to="/Materias" className={`aDesktop ${isActive('/Materias')}`}>
+                    <FaFileAlt className="icon-desktop" />
+                    <span className="text-desktop">Matérias</span>
+                </Link>
+                <Link to="/Comissoes" className={`aDesktop ${isActive('/Comissoes')}`}>
+                    <FaUsers className="icon-desktop" />
+                    <span className="text-desktop">Comissões</span>
+                </Link>
+                 <Link to="/Normas" className={`aDesktop ${isActive('/Normas')}`}>
+                    <FaBook className="icon-desktop" />
+                    <span className="text-desktop">Normas</span>
+                </Link>
+                <Link to="/Sessao-Virtual" className={`aDesktop ${isActive('/Sessao-Virtual')}`}>
+                    <FaVideo className="icon-desktop" />
+                    <span className="text-desktop">Sessão Virtual</span>
+                </Link>
 
-//mudança de páginas
+                <div className="divider-desktop">Camara AI</div>
 
-class menuDesktop extends Component {
-
-    constructor(props) {
-        super(props)
-        this.state = {
-            linkMenu: 'aDesktop',
-            linkMenu2: 'aDesktop',
-            linkMenu3: 'aDesktop',
-            linkMenu4: 'aDesktop',
-            linkMenu5: 'aDesktop',
-            linkMenu6: 'aDesktop',
-            linkMenu7: 'aDesktop',
-            linkMenu8: 'aDesktop',
-            menuDesktop: 'menuDesktop',
-            window: window.location.pathname,
-        }
-    }
-
-
-    btnHome = () => {
-        switch (this.state.window) {
-            case `/sessoes`:
-                return this.setState({ linkMenu: 'aDesktop link-desktop-active' })
-            case `/relatorios`:
-                return this.setState({ linkMenu2: 'aDesktop link-desktop-active' })
-            case `/sessao-virtual`:
-                return this.setState({ linkMenu3: 'aDesktop link-desktop-active' })
-            case `/normas`:
-                return this.setState({ linkMenu4: 'aDesktop link-desktop-active' })
-            case `/comissoes`:
-                return this.setState({ linkMenu5: 'aDesktop link-desktop-active' })
-            case `/materias`:
-                return this.setState({ linkMenu6: 'aDesktop link-desktop-active' })
-            case `/perfil`:
-                return this.setState({ linkMenu7: 'aDesktop link-desktop-active' })
-            case `/ajuda`:
-                return this.setState({ linkMenu8: 'aDesktop link-desktop-active' })
-            case `/login`:
-                return this.setState({ menuDesktop: 'menuNone' })
-            default:
-                return null
-        }
-    }
-
-    componentDidMount() {
-        const loadPage = () => {
-            this.btnHome()
-        }
-
-        loadPage()
-    }
-
-
-    render() {
-        return (
-            <nav className={this.state.menuDesktop}>
-
-                
-
-                <a href="/sessoes" className={this.state.linkMenu}>
-                    <GoNote className='fas fa-home'></GoNote>
-                    <span className='nav-item'>Sessões</span> 
-                </a>
-
-                <a href="/relatorios" className={this.state.linkMenu2}>
-                    <GoGraph  className='fas fa-favoritos'></GoGraph >
-                    <span className='nav-item'>Relatórios</span>
-                </a>
-
-                 {/* <a href="/sessao-virtual" className={this.state.linkMenu3}>
-                     <GoBroadcast  className='fas fa-Compras'></GoBroadcast >
-                     <span className='nav-item'>Sessão Virtual</span>
-                </a> */}
-
-                <a href="/normas" className={this.state.linkMenu4}>
-                    <GoLaw className='fas fa-Notificacoes'></GoLaw>
-                    <span className='nav-item'>Normas Juridicas</span>
-                </a>
-                <a href="/comissoes" className={this.state.linkMenu5}>
-                    <GoBook className='fas fa-Ajuda'></GoBook>
-                    <span className='nav-item'>Comissões</span>
-                </a>
-                <a href="/materias" className={this.state.linkMenu6}>
-                    <GoRepo className='fas fa-Ajuda'></GoRepo>
-                    <span className='nav-item'>Matérias</span>
-                </a>
-                <a href="/login" className={this.state.linkMenu7}>
-                    <FaRegUser className='fas fa-Ajuda'></FaRegUser>
-                    <span className='nav-item'>Entrar</span>
-                </a>
-                
-                
+                <Link to="/copilot" className={`aDesktop ${isActive('/copilot')}`}>
+                    <FaRobot className="icon-desktop" />
+                    <span className="text-desktop">Copilot</span>
+                </Link>
+                 <Link to="/assinatura" className={`aDesktop ${isActive('/assinatura')}`}>
+                    <FaFileSignature className="icon-desktop" />
+                    <span className="text-desktop">Assinatura</span>
+                </Link>
+                <Link to="/Relatorios" className={`aDesktop ${isActive('/Relatorios')}`}>
+                    <FaChartLine className="icon-desktop" />
+                    <span className="text-desktop">Relatórios</span>
+                </Link>
             </nav>
+        </div>
+    );
+};
 
-        );
-    }
-}
-
-export default menuDesktop;
+export default MenuDesktop;
