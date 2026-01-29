@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
-import { FaSearch, FaRobot, FaUsers, FaGavel, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaSearch, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
+import SlideFeacures from '../componets/slideFeactures';
+import SlideComissoes from '../componets/SlideComissoes';
 import '../App.css';
 import ChatAI from './ChatAI';
 
@@ -37,7 +39,7 @@ class HomePage extends Component {
     }
 
     render() {
-        const { city, stats, latestLaw, agenda, isChatOpen } = this.state;
+        const { city, agenda, isChatOpen } = this.state;
 
         return (
             <div className='App-header'>
@@ -68,28 +70,26 @@ class HomePage extends Component {
                         <p className="search-hint">A IA faz a varredura e entrega um resumo explicado, convidando você a participar.</p>
                     </div>
 
-                    {/* 3. Painel de Transparência em Tempo Real */}
-                    <div className="transparency-panel">
-                        <div className="widget-card">
-                            <FaRobot className="widget-icon" />
-                            <h3>{stats.aiLaws}</h3>
-                            <p>leis criadas com auxílio de IA este ano.</p>
-                        </div>
-                        <div className="widget-card">
-                            <FaUsers className="widget-icon" />
-                            <h3>{stats.votes}</h3>
-                            <p>cidadãos votaram nas consultas públicas esta semana.</p>
-                        </div>
-                        <div className="widget-card latest-law">
-                            <div className="latest-law-header">
-                                <FaGavel className="widget-icon" />
-                                <span>Última Lei Sancionada</span>
+                    {/* 3. Nossos Representantes */}
+                    <div className="representatives-section-parallax">
+                        <div className="representatives-overlay">
+                            <h2>Nossos Representantes</h2>
+                            <div className='HomeDesktopCarrosel'>
+                                <SlideFeacures />
                             </div>
-                            <h4>{latestLaw.number}</h4>
-                            <p className="ai-summary">Resumo IA: {latestLaw.summary}</p>
                         </div>
                     </div>
 
+                    {/* 4. Seção de Comissões com Imagem de Fundo */}
+                    <div className="commissions-section-parallax">
+                        <div className="commissions-overlay">
+                            <h2>Comissões Permanentes</h2>
+                            <p>Acompanhe o trabalho técnico das comissões temáticas da Câmara.</p>
+                            <div className="commissions-carousel-wrapper">
+                                <SlideComissoes />
+                            </div>
+                        </div>
+                    </div>
 
                     {/* 4. Agenda Legislativa (Substituindo Como Funciona) */}
                     <div className="agenda-section">
@@ -115,9 +115,7 @@ class HomePage extends Component {
 
                 {/* Popup do Chat AI */}
                 {isChatOpen && (
-                    <div className="chat-popup-overlay">
-                        <ChatAI onClose={this.closeChat} />
-                    </div>
+                    <ChatAI onClose={this.closeChat} />
                 )}
             </div>
         );

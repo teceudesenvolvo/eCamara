@@ -7,7 +7,13 @@ const ChatAI = ({ onClose }) => {
         { id: 1, text: "Olá! Sou o Camara AI. Como posso ajudar você a entender melhor as leis e projetos da sua cidade hoje?", sender: 'ai' }
     ]);
     const [inputText, setInputText] = useState('');
+    const [isClosing, setIsClosing] = useState(false);
     const messagesEndRef = useRef(null);
+
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(onClose, 300); // Aguarda a animação terminar (300ms)
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,9 +40,10 @@ const ChatAI = ({ onClose }) => {
     };
 
     return (
-        <div className="chat-ai-container">
+        <div className={`chat-popup-overlay ${isClosing ? 'closing' : ''}`}>
+        <div className={`chat-ai-container ${isClosing ? 'closing' : ''}`}>
             <div className="chat-header">
-                <button onClick={onClose} className="back-button">
+                <button onClick={handleClose} className="back-button">
                     <FaArrowLeft /> Voltar
                 </button>
                 <div className="chat-header-info">
@@ -73,6 +80,7 @@ const ChatAI = ({ onClose }) => {
                     </button>
                 </div>
             </form>
+        </div>
         </div>
     );
 };

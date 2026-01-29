@@ -12,6 +12,7 @@ import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField'; // Import TextField for search input
 import InputAdornment from '@mui/material/InputAdornment'; // For search icon
 import Typography from '@mui/material/Typography'; // For the title
+import MenuItem from '@mui/material/MenuItem';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search'; // Import a search icon
@@ -22,7 +23,7 @@ function createData(id, materia, situacao, votoSim, votoNao, semVoto, autor, apr
   return { id, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data };
 }
 
-const initialRows = [
+const rows = [
   createData('1', 'PL 542/2010', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
   createData('2', 'PL 542/2011', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Extraordinária', 2023, '10/10/2023'),
   createData('3', 'PL 542/2012', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
@@ -32,151 +33,163 @@ const initialRows = [
   createData('7', 'PL 542/2016', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
 ];
 
-class Notificacoes extends Component {
+class Materias extends Component {
   state = {
-    searchTerm: '', // State for the search input
-    rows: initialRows, // Use initialRows for the table data
+    rows: rows,
+    filterText: {
+      id: '',
+      materia: '',
+      situacao: '',
+      autor: '',
+      apresentacao: '',
+      tramitacao: '',
+      exercicio: '',
+      data: '',
+    },
   };
 
   // Handler for search input changes
-  handleSearchChange = (event) => {
-    this.setState({ searchTerm: event.target.value });
+  handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    this.setState(prevState => ({
+      filterText: {
+        ...prevState.filterText,
+        [name]: value,
+      },
+    }));
   };
 
   render() {
-    const { searchTerm, rows } = this.state;
+    const { rows, filterText } = this.state;
 
     // Filter the rows array based on the search term
     const filteredRows = rows.filter((row) => {
-      // Convert all values to string and lowercase for case-insensitive search
-      return Object.values(row).some((value) =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      return Object.keys(filterText).every(key => {
+        const rowValue = String(row[key]).toLowerCase();
+        const filterValue = filterText[key].toLowerCase();
+        return rowValue.includes(filterValue);
+      });
     });
+
+    // Helper function to get unique values for select options
+    const getUniqueValues = (key) => {
+      return [...new Set(rows.map(item => item[key]))].filter(Boolean).sort();
+    };
+
+    const selectFields = ['autor', 'apresentacao', 'tramitacao', 'exercicio', 'data'];
 
     return (
       <div className='App-header'>
-        <div className='favoritos agendarConsulta' style={{ padding: '20px' }}>
-          <Typography variant="h5" component="h1" gutterBottom style={{ marginBottom: '20px' }}>
+        <div className='favoritos agendarConsulta' style={{ padding: '40px', width: '100%', maxWidth: '1200px', boxSizing: 'border-box' }}>
+          <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
             Matérias Legislativas
           </Typography>
 
-          {/* Search Bar */}
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Pesquisar Matéria"
-            value={searchTerm}
-            onChange={this.handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ mb: 3, borderRadius: '8px', '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-          />
-
-          <TableContainer component={Paper} sx={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <Table sx={{ minWidth: 650 }} aria-label="matérias legislativas table">
-              <TableHead sx={{ backgroundColor: '#e0e5e9' }}>
-                <TableRow>
-                  <TableCell align="left" sx={{ fontWeight: 'bold', color: '#333' }}>ID</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 'bold', color: '#333' }}>Matéria</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 'bold', color: '#333' }}>Status</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', color: '#333' }}>Votos</TableCell> {/* Combined Votos column */}
-                  <TableCell align="left" sx={{ fontWeight: 'bold', color: '#333' }}>Promovente</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 'bold', color: '#333' }}>Apresentação</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 'bold', color: '#333' }}>Regime da Tramitação</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 'bold', color: '#333' }}>Exercício</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 'bold', color: '#333' }}>Votação</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredRows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { backgroundColor: '#f8f9fa' } }}
-                  >
-                    <TableCell align="left">{row.id}</TableCell> {/* Use row.id for ID column */}
-                    <TableCell align="left">
-                      {/* Added Link component for navigation */}
-                      <Link to={`/materias-dash/${row.id}`} style={{ textDecoration: 'none', color: '#007bff', fontWeight: 'bold' }}>
-                        {row.materia}
-                      </Link>
-                    </TableCell>
-                    <TableCell align="left">{row.situacao}</TableCell>
-                    <TableCell align="center">
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '5px' }}>
-                        {/* Voto Sim (Grey circle) */}
-                        <div style={{
-                          backgroundColor: '#e0e0e0', // Grey color
-                          color: '#333',
-                          borderRadius: '50%',
-                          width: '30px',
-                          height: '30px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 'bold',
-                          fontSize: '0.9em'
-                        }}>
-                          {row.votoSim}
-                        </div>
-                        {/* Voto Não (Green circle) */}
-                        <div style={{
-                          backgroundColor: '#a8e6cf', // Light green color
-                          color: '#333',
-                          borderRadius: '50%',
-                          width: '30px',
-                          height: '30px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 'bold',
-                          fontSize: '0.9em'
-                        }}>
-                          {row.votoNao}
-                        </div>
-                        {/* Sem Voto / Branco (Red circle) */}
-                        <div style={{
-                          backgroundColor: '#ffadad', // Light red color
-                          color: '#333',
-                          borderRadius: '50%',
-                          width: '30px',
-                          height: '30px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 'bold',
-                          fontSize: '0.9em'
-                        }}>
-                          {row.semVoto}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell align="left">{row.autor}</TableCell> {/* Promovente */}
-                    <TableCell align="left">{row.apresentacao}</TableCell>
-                    <TableCell align="left">{row.tramitacao}</TableCell> {/* Regime da Tramitação */}
-                    <TableCell align="left">{row.exercicio}</TableCell>
-                    <TableCell align="left">{row.data}</TableCell> {/* Votação */}
-                  </TableRow>
-                ))}
-                {filteredRows.length === 0 && (
+          <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
+            <TableContainer sx={{ maxHeight: 800 }}>
+              <Table stickyHeader aria-label="sticky table">
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={9} align="center">
-                      Nenhuma matéria encontrada.
-                    </TableCell>
+                    {['id', 'materia', 'situacao', 'votos', 'autor', 'apresentacao', 'tramitacao', 'exercicio', 'data'].map((column) => (
+                      <TableCell
+                        key={column}
+                        align="left"
+                        style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {column.charAt(0).toUpperCase() + column.slice(1)}
+                          {column !== 'votos' && (
+                            selectFields.includes(column) ? (
+                              <TextField
+                                select
+                                name={column}
+                                value={filterText[column]}
+                                onChange={this.handleFilterChange}
+                                variant="outlined"
+                                size="small"
+                                fullWidth
+                                sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' }, backgroundColor: '#fff', borderRadius: '8px' } }}
+                              >
+                                <MenuItem value="">
+                                  <em>Todos</em>
+                                </MenuItem>
+                                {getUniqueValues(column).map((option) => (
+                                  <MenuItem key={option} value={option}>
+                                    {option}
+                                  </MenuItem>
+                                ))}
+                              </TextField>
+                            ) : (
+                              <TextField
+                              name={column}
+                              value={filterText[column]}
+                              onChange={this.handleFilterChange}
+                              placeholder={`Buscar...`}
+                              variant="outlined"
+                              size="small"
+                              fullWidth
+                              InputProps={{
+                                startAdornment: (
+                                  <InputAdornment position="start">
+                                    <SearchIcon fontSize="small" style={{ color: '#999' }} />
+                                  </InputAdornment>
+                                ),
+                                style: { backgroundColor: '#fff', borderRadius: '8px', fontSize: '0.875rem' }
+                              }}
+                              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }}
+                            />
+                            )
+                          )}
+                        </div>
+                      </TableCell>
+                    ))}
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {filteredRows.map((row) => (
+                    <TableRow
+                      hover
+                      role="checkbox"
+                      tabIndex={-1}
+                      key={row.id}
+                      sx={{ '&:hover': { backgroundColor: '#f9f9f9' }, cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    >
+                      <TableCell style={{ padding: '20px' }}>{row.id}</TableCell>
+                      <TableCell style={{ fontWeight: '500', padding: '20px' }}>
+                        <Link to={`/materias-dash/${row.id}`} style={{ textDecoration: 'none', color: '#126B5E', fontWeight: 'bold' }}>
+                          {row.materia}
+                        </Link>
+                      </TableCell>
+                      <TableCell style={{ padding: '20px' }}>{row.situacao}</TableCell>
+                      <TableCell style={{ padding: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '8px' }}>
+                          <div className="vote-circle vote-sim-circle">{row.votoSim}</div>
+                          <div className="vote-circle vote-nao-circle">{row.votoNao}</div>
+                          <div className="vote-circle vote-abs-circle">{row.semVoto}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell style={{ padding: '20px' }}>{row.autor}</TableCell>
+                      <TableCell style={{ padding: '20px' }}>{row.apresentacao}</TableCell>
+                      <TableCell style={{ padding: '20px' }}>{row.tramitacao}</TableCell>
+                      <TableCell style={{ padding: '20px' }}>{row.exercicio}</TableCell>
+                      <TableCell style={{ padding: '20px' }}>{row.data}</TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredRows.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center" style={{ padding: '30px', color: '#666' }}>
+                        Nenhuma matéria encontrada.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
         </div>
       </div>
     );
   }
 }
 
-export default Notificacoes;
+export default Materias;

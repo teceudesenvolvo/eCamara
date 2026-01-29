@@ -4,7 +4,6 @@ import { Switch, Route } from 'react-router-dom'
 
 //Screen Navigate
 import HomeDashboard from './screens/HomePage';
-import ChatAI from './screens/ChatAI';
 
 // Páginas Principais
 import Sessoes from './screens/semLogin/Sessoes';
@@ -12,9 +11,6 @@ import Relatorios from './screens/semLogin/Relatorios';
 import SessaoVirtual from './screens/semLogin/SessaoVirtual';
 import NormasJuridicas from './screens/semLogin/NormasJuridicas';
 import Comissoes from './screens/semLogin/Comissoes';
-
-// News
-import Home from './screens/HomePage';
 
 // Páginas Secundárias
 import Materias from './screens/semLogin/Materias';
@@ -74,8 +70,6 @@ function App() {
         {/* Páginas de Formulários */}
         <Route path="/protocolar-materia" component={AddMateria} />
         <Route path="/juizo-materia" component={JuizoMateria} />
-        <Route path="/chat-ai" component={ChatAI} />
-        <Route path="/novidades" component={Home} />
       </Switch>
       <Menu />
       <MenuDesktop />

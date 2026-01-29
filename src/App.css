@@ -293,6 +293,11 @@
 .vacinaItem {
   height: auto;
   margin-bottom: 5px !important;
+  color: #000;
+}
+
+.vacinaItem  > p{
+  color: #000;
 }
 
 .profile-img {
@@ -743,12 +748,12 @@ video {
 
 
 .splide__track {
-  width: 77% !important;
-  margin-top: -75px;
+  width: 100% !important;
+  margin-top: 0;
   overflow: hidden;
   position: relative;
   z-index: 0;
-  margin-left: -40px;
+  margin-left: 0;
 }
 
 .slidesFeacture {
@@ -881,6 +886,13 @@ video {
   margin-top: 50px;
 }
 
+.kzRrnl, .gZiTyW{
+  color: #7c7c7c !important;
+  font-size: 17px !important;
+  font-weight: 500 !important;
+}
+
+
 .videoPlayerTramissao {
   width: 50%;
 }
@@ -889,15 +901,8 @@ video {
   width: 90% !important;
 }
 
-.historico-sessao-virtual {
-  width: 40%;
-  margin-left: 30px;
-  color: #1f1f1f;
-  text-align: left;
-}
-
 .historicoItem {
-  width: 45%;
+  width: 100%;
   margin-bottom: 20px !important;
   height: auto !important;
   padding: 5px;
@@ -906,6 +911,7 @@ video {
 }
 
 .titleHistorico {
+  margin-bottom: 30px;
   font-size: 15px;
   font-weight: bold;
 }
@@ -913,6 +919,18 @@ video {
 .descricaoHistorico {
   font-size: 12px;
   margin-top: -10px;
+  width: 100%;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+  padding: 12.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-left: -15px;
+}
+
+.historico-numero {
+  color: #FF740F;
+  font-weight: bold;
 }
 
 /* Tabela Materias da Sessão */
@@ -988,27 +1006,6 @@ video {
   text-decoration: underline;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .sessoes-table-container {
-    margin: 10px;
-    box-shadow: none;
-    /* Remove shadow on smaller screens */
-  }
-
-  .MuiTable-root {
-    min-width: unset;
-    /* Allow table to shrink */
-  }
-
-  .MuiTableCell-head,
-  .MuiTableCell-body {
-    padding: 8px 10px;
-    /* Smaller padding on mobile */
-    font-size: 0.85em;
-    /* Smaller font size */
-  }
-}
 
 .tabela-design {
   width: 90% !important;
@@ -2229,76 +2226,7 @@ video {
   text-align: center;
 }
 
-/* Responsividade */
-@media (max-width: 992px) {
-  .profile-header-card {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 
-  .profile-header-actions {
-    margin-top: 15px;
-    justify-content: flex-start;
-    width: 100%;
-  }
-
-  .profile-data-card {
-    flex: 1 1 100%;
-    /* Uma coluna para cards de dados em telas menores */
-  }
-
-  .chart-card {
-    flex: 1 1 100%;
-    /* Uma coluna para gráficos em telas menores */
-  }
-}
-
-@media (max-width: 768px) {
-  .profile-page-wrapper {
-    flex-direction: column;
-    /* Empilha sidebar e conteúdo principal */
-  }
-
-  .profile-main-content {
-    padding: 15px;
-  }
-
-  .profile-header-img {
-    width: 70px;
-    height: 70px;
-  }
-
-  .profile-header-name {
-    font-size: 1.5em;
-  }
-
-  .matter-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
-
-  .matter-status-button {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 480px) {
-  .profile-main-content {
-    padding: 10px;
-    gap: 15px;
-  }
-
-  .profile-header-card,
-  .profile-data-card,
-  .matters-list-container,
-  .chart-card,
-  .satisfaction-section,
-  .profile-footer {
-    padding: 15px;
-  }
-}
 
 /* --- Layout Geral da Página --- */
 .profile-page-container {
@@ -2475,42 +2403,6 @@ video {
     text-decoration: underline;
 } */
 
-/* --- Responsividade Básica --- */
-@media (max-width: 768px) {
-  .profile-main-content {
-    padding: 15px;
-  }
-
-  .profile-card {
-    padding: 20px;
-  }
-
-  .profile-img {
-    width: 120px;
-    height: 120px;
-  }
-
-  .edit-icon-overlay {
-    width: 25px;
-    height: 25px;
-    font-size: 14px;
-  }
-
-  .info-label {
-    font-size: 14px;
-  }
-
-  .profile-btn {
-    padding: 10px 20px;
-    font-size: 14px;
-  }
-
-  .profile-action-buttons {
-    flex-direction: column;
-    /* Botões empilhados em telas menores */
-    gap: 10px;
-  }
-}
 
 
 .profile-logout-link {
@@ -2530,72 +2422,105 @@ video {
   text-decoration: underline;
 }
 
-/* --- Responsividade Básica --- */
-@media (max-width: 768px) {
-  .profile-main-content {
-    padding: 20px;
-    gap: 20px;
-  }
-
-  .profile-top-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .top-bar-right {
-    width: 100%;
-    justify-content: space-between;
-    margin-top: 15px;
-  }
-
-  .welcome-card {
-    flex-direction: column;
-    text-align: center;
-    padding: 30px;
-  }
-
-  .welcome-text-section {
-    max-width: 100%;
-    margin-bottom: 20px;
-  }
-
-  .welcome-illustration-section {
-    position: static;
-    /* Remove posicionamento absoluto em mobile */
-    width: 100%;
-    margin-top: 20px;
-    order: -1;
-    /* Move a ilustração para cima em mobile */
-  }
-
-  .profile-info-cards-grid {
-    grid-template-columns: 1fr;
-    /* Uma coluna em telas menores */
-  }
-
-  .profile-details-section {
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .profile-image-container {
-    border-right: none;
-    border-bottom: 1px solid #eee;
-    padding-right: 0;
-    padding-bottom: 20px;
-  }
-
-  .signature-container {
-    padding-left: 0;
-    padding-top: 20px;
-  }
-
-  .profile-action-buttons {
-    flex-direction: column;
-    gap: 10px;
-  }
+.historico-sessao-virtual {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  height: auto;
+  list-style: none;
+  margin: 0;
+  width: 90%;
+  margin-left: 0px;
+  color: #1f1f1f;
+  text-align: left;
 }
+
+.historico-sessao-virtual .titleHistorico {
+  color: #126B5E;
+  font-weight: bold;
+  width: 100%;
+}
+.vote-circle {
+  color: #333;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.vote-sim-circle {
+  background-color: #a8e6cf; /* Light green */
+}
+
+.vote-nao-circle {
+  background-color: #ffadad; /* Light red */
+}
+
+.vote-abs-circle {
+  background-color: #e0e0e0; /* Grey */
+}
+
+.status-tag {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  display: inline-block;
+}
+
+.status-ativa {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.status-inativa {
+  background-color: #fce4ec;
+  color: #ad1457;
+}
+
+/* Sessao Virtual Page Modernization */
+.sessao-virtual-container {
+  padding: 40px;
+  width: 90%;
+  max-width: 1400px;
+  box-sizing: border-box;
+}
+
+.sessao-virtual-main-content {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.sessao-virtual-video-wrapper {
+  flex: 2;
+  min-width: 0;
+}
+
+.player-wrapper {
+  position: relative;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.react-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.sessao-virtual-historico-wrapper {
+  flex: 1;
+  min-width: 300px;
+}
+
 
 .formPerfil {
   display: flex;
@@ -2765,14 +2690,12 @@ video {
   /* Garante que o fundo cubra a tela toda */
   display: flex;
   justify-content: center;
-  padding: 20px;
   box-sizing: border-box;
   /* Inclui padding na largura/altura total */
 }
 
 .Home-Dach {
-  width: 90%;
-  max-width: 1200px;
+  width: 100%;
   /* Limita a largura do conteúdo principal */
   display: flex;
   flex-direction: column;
@@ -2850,12 +2773,10 @@ video {
 
 /* Estilo para a seção "Nossos Representantes" */
 .HomeDesktopCarrosel {
-  justify-content: center;
-  align-items: center;
-  width: 145%;
-  margin-left: -11.5%;
+  width: 100%;
+  max-width: 1200px; /* Limita a largura máxima do carrossel */
+  margin: 0 auto; /* Centraliza o carrossel */
 }
-
 
 /* Estilo para a seção "Produtividade" */
 .Conteiner-Home-Dach-list {
@@ -2874,32 +2795,6 @@ video {
   font-size: 1.1em;
   border-radius: 5px;
   /* Adicione estilos específicos para o gráfico quando uma biblioteca for integrada */
-}
-
-/* Responsividade básica */
-@media (max-width: 768px) {
-  .balanco-metric-card {
-    flex: 1 1 45%;
-    /* Duas colunas em telas menores */
-  }
-}
-
-@media (max-width: 480px) {
-  .balanco-metric-card {
-    flex: 1 1 100%;
-    /* Uma coluna em telas muito pequenas */
-  }
-
-  .header-Dach-div {
-    flex-direction: column;
-    /* Empilha título e select */
-    align-items: flex-start;
-  }
-
-  .select-input-ano.inputLogin {
-    margin-top: 10px;
-    width: 10%;
-  }
 }
 
 
@@ -3306,13 +3201,57 @@ textarea {
   color: #fff;
 }
 
+.representatives-overlay > h2{
+  color: #000;
+  font-size: 18px;
+  margin-bottom: -70px;
+}
+
+.commissions-section-parallax{
+  background-color: #003f36;
+  width: 100%;
+  margin: 0 auto;
+  padding-top: 30px;
+}
+
+.commissions-overlay > h2, p, h3, svg{
+  color: #fff;
+  font-size: 18px;
+}
+
+.committee-desc{
+  font-size: 12px;
+
+}
+
+
+
+.committee-card{
+  background-color: #012b24;
+  border-radius: 12px;
+  height: 200px;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.commissions-carousel-wrapper{
+  width: 80%;
+  margin: 0 auto;
+  margin-left: 5%;
+}
+
+
 
 /* Footer */
 
 /* Estilos do Rodapé Melhorado */
 .footer {
-  background-color: #003f36;
-  background: linear-gradient(180deg, #02947e 0%, #003f36 100%);
+  /* Cor de fundo de fallback */
+  background-color: #003f36; 
+  /* Gradiente diagonal mais vivo com uma textura sutil */
+  background: linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png');
   color: white;
   margin-top: auto;
   width: 100%;
@@ -3372,6 +3311,12 @@ textarea {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: 1.5rem 2rem;
   margin-bottom: -10px;
+  color: #fff;
+}
+
+.footer-bottom > p{
+  color: #fff;
+  font-size: 10px;
 }
 
 .footer-bottom-content {
@@ -3386,7 +3331,7 @@ textarea {
 
 .footer-bottom-content p {
   margin: 0;
-  color: #e0e6ed;
+  color: #fff;
   font-size: 0.85rem;
 }
 
@@ -3412,50 +3357,7 @@ textarea {
   color: #888;
 }
 
-/* Responsividade para dispositivos móveis */
-@media (max-width: 768px) {
-  .footer-content {
-    grid-template-columns: 1fr;
-    padding: 2rem 1rem;
-    gap: 1.5rem;
-  }
 
-  .footer-section {
-    text-align: center;
-  }
-
-  .footer-bottom {
-    padding: 1rem;
-  }
-
-  .footer-bottom-content {
-    gap: 0.75rem;
-  }
-
-  .footer-links {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .footer-links span {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .footer-content {
-    padding: 1.5rem 1rem;
-  }
-
-  .footer-section h4 {
-    font-size: 1.1rem;
-  }
-
-  .footer-section p,
-  .footer-section ul li a {
-    font-size: 0.85rem;
-  }
-}
 
 /* Garantir que o App tenha altura mínima para o footer ficar no final */
 .App {
@@ -3487,65 +3389,6 @@ footer>p {
 
 
 
-
-@media (max-width: 800px) {
-
-  .footer-content {
-    grid-template-columns: 1fr 1fr;
-  }
-  .footer-about {
-    grid-column: 1 / -1;
-    text-align: center;
-  }
-  .footer-about h4::after {
-    left: 50%;
-    transform: translateX(-50%);
-  }
-  .social-icons {
-    justify-content: center;
-  }
-  .footer-bottom {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .Conteiner-Home-Dach {
-    padding-left: 0;
-  }
-
-  .balanco-legislativo-painel-item>div>div {
-    width: 90%;
-  }
-
-  .menuDesktop {
-    display: none;
-  }
-
-  .categoriasHomeDesktop {
-    display: none;
-  }
-
-  .videoPlayerTramissao {
-    width: 95%;
-  }
-
-  .videoPlayer-view {
-    width: 100% !important;
-  }
-
-  .historico-sessao-virtual {
-    width: 98%;
-    margin-top: 20px;
-    margin-left: -60px;
-    margin-bottom: -80px;
-    color: #1f1f1f;
-    text-align: left;
-  }
-
-  .historicoItem {
-    width: 100%;
-  }
-}
 
 
 
@@ -3655,336 +3498,6 @@ footer>p {
   padding: 16px 10px 0px 15px;
   margin-left: 0px;
 }
-
-@media (max-width: 480px) {
-  .footer-content {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-  .footer-section h4::after {
-    left: 50%;
-    transform: translateX(-50%);
-  }
-  .footer-contact p {
-    justify-content: center;
-  }
-}
-
-
-
-
-
-
-
-
-
-@media (min-width: 1000px) {
-
-  .menu {
-    display: none;
-  }
-
-  .heroDesc {
-    margin-top: -85px;
-    height: auto !important;
-  }
-
-  .heroDesc>p {
-    margin-left: 5%;
-  }
-
-  .conteinerHome {
-
-    align-items: center;
-  }
-
-  .Container>h1 {
-    margin-left: 4%;
-    font-size: 15px;
-  }
-
-
-  .inputPesquisar {
-    height: 40px;
-    width: 25%;
-  }
-
-  .textoDestaques {
-    display: none;
-  }
-
-  .categoriasHome {
-    display: none;
-  }
-
-  .Produto-container {
-    margin-left: 80px;
-  }
-
-  .Mais-content {
-    margin-left: 80px;
-
-  }
-
-  .price-buttom {
-    bottom: 0;
-  }
-
-  .favoritoItem {
-    max-width: 350px;
-    margin-left: 5px;
-    margin-bottom: 10px;
-  }
-
-  .vistosHome {
-    display: inline-block;
-  }
-
-  .productItem {
-    width: 45% !important;
-    display: inherit !important;
-  }
-
-  .vacinaItem {
-    margin-left: 5px;
-    margin-bottom: 10px !important;
-    height: auto !important;
-  }
-
-
-  /* SlideFeactures.css */
-
-  /* --- Container Principal do Splide --- */
-  .splide-container {
-    padding: 20px 0;
-    /* Espaçamento superior e inferior para o carrossel */
-    width: 100%;
-    max-width: 90%;
-    /* Limita a largura para centralizar e dar respiro */
-    margin: 0 auto;
-    /* Centraliza o container */
-  }
-
-  /* --- Estilo do Slide Individual (Card do Representante) --- */
-  .representative-card-slide {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px;
-    /* Espaçamento interno para o card dentro do slide */
-  }
-
-  .representative-card {
-    background-color: #ffffff;
-    /* Fundo branco do card */
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    /* Sombra suave */
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    /* Ocupa a largura disponível no slide */
-    max-width: 280px;
-    /* Largura máxima para o card individual */
-    height: auto;
-    /* Altura automática baseada no conteúdo */
-    min-height: 180px;
-    /* Altura mínima para consistência */
-    transition: transform 0.2s ease-in-out;
-    /* Animação suave no hover */
-  }
-
-  .representative-card:hover {
-    transform: translateY(-5px);
-    /* Efeito de "levantar" no hover */
-  }
-
-  /* --- Cabeçalho do Card (Imagem e Info) --- */
-  .representative-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-    width: 100%;
-    justify-content: center;
-    /* Centraliza o cabeçalho */
-    flex-direction: column;
-    /* Empilha imagem e info em telas menores */
-    text-align: center;
-  }
-
-  .representative-image-wrapper {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    /* Torna a imagem circular */
-    overflow: hidden;
-    /* Garante que a imagem seja cortada em círculo */
-    border: 2px solid #e0e0e0;
-    /* Borda clara ao redor da imagem */
-    margin-bottom: 10px;
-    /* Espaçamento entre imagem e nome */
-  }
-
-  .representative-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    /* Garante que a imagem preencha o círculo */
-  }
-
-  .representative-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    /* Centraliza o texto */
-  }
-
-  .representative-name {
-    font-size: 15px;
-    font-weight: bold;
-    color: #333;
-    margin: 0;
-    align-items: center !important;
-    white-space: nowrap;
-    width: 17ch;
-    overflow: hidden;
-    text-overflow: ellipsis !important;
-  }
-
-  .verified-icon {
-    font-size: 0.8em;
-    /* Tamanho do ícone de verificação */
-    color: #4CAF50;
-    /* Cor verde para o ícone de verificação */
-  }
-
-  .representative-role {
-    font-size: 12px;
-    color: #777;
-    margin: 5px 0 0 0;
-  }
-
-  /* --- Estatísticas do Representante --- */
-  .representative-stats {
-    display: flex;
-    justify-content: space-around;
-    /* Distribui as estatísticas horizontalmente */
-    width: 100%;
-    padding-top: 15px;
-    border-top: 1px solid #f0f0f0;
-    /* Linha divisória sutil */
-  }
-
-  .stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-size: 12px;
-    color: #555;
-    margin: 0;
-  }
-
-  .stat-value {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 5px;
-  }
-
-  /* --- Estilos das Setas de Navegação do Splide --- */
-  /* Sobrescreve os estilos padrão do Splide para as setas */
-  .splide__arrow {
-    background-color: rgba(255, 255, 255, 0.8);
-    /* Fundo branco semi-transparente */
-    border-radius: 50%;
-    /* Torna as setas circulares */
-    width: 40px;
-    height: 40px;
-    /* Sombra para destacá-las */
-    opacity: 1;
-    /* Garante que estejam sempre visíveis */
-    transition: background-color 0.3s ease, transform 0.2s ease;
-  }
-
-  .splide__arrow svg {
-    fill: #888;
-    /* Cor cinza para o ícone da seta */
-    width: 1.2em;
-    height: 1.2em;
-  }
-
-  .splide__arrow--prev {
-    top: 11em !important;
-    left: -2px;
-    /* Ajusta a posição da seta esquerda */
-  }
-
-  .splide__arrow--next {
-    top: 11em !important;
-    left: 71.5%;
-    z-index: 1;
-    /* Ajusta a posição da seta direita */
-  }
-
-  /* --- Responsividade --- */
-  @media (max-width: 768px) {
-    .splide-container {
-      max-width: 95%;
-      /* Ocupa mais largura em telas menores */
-    }
-
-    .representative-card {
-      padding: 15px;
-      min-height: 160px;
-    }
-
-    .representative-image-wrapper {
-      width: 70px;
-      height: 70px;
-    }
-
-    .representative-name {
-      font-size: 1.1em;
-    }
-
-    .representative-role {
-      font-size: 0.85em;
-    }
-
-    .representative-stats {
-      flex-direction: column;
-      /* Empilha as estatísticas em telas muito pequenas */
-      gap: 5px;
-    }
-
-    .stat-item {
-      font-size: 0.8em;
-    }
-
-    .stat-value {
-      font-size: 1.1em;
-    }
-
-    .splide__arrow {
-      width: 35px;
-      height: 35px;
-    }
-
-    .splide__arrow svg {
-      width: 1em;
-      height: 1em;
-    }
-
-    .splide__arrow--prev {
-      left: -10px;
-    }
-
-    .splide__arrow--next {
-      right: -10px;
-    }
-  }
 
 /* Camara AI - Novos Estilos da Home */
 
@@ -4192,8 +3705,11 @@ footer>p {
   background: linear-gradient(135deg, #126B5E 0%, #003f36 100%);
   border-radius: 12px;
   color: white;
+  margin: 40px auto;
+
   margin-bottom: 40px;
   box-shadow: 0 10px 30px rgba(18, 107, 94, 0.3);
+  width: 85%;
 }
 
 .hero-section-new h1 {
@@ -4453,20 +3969,6 @@ footer>p {
   max-width: 300px;
 }
 
-@media (max-width: 768px) {
-  .hero-section-new h1 {
-      font-size: 2rem;
-  }
-  
-  .transparency-panel {
-      flex-direction: column;
-  }
-  
-  .pillars-container {
-      flex-direction: column;
-  }
-}
-
 /* Agenda Legislativa */
 .agenda-section {
   text-align: center;
@@ -4477,7 +3979,8 @@ footer>p {
 .agenda-section h2 {
   color: #333;
   margin-bottom: 30px;
-  font-size: 2rem;
+  font-size: 21px;
+  margin-top: 100px;
 }
 
 .agenda-container {
@@ -4575,6 +4078,20 @@ footer>p {
   to { opacity: 1; }
 }
 
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(20px); opacity: 0; }
+}
+
+.chat-popup-overlay.closing {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
 /* Container do Chat (Modal) */
 .chat-ai-container {
   position: relative;
@@ -4586,6 +4103,10 @@ footer>p {
   border-radius: 0;
   overflow: hidden;
   animation: slideUp 0.3s ease-out;
+}
+
+.chat-ai-container.closing {
+  animation: slideDown 0.3s ease-out forwards;
 }
 
 @keyframes slideUp {
@@ -4771,11 +4292,6 @@ footer>p {
   background-color: #0e5248;
 }
 
-/* Responsividade Mobile para o Chat */
-@media (max-width: 768px) {
-}
-
-
 
   .slidesFeacture {
     width: 250px !important;
@@ -4839,15 +4355,88 @@ footer>p {
     width: 90%;
   }
 
-  .notificacoes {
-    width: 70%;
-  }
+/* --- Estilos para o Slide de Vereadores (SlideFeacures) --- */
 
-  .Container {
-    width: 80%;
-  }
+.representative-card-slide {
+  padding: 10px 0; /* Espaçamento vertical para a sombra aparecer */
+}
 
-  .logo {
-    width: 40%;
+.representative-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  border-top: 4px solid #126B5E;
+  color: #333; /* Garante que o texto dentro seja escuro */
+}
+
+.representative-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.representative-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.representative-image-wrapper {
+  margin-bottom: 10px;
+}
+
+.representative-image {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f0f2f5;
+}
+
+.representative-info {
+  text-align: center;
+}
+
+.representative-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+}
+
+.representative-role {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 4px 0 0 0;
+}
+
+.representative-stats {
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+  color: #555;
+}
+
+.stat-item {
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #FF740F;
+}
+
+/* Ocultar o menu inferior (bottombar) em telas de desktop */
+@media (min-width: 769px) {
+  .menu {
+    display: none;
   }
 }

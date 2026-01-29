@@ -9,7 +9,7 @@ import React, { Component } from 'react';
 
 //mudança de páginas
 
-class vacinaList extends Component {
+class HistoricoSessao extends Component {
     state = {
         historico: [
             {
@@ -49,13 +49,34 @@ class vacinaList extends Component {
             >
                 <div className='vacinaItem ' >
                     <p className='titleHistorico' >{historico.sessao}</p>
-                    <p className='descricaoHistorico' >Matérias Votadas: <b>{historico.votadas}</b></p>
-                    <p className='descricaoHistorico' >Matérias Sobrestadas: <b>{historico.sobrestadas}</b></p>
-                    <p className='descricaoHistorico' >Matérias Retiras de Pauta: <b>{historico.retiradas}</b></p>
-                    <p className='descricaoHistorico' >Matérias Destacadas: <b>{historico.destacadas}</b></p>
-                    <p className='descricaoHistorico' >Matérias com Impedimento: <b>{historico.impedidas}</b></p>
-                    <p className='descricaoHistorico' >Matérias com suspeição: <b>{historico.suspeitas}</b></p>
-                    <p className='descricaoHistorico' >Matérias em vista: <b>{historico.vista}</b></p>
+                    <p className='descricaoHistorico' >
+                        <span>Matérias Votadas:</span>
+                        <b className='historico-numero'>{historico.votadas}</b>
+                    </p>
+                    <p className='descricaoHistorico' >
+                        <span>Matérias Sobrestadas:</span>
+                        <b className='historico-numero'>{historico.sobrestadas}</b>
+                    </p>
+                    <p className='descricaoHistorico' >
+                        <span>Matérias Retiras de Pauta:</span>
+                        <b className='historico-numero'>{historico.retiradas}</b>
+                    </p>
+                    <p className='descricaoHistorico' >
+                        <span>Matérias Destacadas:</span>
+                        <b className='historico-numero'>{historico.destacadas}</b>
+                    </p>
+                    <p className='descricaoHistorico' >
+                        <span>Matérias com Impedimento:</span>
+                        <b className='historico-numero'>{historico.impedidas}</b>
+                    </p>
+                    <p className='descricaoHistorico' >
+                        <span>Matérias com suspeição:</span>
+                        <b className='historico-numero'>{historico.suspeitas}</b>
+                    </p>
+                    <p className='descricaoHistorico' >
+                        <span>Matérias em vista:</span>
+                        <b className='historico-numero'>{historico.vista}</b>
+                    </p>
                 </div>
             </li>
         )
@@ -73,4 +94,4 @@ class vacinaList extends Component {
     }
 }
 
-export default vacinaList;
+export default HistoricoSessao;

@@ -14,6 +14,10 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import Typography from '@mui/material/Typography';
+import SearchIcon from '@mui/icons-material/Search';
 
 // Dados da tabela
 function createData(nome, sigla, criacao, extincao, tipo, situacao) {
@@ -30,48 +34,90 @@ const rows = [
 
 //mudança de páginas
 
-class categorias extends Component {
+class Comissoes extends Component {
+    state = {
+        comissoes: rows,
+        searchTerm: '',
+    };
+
+    handleSearchChange = (event) => {
+        this.setState({ searchTerm: event.target.value });
+    };
+
     render() {
+        const { comissoes, searchTerm } = this.state;
+
+        const filteredComissoes = comissoes.filter(comissao => {
+            return Object.values(comissao).some(value =>
+                String(value).toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        });
+
         return (
 
             <div className='App-header' >
-            <div className='favoritos agendarConsulta'>
-            {/* <h1>Comissões</h1> */}
-               {/* A tabela de matérias */}
+                <div className='favoritos agendarConsulta' style={{ padding: '40px', width: '100%', maxWidth: '1200px', boxSizing: 'border-box' }}>
+                    <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
+                        Comissões Legislativas
+                    </Typography>
 
-<TableContainer component={Paper} className='tabela-design'>
-      <Table sx={{ minWidth: 650 }} aria-label="simple table">
-        <TableHead className='tabela-header'>
-          <TableRow>
-            <TableCell align="center">Nome</TableCell>
-            <TableCell align="center">Sigla</TableCell>
-            <TableCell align="center">Criação</TableCell>
-            <TableCell align="center">Extinção</TableCell>
-            <TableCell align="center">Tipo</TableCell>
-            <TableCell align="center">Situação</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow
-              key={row.id}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-            >
-              <TableCell align="center">{row.nome}</TableCell>
-              <TableCell align="center">{row.sigla}</TableCell>
-              <TableCell align="center">{row.criacao}</TableCell>
-              <TableCell align="center">{row.extincao}</TableCell>
-              <TableCell align="center">{row.tipo}</TableCell>
-              <TableCell align="center">{row.situacao}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+                    <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
+                        <TextField
+                            fullWidth
+                            variant="outlined"
+                            placeholder="Pesquisar comissões..."
+                            value={searchTerm}
+                            onChange={this.handleSearchChange}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{ margin: '20px', width: 'calc(100% - 40px)' }}
+                        />
+                        <TableContainer sx={{ maxHeight: 800 }}>
+                            <Table stickyHeader aria-label="sticky table">
+                                <TableHead>
+                                    <TableRow>
+                                        {['Nome', 'Sigla', 'Criação', 'Extinção', 'Tipo', 'Situação'].map((column) => (
+                                            <TableCell key={column} align="left" style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}>
+                                                {column}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredComissoes.map((row, index) => (
+                                        <TableRow hover key={index} sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}>
+                                            <TableCell style={{ padding: '20px', fontWeight: '500' }}>{row.nome}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{row.sigla}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{row.criacao}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{row.extincao}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{row.tipo}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>
+                                                <span className={`status-tag ${row.situacao === 'Ativa' ? 'status-ativa' : 'status-inativa'}`}>
+                                                    {row.situacao}
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {filteredComissoes.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} align="center" style={{ padding: '30px', color: '#666' }}>
+                                                Nenhuma comissão encontrada.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Paper>
+                </div>
             </div>
-          </div>
         );
     }
 }
 
-export default categorias;
+export default Comissoes;

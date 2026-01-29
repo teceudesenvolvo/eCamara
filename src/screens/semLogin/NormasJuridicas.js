@@ -17,7 +17,7 @@ import SearchIcon from '@mui/icons-material/Search'; // Import a search icon
 // You might need a CSS file for custom styles, e.g., NormasJuridicas.css
 // import './NormasJuridicas.css'; 
 
-class categorias extends Component {
+class NormasJuridicas extends Component {
     state = {
         normas: [
             {
@@ -60,72 +60,68 @@ class categorias extends Component {
 
         return (
             <div className='App-header'>
-                <div className='favoritos agendarConsulta' style={{ padding: '20px' }}>
-                    <Typography variant="h5" component="h1" gutterBottom style={{ marginBottom: '20px' }}>
+                <div className='favoritos agendarConsulta' style={{ padding: '40px', width: '100%', maxWidth: '1200px', boxSizing: 'border-box' }}>
+                    <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
                         Normas Jurídicas
                     </Typography>
 
-                    {/* Search Bar */}
-                    <TextField
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Pesquisar"
-                        value={searchTerm}
-                        onChange={this.handleSearchChange}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon />
-                                </InputAdornment>
-                            ),
-                        }}
-                        sx={{ mb: 3, borderRadius: '8px', '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-                    />
-
-                    <TableContainer component={Paper} sx={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                        <Table sx={{ minWidth: 650 }} aria-label="normas juridicas table">
-                            <TableHead sx={{ backgroundColor: '#e0e5e9' }}>
-                                <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold', color: '#333' }}>Tipo</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', color: '#333' }}>Número</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', color: '#333' }}>Ano</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', color: '#333' }}>Data</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', color: '#333' }}>Descrição</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', color: '#333' }}>Status</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredNormas.map((norma) => (
-                                    <TableRow
-                                        key={norma.id}
-                                        sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { backgroundColor: '#f8f9fa' } }}
-                                    >
-                                        <TableCell>
-                                            <a href="/" style={{ color: '#007bff', textDecoration: 'none', fontWeight: 'bold' }}>
-                                                {norma.tipo}
-                                            </a>
-                                        </TableCell>
-                                        <TableCell>{norma.numero}</TableCell>
-                                        <TableCell>{norma.ano}</TableCell>
-                                        <TableCell>{norma.data}</TableCell>
-                                        <TableCell>{norma.descricao}</TableCell>
-                                        <TableCell>{norma.status}</TableCell>
-                                    </TableRow>
-                                ))}
-                                {filteredNormas.length === 0 && (
+                    <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
+                        <TextField
+                            fullWidth
+                            variant="outlined"
+                            placeholder="Pesquisar em normas jurídicas..."
+                            value={searchTerm}
+                            onChange={this.handleSearchChange}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{ margin: '20px', width: 'calc(100% - 40px)' }}
+                        />
+                        <TableContainer sx={{ maxHeight: 800 }}>
+                            <Table stickyHeader aria-label="sticky table">
+                                <TableHead>
                                     <TableRow>
-                                        <TableCell colSpan={6} align="center">
-                                            Nenhuma norma encontrada.
-                                        </TableCell>
+                                        {['Tipo', 'Número', 'Ano', 'Data', 'Descrição', 'Status'].map(column => (
+                                            <TableCell key={column} align="left" style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}>
+                                                {column}
+                                            </TableCell>
+                                        ))}
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredNormas.map((norma) => (
+                                        <TableRow hover key={norma.id} sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}>
+                                            <TableCell style={{ padding: '20px' }}>
+                                                <a href="/" style={{ color: '#126B5E', textDecoration: 'none', fontWeight: 'bold' }}>
+                                                    {norma.tipo}
+                                                </a>
+                                            </TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{norma.numero}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{norma.ano}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{norma.data}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{norma.descricao}</TableCell>
+                                            <TableCell style={{ padding: '20px' }}>{norma.status}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {filteredNormas.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} align="center" style={{ padding: '30px', color: '#666' }}>
+                                                Nenhuma norma encontrada.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Paper>
                 </div>
             </div>
         );
     }
 }
 
-export default categorias;
+export default NormasJuridicas;

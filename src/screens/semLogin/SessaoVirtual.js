@@ -9,6 +9,7 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
 
 //Imagens
 
@@ -43,70 +44,68 @@ const rows = [
 
 
 
-class categorias extends Component {
+class SessaoVirtual extends Component {
   render() {
     return (
 
       <div className='App-header' >
+        <div className='sessao-virtual-container'>
+          <Typography variant="h4" component="p" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
+            Sessão Virtual ao Vivo
+          </Typography>
 
-        <div className='agendarConsulta'>
-
-          <div className='section-header-sessao-virtual'>
-            <div className='videoPlayerTramissao'>
-              <ReactPlayer className='videoPlayer-view' url='https://www.youtube.com/watch?v=KBWvFODawj0' />
+          <div className='sessao-virtual-main-content'>
+            <div className='sessao-virtual-video-wrapper'>
+              <div className='player-wrapper'>
+                <ReactPlayer className='react-player' url='https://www.youtube.com/watch?v=KBWvFODawj0' width='100%' height='100%' controls={true} />
+              </div>
             </div>
-            
-            <HistoricoSessao />
+            <div className='sessao-virtual-historico-wrapper'>
+              <HistoricoSessao />
+            </div>
+          </div>
+
+          <div className='sessao-virtual-materias-wrapper'>
+            <Typography variant="h5" component="h2" gutterBottom style={{ marginTop: '40px', marginBottom: '20px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
+              Matérias em Votação
+            </Typography>
+            <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
+              <TableContainer sx={{ maxHeight: 600 }}>
+                <Table stickyHeader aria-label="sticky table">
+                  <TableHead>
+                    <TableRow>
+                      {['Protocolo', 'Matéria', 'Situação', <FaRegCheckCircle/>, <FaRegTimesCircle/>, <FaBan/>, 'Autor', 'Apresentação', 'Tramitação', 'Exercício', 'Votação'].map((column, index) => (
+                        <TableCell key={index} align="left" style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}>
+                          {column}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map((row, index) => (
+                      <TableRow hover key={index} sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}>
+                        <TableCell style={{ padding: '20px' }}>{row.numero}</TableCell>
+                        <TableCell style={{ padding: '20px', fontWeight: '500' }}>{row.materia}</TableCell>
+                        <TableCell style={{ padding: '20px' }}>{row.situacao}</TableCell>
+                        <TableCell style={{ padding: '20px' }}><span className="vote-circle vote-sim-circle">{row.votoSim}</span></TableCell>
+                        <TableCell style={{ padding: '20px' }}><span className="vote-circle vote-nao-circle">{row.votoNao}</span></TableCell>
+                        <TableCell style={{ padding: '20px' }}><span className="vote-circle vote-abs-circle">{row.semVoto}</span></TableCell>
+                        <TableCell style={{ padding: '20px' }}>{row.autor}</TableCell>
+                        <TableCell style={{ padding: '20px' }}>{row.apresentacao}</TableCell>
+                        <TableCell style={{ padding: '20px' }}>{row.tramitacao}</TableCell>
+                        <TableCell style={{ padding: '20px' }}>{row.exercicio}</TableCell>
+                        <TableCell style={{ padding: '20px' }}>{row.data}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
           </div>
         </div>
-
-
-{/* A tabela de matérias */}
-
-<TableContainer component={Paper} className='tabela-design'>
-      <Table sx={{ minWidth: 650 }} aria-label="simple table">
-        <TableHead className='tabela-header'>
-          <TableRow>
-            <TableCell align="center">Protocolo</TableCell>
-            <TableCell align="center">Materia</TableCell>
-            <TableCell align="center">Situação</TableCell>
-            <TableCell align="center"><FaRegCheckCircle/></TableCell>
-            <TableCell align="center"><FaRegTimesCircle/></TableCell>
-            <TableCell align="center"><FaBan/></TableCell>
-            <TableCell align="center">Autor</TableCell>
-            <TableCell align="center">Apresentação</TableCell>
-            <TableCell align="center">Tramitação</TableCell>
-            <TableCell align="center">Exercício</TableCell>
-            <TableCell align="center">Votação</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow
-              key={row.id}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-            >
-              <TableCell align="center">{row.numero}</TableCell>
-              <TableCell align="center">{row.materia}</TableCell>
-              <TableCell align="center">{row.situacao}</TableCell>
-              <TableCell align="center" className='votos voto-sim'>{row.votoSim}</TableCell>
-              <TableCell align="center" className='votos voto-nao'>{row.votoNao}</TableCell>
-              <TableCell align="center" className='votos voto-branco'>{row.semVoto}</TableCell>
-              <TableCell align="center">{row.autor}</TableCell>
-              <TableCell align="center">{row.apresentacao}</TableCell>
-              <TableCell align="center">{row.tramitacao}</TableCell>
-              <TableCell align="center">{row.exercicio}</TableCell>
-              <TableCell align="center">{row.data}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-
-
       </div>
     );
   }
 }
 
-export default categorias;
+export default SessaoVirtual;
