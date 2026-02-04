@@ -1,17 +1,17 @@
 import React, { Component } from 'react';
 
 // Material-UI Table Components
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField'; // Import TextField for filter inputs
 import InputAdornment from '@mui/material/InputAdornment'; // For search icon
 
+import Box from '@mui/material/Box';
 import SearchIcon from '@mui/icons-material/Search'; // Import a search icon
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import PageHeader from './PageHeader';
 
 class ProductsList_minhaConsultas extends Component {
     state = {
@@ -51,13 +51,13 @@ class ProductsList_minhaConsultas extends Component {
         ],
         // State to hold filter text for each column
         filterText: {
-            id: '',
             sessao: '',
             abertura: '',
             tipo: '',
             exercicio: '',
             materias: '',
         },
+        showFilters: false,
     };
 
     // Handler for filter input changes
@@ -71,8 +71,12 @@ class ProductsList_minhaConsultas extends Component {
         }));
     };
 
+    toggleFilters = () => {
+        this.setState(prevState => ({ showFilters: !prevState.showFilters }));
+    };
+
     render() {
-        const { sessoes, filterText } = this.state;
+        const { sessoes, filterText, showFilters } = this.state;
 
         // Filter the sessoes array based on filterText
         const filteredSessoes = sessoes.filter((sessao) => {
@@ -86,168 +90,71 @@ class ProductsList_minhaConsultas extends Component {
 
         return (
             <div className="sessoes-table-wrapper">
-                <TableContainer component={Paper} className='sessoes-table-container'>
-                    <Table sx={{ minWidth: 650 }} aria-label="sessoes table">
-                        <TableHead className='sessoes-table-header'>
-                            <TableRow>
-                                {/* ID Column Header with Filter */}
-                                <TableCell align="left">
-                                    ID
-                                    <TextField
-                                        name="id"
-                                        value={filterText.id}
-                                        onChange={this.handleFilterChange}
-                                        placeholder="Filtrar ID"
-                                        variant="standard"
-                                        size="small"
-                                        fullWidth
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <SearchIcon />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                        sx={{ mt: 1, '& .MuiInput-underline:before': { borderBottom: 'none' }, '& .MuiInput-underline:after': { borderBottom: 'none' } }}
-                                    />
-                                </TableCell>
-                                {/* Sessão Column Header with Filter */}
-                                <TableCell align="left">
-                                    Sessão
-                                    <TextField
-                                        name="sessao"
-                                        value={filterText.sessao}
-                                        onChange={this.handleFilterChange}
-                                        placeholder="Filtrar Sessão"
-                                        variant="standard"
-                                        size="small"
-                                        fullWidth
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <SearchIcon />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                        sx={{ mt: 1, '& .MuiInput-underline:before': { borderBottom: 'none' }, '& .MuiInput-underline:after': { borderBottom: 'none' } }}
-                                    />
-                                </TableCell>
-                                {/* Abertura Column Header with Filter */}
-                                <TableCell align="left">
-                                    Abertura
-                                    <TextField
-                                        name="abertura"
-                                        value={filterText.abertura}
-                                        onChange={this.handleFilterChange}
-                                        placeholder="Filtrar Abertura"
-                                        variant="standard"
-                                        size="small"
-                                        fullWidth
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <SearchIcon />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                        sx={{ mt: 1, '& .MuiInput-underline:before': { borderBottom: 'none' }, '& .MuiInput-underline:after': { borderBottom: 'none' } }}
-                                    />
-                                </TableCell>
-                                {/* Tipo Column Header with Filter */}
-                                <TableCell align="left">
-                                    Tipo
-                                    <TextField
-                                        name="tipo"
-                                        value={filterText.tipo}
-                                        onChange={this.handleFilterChange}
-                                        placeholder="Filtrar Tipo"
-                                        variant="standard"
-                                        size="small"
-                                        fullWidth
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <SearchIcon />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                        sx={{ mt: 1, '& .MuiInput-underline:before': { borderBottom: 'none' }, '& .MuiInput-underline:after': { borderBottom: 'none' } }}
-                                    />
-                                </TableCell>
-                                {/* Exercício Column Header with Filter */}
-                                <TableCell align="left">
-                                    Exercício
-                                    <TextField
-                                        name="exercicio"
-                                        value={filterText.exercicio}
-                                        onChange={this.handleFilterChange}
-                                        placeholder="Filtrar Exercício"
-                                        variant="standard"
-                                        size="small"
-                                        fullWidth
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <SearchIcon />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                        sx={{ mt: 1, '& .MuiInput-underline:before': { borderBottom: 'none' }, '& .MuiInput-underline:after': { borderBottom: 'none' } }}
-                                    />
-                                </TableCell>
-                                {/* Matérias Column Header with Filter */}
-                                <TableCell align="left">
-                                    Matérias
-                                    <TextField
-                                        name="materias"
-                                        value={filterText.materias}
-                                        onChange={this.handleFilterChange}
-                                        placeholder="Filtrar Matérias"
-                                        variant="standard"
-                                        size="small"
-                                        fullWidth
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <SearchIcon />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                        sx={{ mt: 1, '& .MuiInput-underline:before': { borderBottom: 'none' }, '& .MuiInput-underline:after': { borderBottom: 'none' } }}
-                                    />
-                                </TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredSessoes.map((sessao) => (
-                                <TableRow
-                                    key={sessao.id}
-                                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                                >
-                                    <TableCell component="th" scope="row" align="left">
-                                        {sessao.id}
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        <a href='/sessao-virtual' className="sessao-link">
-                                            {sessao.sessao}
-                                        </a>
-                                    </TableCell>
-                                    <TableCell align="left">{sessao.abertura}</TableCell>
-                                    <TableCell align="left">{sessao.tipo}</TableCell>
-                                    <TableCell align="left">{sessao.exercicio}</TableCell>
-                                    <TableCell align="left">{sessao.materias}</TableCell>
-                                </TableRow>
-                            ))}
-                            {filteredSessoes.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={6} align="center">
-                                        Nenhum resultado encontrado.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                <div className='sessoes-table-container' style={{ width: '100%', maxWidth: '1200px' }}>
+                    <PageHeader 
+                        title="Minhas Sessões" 
+                        onToggleFilters={this.toggleFilters} 
+                    />
+                    
+                    {showFilters && (
+                        <Box sx={{ mb: 3, p: 2, bgcolor: '#fff', borderRadius: 2, boxShadow: 1 }}>
+                            <Grid container spacing={2}>
+                                {['sessao', 'abertura', 'tipo', 'exercicio', 'materias'].map((column) => (
+                                    <Grid item xs={12} sm={6} md={2.4} key={column}>
+                                        <TextField
+                                            name={column}
+                                            value={filterText[column]}
+                                            onChange={this.handleFilterChange}
+                                            placeholder={`Filtrar ${column.charAt(0).toUpperCase() + column.slice(1)}`}
+                                            variant="outlined"
+                                            size="small"
+                                            fullWidth
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <SearchIcon fontSize="small" />
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Box>
+                    )}
+
+                    <Grid container spacing={2} justifyContent="flex-start">
+                        {filteredSessoes.map((sessao) => (
+                            <Grid item xs={12} key={sessao.id}>
+                                <Card elevation={1} sx={{ borderRadius: 2, '&:hover': { boxShadow: 3 } }}>
+                                    <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, '&:last-child': { pb: 2 } }}>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant="subtitle1" component="div" sx={{ fontWeight: 'bold' }}>
+                                                <a href='/sessao-virtual' className="sessao-link" style={{ textDecoration: 'none', color: '#126B5E' }}>
+                                                    {sessao.sessao}
+                                                </a>
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Abertura: {sessao.abertura} | Exercício: {sessao.exercicio}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Chip label={sessao.tipo} size="small" color="primary" variant="outlined" />
+                                            <Chip label={`${sessao.materias} Matérias`} size="small" />
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        ))}
+                        {filteredSessoes.length === 0 && (
+                            <Grid item xs={12}>
+                                <Typography variant="body1" align="center" color="text.secondary" sx={{ py: 4 }}>
+                                    Nenhum resultado encontrado.
+                                </Typography>
+                            </Grid>
+                        )}
+                    </Grid>
+                </div>
             </div>
         );
     }

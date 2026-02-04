@@ -1,20 +1,21 @@
 import React, { Component } from 'react';
 
 // Material-UI Table Components
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
+import Card from '@mui/material/Card';
+import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import Typography from '@mui/material/Typography';
 import MenuItem from '@mui/material/MenuItem';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import PageHeader from '../../componets/PageHeader';
 
 class Sessoes extends Component {
     state = {
@@ -50,6 +51,7 @@ class Sessoes extends Component {
             tipo: '',
             exercicio: '',
         },
+        showFilters: false,
     };
 
     handleFilterChange = (event) => {
@@ -62,8 +64,12 @@ class Sessoes extends Component {
         }));
     };
 
+    toggleFilters = () => {
+        this.setState(prevState => ({ showFilters: !prevState.showFilters }));
+    };
+
     render() {
-        const { sessoes, filterText } = this.state;
+        const { sessoes, filterText, showFilters } = this.state;
 
         const filteredSessoes = sessoes.filter((sessao) => {
             return Object.keys(filterText).every((key) => {
@@ -82,116 +88,146 @@ class Sessoes extends Component {
 
         return (
             <div className='App-header'>
-                <div className='favoritos agendarConsulta' style={{ padding: '40px', width: '100%', maxWidth: '1200px', boxSizing: 'border-box' }}>
-                    <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
-                        Sessões Legislativas
-                    </Typography>
+                <div className='favoritos agendarConsulta' style={{ padding: '0 40px 40px 40px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                    <PageHeader 
+                        title="Sessões Legislativas" 
+                        onToggleFilters={this.toggleFilters} 
+                        showPdfButton={false}
+                        showPrintButton={false}
+                    />
+
+                    {showFilters && (
+                        <Box sx={{ mb: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                            <Grid container spacing={2}>
+                                {['sessao', 'abertura', 'tipo', 'exercicio'].map((column) => (
+                                    <Grid item xs={12} sm={6} md={3} key={column}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                            <Typography variant="caption" style={{ fontWeight: 'bold', color: '#555' }}>
+                                                {column.charAt(0).toUpperCase() + column.slice(1)}
+                                            </Typography>
+                                            {selectFields.includes(column) ? (
+                                                <TextField
+                                                    select
+                                                    name={column}
+                                                    value={filterText[column]}
+                                                    onChange={this.handleFilterChange}
+                                                    variant="outlined"
+                                                    size="small"
+                                                    fullWidth
+                                                    sx={{ bgcolor: '#fff' }}
+                                                >
+                                                    <MenuItem value=""><em>Todos</em></MenuItem>
+                                                    {getUniqueValues(column).map((option) => (
+                                                        <MenuItem key={option} value={option}>{option}</MenuItem>
+                                                    ))}
+                                                </TextField>
+                                            ) : (
+                                                <TextField
+                                                    name={column}
+                                                    value={filterText[column]}
+                                                    onChange={this.handleFilterChange}
+                                                    placeholder={`Buscar...`}
+                                                    variant="outlined"
+                                                    size="small"
+                                                    fullWidth
+                                                    sx={{ bgcolor: '#fff' }}
+                                                    InputProps={{
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <SearchIcon fontSize="small" style={{ color: '#999' }} />
+                                                            </InputAdornment>
+                                                        ),
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Box>
+                    )}
                     
-                    <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-                        <TableContainer sx={{ maxHeight: 800 }}>
-                            <Table stickyHeader aria-label="sticky table">
-                                <TableHead>
-                                    <TableRow>
-                                        {/* Columns with filters */}
-                                        {['sessao', 'abertura', 'tipo', 'exercicio'].map((column) => (
-                                            <TableCell 
-                                                key={column}
-                                                align="left"
-                                                style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}
-                                            >
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                    {column.charAt(0).toUpperCase() + column.slice(1)}
-                                                    {selectFields.includes(column) ? (
-                                                        <TextField
-                                                            select
-                                                            name={column}
-                                                            value={filterText[column]}
-                                                            onChange={this.handleFilterChange}
-                                                            variant="outlined"
-                                                            size="small"
-                                                            fullWidth
-                                                            sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' }, backgroundColor: '#fff', borderRadius: '8px' } }}
-                                                        >
-                                                            <MenuItem value="">
-                                                                <em>Todos</em>
-                                                            </MenuItem>
-                                                            {getUniqueValues(column).map((option) => (
-                                                                <MenuItem key={option} value={option}>
-                                                                    {option}
-                                                                </MenuItem>
-                                                            ))}
-                                                        </TextField>
-                                                    ) : (
-                                                        <TextField
-                                                        name={column}
-                                                        value={filterText[column]}
-                                                        onChange={this.handleFilterChange}
-                                                        placeholder={`Buscar...`}
-                                                        variant="outlined"
-                                                        size="small"
-                                                        fullWidth
-                                                        InputProps={{
-                                                            startAdornment: (
-                                                                <InputAdornment position="start">
-                                                                    <SearchIcon fontSize="small" style={{ color: '#999' }} />
-                                                                </InputAdornment>
-                                                            ),
-                                                            style: { backgroundColor: '#fff', borderRadius: '8px', fontSize: '0.875rem' }
-                                                        }}
-                                                        sx={{ 
-                                                            '& .MuiOutlinedInput-root': {
-                                                                '& fieldset': { border: 'none' },
-                                                            } 
-                                                        }}
-                                                    />
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {filteredSessoes.map((sessao) => (
-                                        <TableRow
-                                            hover
-                                            role="checkbox"
-                                            tabIndex={-1}
-                                            key={sessao.sessao} // Using sessao as key since id is removed
-                                            sx={{ '&:hover': { backgroundColor: '#f9f9f9' }, cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    <Grid container spacing={2} justifyContent="flex-start">
+                        {filteredSessoes.map((sessao) => (
+                            <Grid item key={sessao.sessao}>
+                                <Card elevation={0} sx={{ 
+                                    width: 200, 
+                                    height: 200, 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    justifyContent: 'space-between', 
+                                    p: 2, 
+                                    borderRadius: '12px', 
+                                    border: '1px solid #e0e0e0', 
+                                    transition: '0.3s', 
+                                    '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', borderColor: 'transparent' } 
+                                }}>
+                                    
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', color: '#666', backgroundColor: '#f5f5f5', padding: '4px 8px', borderRadius: '6px' }}>
+                                            <CalendarTodayIcon sx={{ fontSize: 12, mr: 0.5 }} />
+                                            <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+                                                {sessao.abertura}
+                                            </Typography>
+                                        </Box>
+                                        <Chip 
+                                            label={sessao.tipo} 
+                                            size="small" 
+                                            sx={{ 
+                                                backgroundColor: sessao.tipo === 'Ordinária' ? 'rgba(21, 101, 192, 0.08)' : 'rgba(239, 108, 0, 0.08)',
+                                                color: sessao.tipo === 'Ordinária' ? '#1565c0' : '#ef6c00',
+                                                fontWeight: 'bold',
+                                                borderRadius: '6px',
+                                                height: '20px',
+                                                fontSize: '0.65rem'
+                                            }} 
+                                        />
+                                    </Box>
+
+                                    <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
+                                        <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 'bold', lineHeight: 1.2, mb: 0.5, color: '#2c3e50', fontSize: '0.9rem', display: '-webkit-box', overflow: 'hidden', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3 }}>
+                                            {sessao.sessao}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Exercício: {sessao.exercicio}
+                                        </Typography>
+                                    </Box>
+                                    
+                                    <Box sx={{ width: '100%' }}>
+                                        <Button 
+                                            component="a" 
+                                            href="/sessao-virtual" 
+                                            endIcon={<ArrowForwardIcon sx={{ fontSize: '1rem !important' }} />} 
+                                            variant="text" 
+                                            size="small"
+                                            fullWidth
+                                            sx={{ 
+                                                borderRadius: '8px', 
+                                                textTransform: 'none', 
+                                                fontWeight: 'bold',
+                                                color: '#126B5E',
+                                                backgroundColor: 'rgba(18, 107, 94, 0.04)',
+                                                padding: '6px 12px',
+                                                fontSize: '0.8rem',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(18, 107, 94, 0.1)'
+                                                }
+                                            }}
                                         >
-                                            <TableCell component="th" scope="row" align="left" style={{ fontWeight: '500', padding: '20px' }}>
-                                                <a href='/sessao-virtual' className="sessao-link" style={{ color: '#126B5E', textDecoration: 'none', fontWeight: 'bold' }}>
-                                                    {sessao.sessao}
-                                                </a>
-                                            </TableCell>
-                                            <TableCell align="left" style={{ padding: '20px' }}>{sessao.abertura}</TableCell>
-                                            <TableCell align="left" style={{ padding: '20px' }}>
-                                                <span style={{ 
-                                                    padding: '6px 12px', 
-                                                    borderRadius: '20px', 
-                                                    backgroundColor: sessao.tipo === 'Ordinária' ? '#e3f2fd' : '#fff3e0',
-                                                    color: sessao.tipo === 'Ordinária' ? '#1565c0' : '#ef6c00',
-                                                    fontWeight: 'bold',
-                                                    fontSize: '0.85rem',
-                                                    display: 'inline-block'
-                                                }}>
-                                                    {sessao.tipo}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell align="left" style={{ padding: '20px' }}>{sessao.exercicio}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {filteredSessoes.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={4} align="center" style={{ padding: '30px', color: '#666' }}>
-                                                Nenhum resultado encontrado.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    </Paper>
+                                            Ver
+                                        </Button>
+                                    </Box>
+                                </Card>
+                            </Grid>
+                        ))}
+                        {filteredSessoes.length === 0 && (
+                            <Grid item xs={12}>
+                                <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
+                                    Nenhum resultado encontrado.
+                                </Typography>
+                            </Grid>
+                        )}
+                    </Grid>
                 </div>
             </div>
         );

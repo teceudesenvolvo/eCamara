@@ -2,20 +2,19 @@ import React, { Component } from 'react';
 import { Link } from 'react-router-dom'; // Import Link for navigation
 
 // Material-UI Table Components
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField'; // Import TextField for search input
 import InputAdornment from '@mui/material/InputAdornment'; // For search icon
 import Typography from '@mui/material/Typography'; // For the title
 import MenuItem from '@mui/material/MenuItem';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search'; // Import a search icon
+import PageHeader from '../../componets/PageHeader';
 
 // Data for the table
 // Note: 'id' is added to each row for unique key prop in React
@@ -46,6 +45,7 @@ class Materias extends Component {
       exercicio: '',
       data: '',
     },
+    showFilters: false,
   };
 
   // Handler for search input changes
@@ -59,8 +59,12 @@ class Materias extends Component {
     }));
   };
 
+  toggleFilters = () => {
+    this.setState(prevState => ({ showFilters: !prevState.showFilters }));
+  };
+
   render() {
-    const { rows, filterText } = this.state;
+    const { rows, filterText, showFilters } = this.state;
 
     // Filter the rows array based on the search term
     const filteredRows = rows.filter((row) => {
@@ -80,112 +84,112 @@ class Materias extends Component {
 
     return (
       <div className='App-header'>
-        <div className='favoritos agendarConsulta' style={{ padding: '40px', width: '100%', maxWidth: '1200px', boxSizing: 'border-box' }}>
-          <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
-            Matérias Legislativas
-          </Typography>
+        <div className='favoritos agendarConsulta' style={{ padding: '0 40px 40px 40px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+          <PageHeader 
+            title="Matérias Legislativas" 
+            onToggleFilters={this.toggleFilters} 
+          />
+          
+          <div style={{ marginTop: '100px', marginLeft: '60px' }}>
+          {showFilters && (
+            <Box sx={{ mb: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+              <Grid container spacing={2}>
+                {['materia', 'situacao', 'autor', 'apresentacao', 'tramitacao', 'exercicio', 'data'].map((column) => (
+                  <Grid item xs={12} sm={6} md={3} key={column}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <Typography variant="caption" style={{ fontWeight: 'bold', color: '#555' }}>
+                        {column.charAt(0).toUpperCase() + column.slice(1)}
+                      </Typography>
+                      {selectFields.includes(column) ? (
+                        <TextField
+                          select
+                          name={column}
+                          value={filterText[column]}
+                          onChange={this.handleFilterChange}
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          sx={{ bgcolor: '#fff' }}
+                        >
+                          <MenuItem value=""><em>Todos</em></MenuItem>
+                          {getUniqueValues(column).map((option) => (
+                            <MenuItem key={option} value={option}>{option}</MenuItem>
+                          ))}
+                        </TextField>
+                      ) : (
+                        <TextField
+                          name={column}
+                          value={filterText[column]}
+                          onChange={this.handleFilterChange}
+                          placeholder={`Buscar...`}
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          sx={{ bgcolor: '#fff' }}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon fontSize="small" style={{ color: '#999' }} />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      )}
+                    </div>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
 
-          <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-            <TableContainer sx={{ maxHeight: 800 }}>
-              <Table stickyHeader aria-label="sticky table">
-                <TableHead>
-                  <TableRow>
-                    {['id', 'materia', 'situacao', 'votos', 'autor', 'apresentacao', 'tramitacao', 'exercicio', 'data'].map((column) => (
-                      <TableCell
-                        key={column}
-                        align="left"
-                        style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {column.charAt(0).toUpperCase() + column.slice(1)}
-                          {column !== 'votos' && (
-                            selectFields.includes(column) ? (
-                              <TextField
-                                select
-                                name={column}
-                                value={filterText[column]}
-                                onChange={this.handleFilterChange}
-                                variant="outlined"
-                                size="small"
-                                fullWidth
-                                sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' }, backgroundColor: '#fff', borderRadius: '8px' } }}
-                              >
-                                <MenuItem value="">
-                                  <em>Todos</em>
-                                </MenuItem>
-                                {getUniqueValues(column).map((option) => (
-                                  <MenuItem key={option} value={option}>
-                                    {option}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
-                            ) : (
-                              <TextField
-                              name={column}
-                              value={filterText[column]}
-                              onChange={this.handleFilterChange}
-                              placeholder={`Buscar...`}
-                              variant="outlined"
-                              size="small"
-                              fullWidth
-                              InputProps={{
-                                startAdornment: (
-                                  <InputAdornment position="start">
-                                    <SearchIcon fontSize="small" style={{ color: '#999' }} />
-                                  </InputAdornment>
-                                ),
-                                style: { backgroundColor: '#fff', borderRadius: '8px', fontSize: '0.875rem' }
-                              }}
-                              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { border: 'none' } } }}
-                            />
-                            )
-                          )}
-                        </div>
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredRows.map((row) => (
-                    <TableRow
-                      hover
-                      role="checkbox"
-                      tabIndex={-1}
-                      key={row.id}
-                      sx={{ '&:hover': { backgroundColor: '#f9f9f9' }, cursor: 'pointer', transition: 'background-color 0.2s' }}
-                    >
-                      <TableCell style={{ padding: '20px' }}>{row.id}</TableCell>
-                      <TableCell style={{ fontWeight: '500', padding: '20px' }}>
+          <Grid container spacing={3} justifyContent="flex-start">
+            {filteredRows.map((row) => (
+              <Grid item xs={12} sm={6} md={4} key={row.id}>
+                <Card elevation={3} sx={{ height: '100%', borderRadius: '12px', transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
+                  <CardContent sx={{ textAlign: 'left', p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
                         <Link to={`/materias-dash/${row.id}`} style={{ textDecoration: 'none', color: '#126B5E', fontWeight: 'bold' }}>
                           {row.materia}
                         </Link>
-                      </TableCell>
-                      <TableCell style={{ padding: '20px' }}>{row.situacao}</TableCell>
-                      <TableCell style={{ padding: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '8px' }}>
-                          <div className="vote-circle vote-sim-circle">{row.votoSim}</div>
-                          <div className="vote-circle vote-nao-circle">{row.votoNao}</div>
-                          <div className="vote-circle vote-abs-circle">{row.semVoto}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell style={{ padding: '20px' }}>{row.autor}</TableCell>
-                      <TableCell style={{ padding: '20px' }}>{row.apresentacao}</TableCell>
-                      <TableCell style={{ padding: '20px' }}>{row.tramitacao}</TableCell>
-                      <TableCell style={{ padding: '20px' }}>{row.exercicio}</TableCell>
-                      <TableCell style={{ padding: '20px' }}>{row.data}</TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredRows.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} align="center" style={{ padding: '30px', color: '#666' }}>
-                        Nenhuma matéria encontrada.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
+                      </Typography>
+                      <Chip label={row.situacao} size="small" sx={{ backgroundColor: '#e0f2f1', color: '#00695c', fontWeight: 'bold' }} />
+                    </Box>
+
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      <strong>Autor:</strong> {row.autor}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      <strong>Apresentação:</strong> {row.apresentacao}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      <strong>Tramitação:</strong> {row.tramitacao}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      <strong>Data:</strong> {row.data} ({row.exercicio})
+                    </Typography>
+
+                    <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee' }}>
+                      <Typography variant="caption" display="block" sx={{ mb: 1, color: '#888' }}>Votação:</Typography>
+                      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '10px' }}>
+                        <div className="vote-circle vote-sim-circle" title="Sim">{row.votoSim}</div>
+                        <div className="vote-circle vote-nao-circle" title="Não">{row.votoNao}</div>
+                        <div className="vote-circle vote-abs-circle" title="Abstenção">{row.semVoto}</div>
+                      </div>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+            {filteredRows.length === 0 && (
+              <Grid item xs={12}>
+                <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
+                  Nenhuma matéria encontrada.
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+          </div>
         </div>
       </div>
     );

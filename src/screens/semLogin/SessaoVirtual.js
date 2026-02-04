@@ -2,13 +2,9 @@ import React, { Component } from 'react';
 import ReactPlayer from 'react-player';
 
 // Tabela
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
 //Imagens
@@ -16,11 +12,11 @@ import Typography from '@mui/material/Typography';
 
 // Icones
 import { 
-  FaBan,
-  FaRegCheckCircle,
-  FaRegTimesCircle,
-
+  FaFileAlt
 } from "react-icons/fa";
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import PageHeader from '../../componets/PageHeader';
 
 
 // Components
@@ -45,6 +41,14 @@ const rows = [
 
 
 class SessaoVirtual extends Component {
+  state = {
+    showFilters: false,
+  };
+
+  toggleFilters = () => {
+    this.setState(prevState => ({ showFilters: !prevState.showFilters }));
+  };
+
   render() {
     return (
 
@@ -66,41 +70,40 @@ class SessaoVirtual extends Component {
           </div>
 
           <div className='sessao-virtual-materias-wrapper'>
-            <Typography variant="h5" component="h2" gutterBottom style={{ marginTop: '40px', marginBottom: '20px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
-              Matérias em Votação
-            </Typography>
-            <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-              <TableContainer sx={{ maxHeight: 600 }}>
-                <Table stickyHeader aria-label="sticky table">
-                  <TableHead>
-                    <TableRow>
-                      {['Protocolo', 'Matéria', 'Situação', <FaRegCheckCircle/>, <FaRegTimesCircle/>, <FaBan/>, 'Autor', 'Apresentação', 'Tramitação', 'Exercício', 'Votação'].map((column, index) => (
-                        <TableCell key={index} align="left" style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}>
-                          {column}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((row, index) => (
-                      <TableRow hover key={index} sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}>
-                        <TableCell style={{ padding: '20px' }}>{row.numero}</TableCell>
-                        <TableCell style={{ padding: '20px', fontWeight: '500' }}>{row.materia}</TableCell>
-                        <TableCell style={{ padding: '20px' }}>{row.situacao}</TableCell>
-                        <TableCell style={{ padding: '20px' }}><span className="vote-circle vote-sim-circle">{row.votoSim}</span></TableCell>
-                        <TableCell style={{ padding: '20px' }}><span className="vote-circle vote-nao-circle">{row.votoNao}</span></TableCell>
-                        <TableCell style={{ padding: '20px' }}><span className="vote-circle vote-abs-circle">{row.semVoto}</span></TableCell>
-                        <TableCell style={{ padding: '20px' }}>{row.autor}</TableCell>
-                        <TableCell style={{ padding: '20px' }}>{row.apresentacao}</TableCell>
-                        <TableCell style={{ padding: '20px' }}>{row.tramitacao}</TableCell>
-                        <TableCell style={{ padding: '20px' }}>{row.exercicio}</TableCell>
-                        <TableCell style={{ padding: '20px' }}>{row.data}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
+            <PageHeader 
+                title="Matérias em Votação" 
+                onToggleFilters={this.toggleFilters} 
+            />
+            
+            <Grid container spacing={2} justifyContent="flex-start">
+              {rows.map((row, index) => (
+                <Grid item xs={12} key={index}>
+                  <Card elevation={2} sx={{ borderRadius: '12px', transition: '0.3s', '&:hover': { boxShadow: 4 } }}>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <FaFileAlt color="#126B5E" />
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#333' }}>
+                            {row.materia}
+                          </Typography>
+                        </Box>
+                        <Chip label={row.situacao} size="small" color={row.situacao === 'Em Votação' ? 'warning' : 'default'} />
+                      </Box>
+                      
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, ml: 3 }}>
+                        Protocolo: {row.numero} | Autor: {row.autor} | Tramitação: {row.tramitacao}
+                      </Typography>
+
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, ml: 3 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-sim-circle">{row.votoSim}</span> <Typography variant="caption">Sim</Typography></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-nao-circle">{row.votoNao}</span> <Typography variant="caption">Não</Typography></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-abs-circle">{row.semVoto}</span> <Typography variant="caption">Abstenção</Typography></div>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
           </div>
         </div>
       </div>

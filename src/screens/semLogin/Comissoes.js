@@ -7,17 +7,16 @@ import React, { Component } from 'react';
 // Components
 
 // Tabela
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 import SearchIcon from '@mui/icons-material/Search';
+import Chip from '@mui/material/Chip';
+import PageHeader from '../../componets/PageHeader';
 
 // Dados da tabela
 function createData(nome, sigla, criacao, extincao, tipo, situacao) {
@@ -38,14 +37,19 @@ class Comissoes extends Component {
     state = {
         comissoes: rows,
         searchTerm: '',
+        showFilters: false,
     };
 
     handleSearchChange = (event) => {
         this.setState({ searchTerm: event.target.value });
     };
 
+    toggleFilters = () => {
+        this.setState(prevState => ({ showFilters: !prevState.showFilters }));
+    };
+
     render() {
-        const { comissoes, searchTerm } = this.state;
+        const { comissoes, searchTerm, showFilters } = this.state;
 
         const filteredComissoes = comissoes.filter(comissao => {
             return Object.values(comissao).some(value =>
@@ -56,64 +60,71 @@ class Comissoes extends Component {
         return (
 
             <div className='App-header' >
-                <div className='favoritos agendarConsulta' style={{ padding: '40px', width: '100%', maxWidth: '1200px', boxSizing: 'border-box' }}>
-                    <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
-                        Comissões Legislativas
-                    </Typography>
+                <div className='favoritos agendarConsulta' style={{ padding: '0 40px 40px 40px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                    <PageHeader 
+                        title="Comissões Legislativas" 
+                        onToggleFilters={this.toggleFilters} 
+                    />
 
-                    <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-                        <TextField
-                            fullWidth
-                            variant="outlined"
-                            placeholder="Pesquisar comissões..."
-                            value={searchTerm}
-                            onChange={this.handleSearchChange}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{ margin: '20px', width: 'calc(100% - 40px)' }}
-                        />
-                        <TableContainer sx={{ maxHeight: 800 }}>
-                            <Table stickyHeader aria-label="sticky table">
-                                <TableHead>
-                                    <TableRow>
-                                        {['Nome', 'Sigla', 'Criação', 'Extinção', 'Tipo', 'Situação'].map((column) => (
-                                            <TableCell key={column} align="left" style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}>
-                                                {column}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {filteredComissoes.map((row, index) => (
-                                        <TableRow hover key={index} sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}>
-                                            <TableCell style={{ padding: '20px', fontWeight: '500' }}>{row.nome}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{row.sigla}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{row.criacao}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{row.extincao}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{row.tipo}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>
-                                                <span className={`status-tag ${row.situacao === 'Ativa' ? 'status-ativa' : 'status-inativa'}`}>
-                                                    {row.situacao}
-                                                </span>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {filteredComissoes.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} align="center" style={{ padding: '30px', color: '#666' }}>
-                                                Nenhuma comissão encontrada.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    </Paper>
+                    {showFilters && (
+                        <Box sx={{ mb: 4 }}>
+                            <TextField
+                                fullWidth
+                                variant="outlined"
+                                placeholder="Pesquisar comissões..."
+                                value={searchTerm}
+                                onChange={this.handleSearchChange}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{ bgcolor: '#fff', borderRadius: 1 }}
+                            />
+                        </Box>
+                    )}
+
+                    <Grid container spacing={3} justifyContent="flex-start">
+                        {filteredComissoes.map((row, index) => (
+                            <Grid item xs={12} sm={6} md={4} key={index}>
+                                <Card elevation={3} sx={{ height: '100%', borderRadius: '12px', transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
+                                    <CardContent sx={{ textAlign: 'left', p: 3 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: '#333', lineHeight: 1.2 }}>
+                                                {row.nome}
+                                            </Typography>
+                                            <Chip 
+                                                label={row.situacao} 
+                                                size="small" 
+                                                className={row.situacao === 'Ativa' ? 'status-ativa' : 'status-inativa'}
+                                                sx={{ fontWeight: 'bold' }}
+                                            />
+                                        </Box>
+                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                                            {row.sigla} • {row.tipo}
+                                        </Typography>
+                                        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                <strong>Criação:</strong> {row.criacao}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                <strong>Extinção:</strong> {row.extincao}
+                                            </Typography>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        ))}
+                        {filteredComissoes.length === 0 && (
+                            <Grid item xs={12}>
+                                <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
+                                    Nenhuma comissão encontrada.
+                                </Typography>
+                            </Grid>
+                        )}
+                    </Grid>
                 </div>
             </div>
         );

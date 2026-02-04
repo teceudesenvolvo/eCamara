@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-    FaHome, FaGavel, FaFileAlt, FaVideo, FaUsers, FaBook, 
-    FaRobot, FaFileSignature, FaChartLine 
+    FaHome, FaGavel, FaFileAlt, FaVideo, FaBook, 
+    FaRobot 
 } from 'react-icons/fa';
 import '../App.css';
 
-const MenuDesktop = () => {
+const MenuDesktop = ({ onOpenChat }) => {
     const location = useLocation();
 
     // Função auxiliar para verificar se a rota está ativa
@@ -36,10 +36,7 @@ const MenuDesktop = () => {
                     <FaFileAlt className="icon-desktop" />
                     <span className="text-desktop">Matérias</span>
                 </Link>
-                <Link to="/Comissoes" className={`aDesktop ${isActive('/Comissoes')}`}>
-                    <FaUsers className="icon-desktop" />
-                    <span className="text-desktop">Comissões</span>
-                </Link>
+                
                  <Link to="/Normas" className={`aDesktop ${isActive('/Normas')}`}>
                     <FaBook className="icon-desktop" />
                     <span className="text-desktop">Normas</span>
@@ -51,18 +48,10 @@ const MenuDesktop = () => {
 
                 <div className="divider-desktop">Camara AI</div>
 
-                <Link to="/copilot" className={`aDesktop ${isActive('/copilot')}`}>
+                <div className={`aDesktop`} onClick={onOpenChat} style={{ cursor: 'pointer' }}>
                     <FaRobot className="icon-desktop" />
-                    <span className="text-desktop">Copilot</span>
-                </Link>
-                 <Link to="/assinatura" className={`aDesktop ${isActive('/assinatura')}`}>
-                    <FaFileSignature className="icon-desktop" />
-                    <span className="text-desktop">Assinatura</span>
-                </Link>
-                <Link to="/Relatorios" className={`aDesktop ${isActive('/Relatorios')}`}>
-                    <FaChartLine className="icon-desktop" />
-                    <span className="text-desktop">Relatórios</span>
-                </Link>
+                    <span className="text-desktop">Falar com IA</span>
+                </div>
             </nav>
         </div>
     );

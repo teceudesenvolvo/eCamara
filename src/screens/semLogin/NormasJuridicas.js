@@ -1,19 +1,16 @@
 import React, { Component } from 'react';
 
 // Material-UI Table Components
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import TextField from '@mui/material/TextField'; // Import TextField for search input
-import InputAdornment from '@mui/material/InputAdornment'; // For search icon
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography'; // For the title
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
 
-import SearchIcon from '@mui/icons-material/Search'; // Import a search icon
-
+import SearchIcon from '@mui/icons-material/Search';
+import PageHeader from '../../componets/PageHeader';
 // You might need a CSS file for custom styles, e.g., NormasJuridicas.css
 // import './NormasJuridicas.css'; 
 
@@ -41,6 +38,7 @@ class NormasJuridicas extends Component {
             // Add more data as needed
         ],
         searchTerm: '', // State for the search input
+        showFilters: false,
     };
 
     // Handler for search input changes
@@ -48,8 +46,12 @@ class NormasJuridicas extends Component {
         this.setState({ searchTerm: event.target.value });
     };
 
+    toggleFilters = () => {
+        this.setState(prevState => ({ showFilters: !prevState.showFilters }));
+    };
+
     render() {
-        const { normas, searchTerm } = this.state;
+        const { normas, searchTerm, showFilters } = this.state;
 
         // Filter the normas array based on the search term
         const filteredNormas = normas.filter((norma) => {
@@ -60,64 +62,63 @@ class NormasJuridicas extends Component {
 
         return (
             <div className='App-header'>
-                <div className='favoritos agendarConsulta' style={{ padding: '40px', width: '100%', maxWidth: '1200px', boxSizing: 'border-box' }}>
-                    <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
-                        Normas Jurídicas
-                    </Typography>
+                <PageHeader 
+                    title="Normas Jurídicas" 
+                    onToggleFilters={this.toggleFilters} 
+                />
+                <div className='favoritos agendarConsulta' style={{ padding: '0 40px 40px 40px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
 
-                    <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-                        <TextField
-                            fullWidth
-                            variant="outlined"
-                            placeholder="Pesquisar em normas jurídicas..."
-                            value={searchTerm}
-                            onChange={this.handleSearchChange}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{ margin: '20px', width: 'calc(100% - 40px)' }}
-                        />
-                        <TableContainer sx={{ maxHeight: 800 }}>
-                            <Table stickyHeader aria-label="sticky table">
-                                <TableHead>
-                                    <TableRow>
-                                        {['Tipo', 'Número', 'Ano', 'Data', 'Descrição', 'Status'].map(column => (
-                                            <TableCell key={column} align="left" style={{ backgroundColor: '#126B5E', color: '#fff', fontWeight: 'bold', fontSize: '1rem', padding: '20px' }}>
-                                                {column}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {filteredNormas.map((norma) => (
-                                        <TableRow hover key={norma.id} sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}>
-                                            <TableCell style={{ padding: '20px' }}>
-                                                <a href="/" style={{ color: '#126B5E', textDecoration: 'none', fontWeight: 'bold' }}>
-                                                    {norma.tipo}
-                                                </a>
-                                            </TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{norma.numero}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{norma.ano}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{norma.data}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{norma.descricao}</TableCell>
-                                            <TableCell style={{ padding: '20px' }}>{norma.status}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {filteredNormas.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} align="center" style={{ padding: '30px', color: '#666' }}>
-                                                Nenhuma norma encontrada.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    </Paper>
+                    {showFilters && (
+                        <Box sx={{ mb: 4 }}>
+                            <TextField
+                                fullWidth
+                                variant="outlined"
+                                placeholder="Pesquisar normas..."
+                                value={searchTerm}
+                                onChange={this.handleSearchChange}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{ bgcolor: '#fff', borderRadius: 1 }}
+                            />
+                        </Box>
+                    )}
+
+                    <Grid container spacing={3} justifyContent="flex-start">
+                        {filteredNormas.map((norma) => (
+                            <Grid item xs={12} sm={6} md={4} key={norma.id}>
+                                <Card elevation={3} sx={{ height: '100%', borderRadius: '12px', transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
+                                    <CardContent sx={{ textAlign: 'left', p: 3 }}>
+                                        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: '#126B5E', mb: 1 }}>
+                                            <a href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                                {norma.tipo} nº {norma.numero}/{norma.ano}
+                                            </a>
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                            {norma.data}
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ mb: 2 }}>
+                                            {norma.descricao}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ display: 'block', color: '#666', fontStyle: 'italic', borderTop: '1px solid #eee', pt: 1 }}>
+                                            {norma.status}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        ))}
+                        {filteredNormas.length === 0 && (
+                            <Grid item xs={12}>
+                                <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
+                                    Nenhuma norma encontrada.
+                                </Typography>
+                            </Grid>
+                        )}
+                    </Grid>
                 </div>
             </div>
         );

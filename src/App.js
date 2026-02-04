@@ -1,4 +1,5 @@
 import './App.css';
+import { useState } from 'react';
 
 import { Switch, Route } from 'react-router-dom'
 
@@ -26,6 +27,7 @@ import Register from './screens/comLogin/register';
 import Login from './screens/login';
 
 // Navigate Components
+import ChatAI from './screens/ChatAI';
 import TopBar from './componets/topBarSearch';
 import Menu from './componets/menu';
 import MenuDesktop from './componets/menuDesktop';
@@ -41,90 +43,100 @@ function App() {
     address: "Rua XV de Novembro, 55 - Centro"
   };
 
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const openChat = () => setIsChatOpen(true);
+  const closeChat = () => setIsChatOpen(false);
+
   return (
     <div className="App">
-      <TopBar />
-      <Switch>
-        {/* Página Principal */}
-        <Route exact path="/" component={HomeDashboard} />
-        <Route path="/login" component={Login} />
-        <Route path="/register" component={Register} />
-
-        {/* Perfis de Acesso */}
-        <Route path="/perfil" component={Perfil} />
-
-        {/*Menu Publico*/}
-        <Route path="/Sessoes" component={Sessoes} />
-        <Route path="/Relatorios" component={Relatorios} />
-        <Route path="/Sessao-Virtual" component={SessaoVirtual} />
-        <Route path="/Normas" component={NormasJuridicas} />
-        <Route path="/Comissoes" component={Comissoes} />
-        <Route path="/Materias" component={Materias} />
-
-        {/* Páginas Mobile */}
-        <Route path="/Mais" component={Mais} />
-
-        {/* Páginas Filho */}
-        <Route path="/materias-dash" component={MateriasDash} />
-
-        {/* Páginas de Formulários */}
-        <Route path="/protocolar-materia" component={AddMateria} />
-        <Route path="/juizo-materia" component={JuizoMateria} />
-      </Switch>
-      <Menu />
-      <MenuDesktop />
+      <MenuDesktop onOpenChat={openChat} />
       
-      <footer className='footer'>
-        <div className='footer-content'>
-          <div className='footer-section footer-about'>
-            <h4 className='footer-logo-text'>Camara AI</h4>
-            <p>Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.</p>
-            <div className='social-icons'>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"><FaTwitter /></a>
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
-              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer"><FaYoutube /></a>
+      <div className="main-content-wrapper">
+        <TopBar />
+        <Switch>
+          {/* Página Principal */}
+          <Route exact path="/" component={HomeDashboard} />
+          <Route path="/login" component={Login} />
+          <Route path="/register" component={Register} />
+
+          {/* Perfis de Acesso */}
+          <Route path="/perfil" component={Perfil} />
+
+          {/*Menu Publico*/}
+          <Route path="/Sessoes" component={Sessoes} />
+          <Route path="/Relatorios" component={Relatorios} />
+          <Route path="/Sessao-Virtual" component={SessaoVirtual} />
+          <Route path="/Normas" component={NormasJuridicas} />
+          <Route path="/Comissoes" component={Comissoes} />
+          <Route path="/Materias" component={Materias} />
+
+          {/* Páginas Mobile */}
+          <Route path="/Mais" component={Mais} />
+
+          {/* Páginas Filho */}
+          <Route path="/materias-dash" component={MateriasDash} />
+
+          {/* Páginas de Formulários */}
+          <Route path="/protocolar-materia" component={AddMateria} />
+          <Route path="/juizo-materia" component={JuizoMateria} />
+        </Switch>
+
+        <footer className='footer'>
+          <div className='footer-content'>
+            <div className='footer-section footer-about'>
+              <h4 className='footer-logo-text'>Camara AI</h4>
+              <p>Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.</p>
+              <div className='social-icons'>
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"><FaTwitter /></a>
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
+                <a href="https://youtube.com" target="_blank" rel="noopener noreferrer"><FaYoutube /></a>
+              </div>
+            </div>
+            
+            <div className='footer-section footer-links-section'>
+              <h4>Legislativo</h4>
+              <ul>
+                <li><a href="/Sessoes">Sessões</a></li>
+                <li><a href="/Materias">Matérias</a></li>
+                <li><a href="/Normas">Normas Jurídicas</a></li>
+                <li><a href="/Comissoes">Comissões</a></li>
+              </ul>
+            </div>
+            
+            <div className='footer-section footer-links-section'>
+              <h4>Transparência</h4>
+              <ul>
+                <li><a href="/Relatorios">Relatórios</a></li>
+                <li><a href="/Sessao-Virtual">Sessão Virtual</a></li>
+                <li><a href="/novidades">Novidades</a></li>
+                <li><a href="/acessibilidade">Acessibilidade</a></li>
+              </ul>
+            </div>
+            
+            <div className='footer-section footer-contact'>
+              <h4>Contato</h4>
+              <p>📍 {tenant.address}</p>
+              <p>📞 {tenant.phone}</p>
+              <p>📧 {tenant.email}</p>
             </div>
           </div>
           
-          <div className='footer-section footer-links-section'>
-            <h4>Legislativo</h4>
-            <ul>
-              <li><a href="/Sessoes">Sessões</a></li>
-              <li><a href="/Materias">Matérias</a></li>
-              <li><a href="/Normas">Normas Jurídicas</a></li>
-              <li><a href="/Comissoes">Comissões</a></li>
-            </ul>
+          <div className='footer-bottom-wrapper'>
+            <div className='footer-bottom'>
+              <p>&copy; 2026 Camara AI - Todos os direitos reservados. Desenvolvido por <strong>Blu Sistemas</strong></p>
+              <div className='footer-bottom-links'>
+                  <a href="/politica-privacidade">Política de Privacidade</a>
+                  <a href="/termos-uso">Termos de Uso</a>
+                </div>
+            </div>
           </div>
-          
-          <div className='footer-section footer-links-section'>
-            <h4>Transparência</h4>
-            <ul>
-              <li><a href="/Relatorios">Relatórios</a></li>
-              <li><a href="/Sessao-Virtual">Sessão Virtual</a></li>
-              <li><a href="/novidades">Novidades</a></li>
-              <li><a href="/acessibilidade">Acessibilidade</a></li>
-            </ul>
-          </div>
-          
-          <div className='footer-section footer-contact'>
-            <h4>Contato</h4>
-            <p>📍 {tenant.address}</p>
-            <p>📞 {tenant.phone}</p>
-            <p>📧 {tenant.email}</p>
-          </div>
-        </div>
-        
-        <div className='footer-bottom-wrapper'>
-          <div className='footer-bottom'>
-            <p>&copy; 2026 Camara AI - Todos os direitos reservados. Desenvolvido por <strong>Blu Sistemas</strong></p>
-            <div className='footer-bottom-links'>
-                <a href="/politica-privacidade">Política de Privacidade</a>
-                <a href="/termos-uso">Termos de Uso</a>
-              </div>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
+
+      <Menu />
+      {isChatOpen && <ChatAI onClose={closeChat} />}
     </div>
   );
 }

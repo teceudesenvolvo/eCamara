@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
-import { FaSearch, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaSearch, FaArrowRight } from 'react-icons/fa';
 import SlideFeacures from '../componets/slideFeactures';
-import SlideComissoes from '../componets/SlideComissoes';
 import '../App.css';
 import ChatAI from './ChatAI';
 
@@ -45,69 +44,58 @@ class HomePage extends Component {
             <div className='App-header'>
                 <div className='Home-Dach'>
                     
-                    {/* 1. Hero Section (Destaque Principal) */}
+                    {/* 1. Hero Section (Gradient Style) */}
                     <div className="hero-section-new">
-                        <h1>O Futuro do Legislativo chegou em {city}.</h1>
-                        <p>Legislação inteligente, participação direta e transparência total com Inteligência Artificial.</p>
-                        <div className="hero-buttons">
-                            <Link to="/Materias" className="btn-hero btn-citizen">Sou Cidadão: Ver Projetos</Link>
-                            <Link to="/login" className="btn-hero btn-parliament">Acesso Parlamentar</Link>
+                        <div className="hero-content-openai">
+                            <h1>Camara AI</h1>
+                            <p>Inteligência Artificial para uma legislação mais transparente e acessível em {city}.</p>
+                            <div className="hero-buttons-openai">
+                                <Link to="/Materias" className="btn-openai btn-primary">Explorar Projetos</Link>
+                                <Link to="/login" className="btn-openai btn-secondary">Acesso Restrito</Link>
+                            </div>
                         </div>
                     </div>
 
-                     {/* 2. Busca Inteligente por Voz ou Texto */}
-                    <div className="smart-search-section">
-                        <h2>O que você quer saber sobre sua cidade?</h2>
-                        <div className="search-box-wrapper">
+                     {/* 2. Search Bar Floating */}
+                    <div className="openai-search-container">
+                        <div className="search-box-wrapper-openai">
                             <input 
                                 type="text" 
-                                className="smart-search-input" 
-                                placeholder="Ex: O que a cidade tem de leis sobre proteção animal?"
+                                className="smart-search-input-openai" 
+                                placeholder="Pergunte sobre leis, sessões ou vereadores..."
                                 onFocus={this.openChat} 
                             />
-                            <button className="smart-search-btn"><FaSearch /></button>
-                        </div>
-                        <p className="search-hint">A IA faz a varredura e entrega um resumo explicado, convidando você a participar.</p>
-                    </div>
-
-                    {/* 3. Nossos Representantes */}
-                    <div className="representatives-section-parallax">
-                        <div className="representatives-overlay">
-                            <h2>Nossos Representantes</h2>
-                            <div className='HomeDesktopCarrosel'>
-                                <SlideFeacures />
-                            </div>
+                            <button className="smart-search-btn-openai"><FaSearch /></button>
                         </div>
                     </div>
 
-                    {/* 4. Seção de Comissões com Imagem de Fundo */}
-                    <div className="commissions-section-parallax">
-                        <div className="commissions-overlay">
-                            <h2>Comissões Permanentes</h2>
-                            <p>Acompanhe o trabalho técnico das comissões temáticas da Câmara.</p>
-                            <div className="commissions-carousel-wrapper">
-                                <SlideComissoes />
-                            </div>
+                    {/* 3. Content Grid (Agenda & Updates) */}
+                    <div className="openai-section">
+                        <div className="section-header-openai">
+                            <h2>Acontece na Câmara</h2>
+                            <Link to="/sessoes" className="view-all-link">Ver tudo <FaArrowRight /></Link>
                         </div>
-                    </div>
-
-                    {/* 4. Agenda Legislativa (Substituindo Como Funciona) */}
-                    <div className="agenda-section">
-                        <h2>Agenda Legislativa</h2>
-                        <div className="agenda-container">
+                        <div className="openai-grid">
                             {agenda.map(item => (
-                                <div className="agenda-card" key={item.id}>
-                                    <div className="agenda-date">
-                                        <span className="agenda-day">{item.day}</span>
-                                        <span className="agenda-month">{item.month}</span>
-                                    </div>
-                                    <div className="agenda-info">
-                                        <span className="agenda-time"><FaClock style={{marginRight: '5px'}}/> {item.time}</span>
-                                        <h3 className="agenda-title">{item.title}</h3>
-                                        <span className="agenda-location"><FaMapMarkerAlt style={{marginRight: '5px'}}/> {item.location}</span>
+                                <div className="openai-card" key={item.id}>
+                                    <div className="card-image-placeholder"></div>
+                                    <div className="card-content-openai">
+                                        <span className="card-date">{item.day} {item.month} • {item.time}</span>
+                                        <h3>{item.title}</h3>
+                                        <p>{item.location}</p>
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* 4. Representatives Section */}
+                    <div className="openai-section">
+                        <div className="section-header-openai">
+                            <h2>Nossos Representantes</h2>
+                        </div>
+                        <div className='HomeDesktopCarrosel'>
+                            <SlideFeacures />
                         </div>
                     </div>
                     
