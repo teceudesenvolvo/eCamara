@@ -7,25 +7,21 @@ import React, { Component } from 'react';
 // Components
 
 // Tabela
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import SearchIcon from '@mui/icons-material/Search';
-import Chip from '@mui/material/Chip';
 import PageHeader from '../../componets/PageHeader';
 
 // Dados da tabela
-function createData(nome, sigla, criacao, extincao, tipo, situacao) {
-  return { nome, sigla, criacao, extincao, tipo, situacao};
+function createData(nome, sigla, criacao, extincao, tipo, situacao, imagem) {
+  return { nome, sigla, criacao, extincao, tipo, situacao, imagem};
 }
 
 const rows = [
-  createData('Comissão Especial de Revisão das Leis', 'COMESPLeis', '10/01/2023', '12/02/2023', 'Comissão Especial', 'Desativada'),
-  createData('Comissão Especial de Revisão das Leis', 'COMESPLeis', '10/01/2023', '-', 'Comissão Especial', 'Ativa'),
+  createData('Comissão Especial de Revisão das Leis', 'COMESPLeis', '10/01/2023', '12/02/2023', 'Comissão Especial', 'Desativada', 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=500&q=60'),
+  createData('Comissão Especial de Revisão das Leis', 'COMESPLeis', '10/01/2023', '-', 'Comissão Especial', 'Ativa', 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=500&q=60'),
   ];
 
 
@@ -60,7 +56,7 @@ class Comissoes extends Component {
         return (
 
             <div className='App-header' >
-                <div className='favoritos agendarConsulta' style={{ padding: '0 40px 40px 40px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                <div className='openai-section'>
                     <PageHeader 
                         title="Comissões Legislativas" 
                         onToggleFilters={this.toggleFilters} 
@@ -86,45 +82,24 @@ class Comissoes extends Component {
                         </Box>
                     )}
 
-                    <Grid container spacing={3} justifyContent="flex-start">
+                    <div className="openai-grid">
                         {filteredComissoes.map((row, index) => (
-                            <Grid item xs={12} sm={6} md={4} key={index}>
-                                <Card elevation={3} sx={{ height: '100%', borderRadius: '12px', transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
-                                    <CardContent sx={{ textAlign: 'left', p: 3 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: '#333', lineHeight: 1.2 }}>
-                                                {row.nome}
-                                            </Typography>
-                                            <Chip 
-                                                label={row.situacao} 
-                                                size="small" 
-                                                className={row.situacao === 'Ativa' ? 'status-ativa' : 'status-inativa'}
-                                                sx={{ fontWeight: 'bold' }}
-                                            />
-                                        </Box>
-                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                                            {row.sigla} • {row.tipo}
-                                        </Typography>
-                                        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
-                                            <Typography variant="caption" color="text.secondary">
-                                                <strong>Criação:</strong> {row.criacao}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                <strong>Extinção:</strong> {row.extincao}
-                                            </Typography>
-                                        </Box>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
+                            <div className="openai-card" key={index}>
+                                <img src={row.imagem} alt={row.nome} className="card-image" />
+                                <div className="card-content-openai">
+                                    <span className="card-date">{row.situacao} • {row.criacao}</span>
+                                    <h3>{row.nome}</h3>
+                                    <p>{row.sigla} • {row.tipo}</p>
+                                </div>
+                            </div>
                         ))}
-                        {filteredComissoes.length === 0 && (
-                            <Grid item xs={12}>
-                                <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
-                                    Nenhuma comissão encontrada.
-                                </Typography>
-                            </Grid>
-                        )}
-                    </Grid>
+                    </div>
+                    
+                    {filteredComissoes.length === 0 && (
+                        <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
+                            Nenhuma comissão encontrada.
+                        </Typography>
+                    )}
                 </div>
             </div>
         );

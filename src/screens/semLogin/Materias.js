@@ -2,15 +2,12 @@ import React, { Component } from 'react';
 import { Link } from 'react-router-dom'; // Import Link for navigation
 
 // Material-UI Table Components
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField'; // Import TextField for search input
 import InputAdornment from '@mui/material/InputAdornment'; // For search icon
 import Typography from '@mui/material/Typography'; // For the title
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search'; // Import a search icon
@@ -18,18 +15,18 @@ import PageHeader from '../../componets/PageHeader';
 
 // Data for the table
 // Note: 'id' is added to each row for unique key prop in React
-function createData(id, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data) {
-  return { id, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data };
+function createData(id, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data, imagem) {
+  return { id, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data, imagem };
 }
 
 const rows = [
-  createData('1', 'PL 542/2010', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
-  createData('2', 'PL 542/2011', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Extraordinária', 2023, '10/10/2023'),
-  createData('3', 'PL 542/2012', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
-  createData('4', 'PL 542/2013', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
-  createData('5', 'PL 542/2014', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
-  createData('6', 'PL 542/2015', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
-  createData('7', 'PL 542/2016', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023'),
+  createData('1', 'PL 542/2010', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023', 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=500&q=60'),
+  createData('2', 'PL 542/2011', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Extraordinária', 2023, '10/10/2023', 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&w=500&q=60'),
+  createData('3', 'PL 542/2012', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023', 'https://images.unsplash.com/photo-1479142506502-19b3a3b7ff33?auto=format&fit=crop&w=500&q=60'),
+  createData('4', 'PL 542/2013', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023', 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60'),
+  createData('5', 'PL 542/2014', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023', 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&w=500&q=60'),
+  createData('6', 'PL 542/2015', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023', 'https://images.unsplash.com/photo-1589578527966-fdac0f44566c?auto=format&fit=crop&w=500&q=60'),
+  createData('7', 'PL 542/2016', 'Em votação', 0, 10, 5, 'Promovente', 'Escrita', 'Ordinária', 2023, '10/10/2023', 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60'),
 ];
 
 class Materias extends Component {
@@ -84,13 +81,13 @@ class Materias extends Component {
 
     return (
       <div className='App-header'>
-        <div className='favoritos agendarConsulta' style={{ padding: '0 40px 40px 40px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+        <div className='openai-section'>
           <PageHeader 
             title="Matérias Legislativas" 
             onToggleFilters={this.toggleFilters} 
           />
           
-          <div style={{ marginTop: '100px', marginLeft: '60px' }}>
+          <div>
           {showFilters && (
             <Box sx={{ mb: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
               <Grid container spacing={2}>
@@ -142,53 +139,28 @@ class Materias extends Component {
             </Box>
           )}
 
-          <Grid container spacing={3} justifyContent="flex-start">
+          <div className="openai-grid">
             {filteredRows.map((row) => (
-              <Grid item xs={12} sm={6} md={4} key={row.id}>
-                <Card elevation={3} sx={{ height: '100%', borderRadius: '12px', transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
-                  <CardContent sx={{ textAlign: 'left', p: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
-                        <Link to={`/materias-dash/${row.id}`} style={{ textDecoration: 'none', color: '#126B5E', fontWeight: 'bold' }}>
-                          {row.materia}
-                        </Link>
-                      </Typography>
-                      <Chip label={row.situacao} size="small" sx={{ backgroundColor: '#e0f2f1', color: '#00695c', fontWeight: 'bold' }} />
-                    </Box>
-
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      <strong>Autor:</strong> {row.autor}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      <strong>Apresentação:</strong> {row.apresentacao}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      <strong>Tramitação:</strong> {row.tramitacao}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      <strong>Data:</strong> {row.data} ({row.exercicio})
-                    </Typography>
-
-                    <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee' }}>
-                      <Typography variant="caption" display="block" sx={{ mb: 1, color: '#888' }}>Votação:</Typography>
-                      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '10px' }}>
-                        <div className="vote-circle vote-sim-circle" title="Sim">{row.votoSim}</div>
-                        <div className="vote-circle vote-nao-circle" title="Não">{row.votoNao}</div>
-                        <div className="vote-circle vote-abs-circle" title="Abstenção">{row.semVoto}</div>
-                      </div>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <div className="openai-card" key={row.id}>
+                <img src={row.imagem} alt={row.materia} className="card-image" />
+                <div className="card-content-openai">
+                  <span className="card-date">{row.data} • {row.situacao}</span>
+                  <h3>
+                    <Link to={`/materias-dash/${row.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {row.materia}
+                    </Link>
+                  </h3>
+                  <p>{row.autor} • {row.tramitacao}</p>
+                </div>
+              </div>
             ))}
-            {filteredRows.length === 0 && (
-              <Grid item xs={12}>
-                <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
-                  Nenhuma matéria encontrada.
-                </Typography>
-              </Grid>
-            )}
-          </Grid>
+          </div>
+          
+          {filteredRows.length === 0 && (
+            <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
+              Nenhuma matéria encontrada.
+            </Typography>
+          )}
           </div>
         </div>
       </div>

@@ -21,9 +21,9 @@ class HomePage extends Component {
                 summary: 'Institui o programa de incentivo à inovação tecnológica nas escolas municipais, prevendo verba para robótica e IA.'
             },
             agenda: [
-                { id: 1, day: '14', month: 'JUN', time: '14:00', title: 'Sessão Ordinária', location: 'Plenário Virtual' },
-                { id: 2, day: '15', month: 'JUN', time: '09:00', title: 'Comissão de Finanças', location: 'Sala das Comissões' },
-                { id: 3, day: '16', month: 'JUN', time: '19:00', title: 'Audiência Pública: Saúde', location: 'Auditório Principal' }
+                { id: 1, day: '14', month: 'JUN', time: '14:00', title: 'Sessão Ordinária', location: 'Plenário Virtual', imagem: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60' },
+                { id: 2, day: '15', month: 'JUN', time: '09:00', title: 'Comissão de Finanças', location: 'Sala das Comissões', imagem: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=500&q=60' },
+                { id: 3, day: '16', month: 'JUN', time: '19:00', title: 'Audiência Pública: Saúde', location: 'Auditório Principal', imagem: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=500&q=60' }
             ],
             isChatOpen: false,
         };
@@ -78,7 +78,7 @@ class HomePage extends Component {
                         <div className="openai-grid">
                             {agenda.map(item => (
                                 <div className="openai-card" key={item.id}>
-                                    <div className="card-image-placeholder"></div>
+                                    <img src={item.imagem} alt={item.title} className="card-image" />
                                     <div className="card-content-openai">
                                         <span className="card-date">{item.day} {item.month} • {item.time}</span>
                                         <h3>{item.title}</h3>
