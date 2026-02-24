@@ -12,7 +12,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import SearchIcon from '@mui/icons-material/Search';
-import PageHeader from '../../componets/PageHeader';
+import PageHeader from '../../componets/PageHeader.jsx';
 
 // Dados da tabela
 function createData(nome, sigla, criacao, extincao, tipo, situacao, imagem) {

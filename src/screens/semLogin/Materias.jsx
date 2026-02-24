@@ -11,7 +11,7 @@ import Box from '@mui/material/Box';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search'; // Import a search icon
-import PageHeader from '../../componets/PageHeader';
+import PageHeader from '../../componets/PageHeader.jsx';
 
 // Data for the table
 // Note: 'id' is added to each row for unique key prop in React

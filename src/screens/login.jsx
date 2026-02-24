@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 
 
 //Imagens
-import logo from '../assets/e-camara-16.png';
 
 // Icones
 
@@ -15,10 +14,9 @@ class loginClient extends Component {
         return (
             <div className='App-header loginPage' >
                 <div className='Container' >
-                    <img src={logo} alt="logo" className='logo logoLogin' />
                     <form className='formLogin'>
                         <h1>Entre com sua conta:</h1> 
-                        <input type="text" placeholder="CPF" className='inputLogin' />
+                        <input type="email" placeholder="email@example.com" className='inputLogin' />
                         <input type="password" placeholder="Senha" className='inputLogin' />
                         <a href='/consultas' className='linkLogin'>Esqueceu a senha?</a>
                         <input type="button" className='buttonLogin' value="Entrar"

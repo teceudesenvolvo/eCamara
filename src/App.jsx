@@ -4,33 +4,33 @@ import { useState } from 'react';
 import { Switch, Route } from 'react-router-dom'
 
 //Screen Navigate
-import HomeDashboard from './screens/HomePage';
+import HomeDashboard from './screens/HomePage.jsx';
 
 // Páginas Principais
-import Sessoes from './screens/semLogin/Sessoes';
-import Relatorios from './screens/semLogin/Relatorios';
-import SessaoVirtual from './screens/semLogin/SessaoVirtual';
-import NormasJuridicas from './screens/semLogin/NormasJuridicas';
-import Comissoes from './screens/semLogin/Comissoes';
+import Sessoes from './screens/semLogin/Sessoes.jsx';
+import Relatorios from './screens/semLogin/Relatorios.jsx';
+import SessaoVirtual from './screens/semLogin/SessaoVirtual.jsx';
+import NormasJuridicas from './screens/semLogin/NormasJuridicas.jsx';
+import Comissoes from './screens/semLogin/Comissoes.jsx';
 
 // Páginas Secundárias
-import Materias from './screens/semLogin/Materias';
-import Mais from './screens/semLogin/Mais';
-import Perfil from './screens/comLogin/Perfil';
+import Materias from './screens/semLogin/Materias.jsx';
+import Mais from './screens/semLogin/Mais.jsx';
+import Perfil from './screens/comLogin/Perfil.jsx';
 
-import AddMateria from './screens/comLogin/addMaterias';
-import MateriasDash from './screens/comLogin/materiasDash';
-import JuizoMateria from './screens/juizoMateria';
-import Register from './screens/comLogin/register';
+import AddMateria from './screens/comLogin/addMaterias.jsx';
+import MateriasDash from './screens/comLogin/materiasDash.jsx';
+import JuizoMateria from './screens/juizoMateria.jsx';
+import Register from './screens/comLogin/register.jsx';
 
 // SingIn / SignUp
-import Login from './screens/login';
+import Login from './screens/login.jsx';
 
 // Navigate Components
-import ChatAI from './screens/ChatAI';
-import TopBar from './componets/topBarSearch';
-import Menu from './componets/menu';
-import MenuDesktop from './componets/menuDesktop';
+import ChatAI from './screens/ChatAI.jsx';
+import TopBar from './componets/topBarSearch.jsx';
+import Menu from './componets/menu.jsx';
+import MenuDesktop from './componets/menuDesktop.jsx'; // Verifique se este arquivo existe ou se deveria ser menuDashboard.jsx
 import { FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
 
 

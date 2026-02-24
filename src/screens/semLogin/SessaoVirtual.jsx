@@ -16,11 +16,11 @@ import {
 } from "react-icons/fa";
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-import PageHeader from '../../componets/PageHeader';
+import PageHeader from '../../componets/PageHeader.jsx';
 
 
 // Components
-import HistoricoSessao from '../../componets/HistoricoSessao';
+import HistoricoSessao from '../../componets/HistoricoSessao.jsx';
 
 // Dados da tabela
 function createData(numero, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data ) {

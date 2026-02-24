@@ -7,7 +7,7 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import SearchIcon from '@mui/icons-material/Search';
-import PageHeader from '../../componets/PageHeader';
+import PageHeader from '../../componets/PageHeader.jsx';
 // You might need a CSS file for custom styles, e.g., NormasJuridicas.css
 // import './NormasJuridicas.css'; 
 

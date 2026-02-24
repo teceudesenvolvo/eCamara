@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import { FaSearch, FaArrowRight } from 'react-icons/fa';
-import SlideFeacures from '../componets/slideFeactures';
+import SlideFeacures from '../componets/slideFeactures.jsx';
 import '../App.css';
-import ChatAI from './ChatAI';
+import ChatAI from './ChatAI.jsx';
 
 class HomePage extends Component {
     constructor(props) {

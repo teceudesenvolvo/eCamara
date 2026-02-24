@@ -82,6 +82,7 @@ class HistoricoSessao extends Component {
         )
 
 
+
         return (
             <>
                 <ul className='vistosHome historico-sessao-virtual'>

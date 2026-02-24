@@ -141,7 +141,7 @@ class register extends Component {
             } 
             type="text" placeholder={this.state.placeCNPJ} className={this.state.classInput} />            
             
-
+            
             {/* Razão Social */}
             <input 
              onFocus={()=>{
@@ -270,7 +270,7 @@ class register extends Component {
             }
             type="password" placeholder={this.state.placePassword} className={this.state.classInput3} />
             
-
+            
             {/* Confirmação de Senha */}
             
             <input 
@@ -288,10 +288,8 @@ class register extends Component {
             }
             type="password" placeholder={this.state.placePasswordConfirmed} className={this.state.classInput4} />
             
-
-
-
-
+            
+            
             {/* <div className="checkbox-politicas">
               <input type="checkbox" placeholder="Complemento" className='inputLogin' />
               <p> Concordo com os termos de uso e as politicas de privacidade. </p>

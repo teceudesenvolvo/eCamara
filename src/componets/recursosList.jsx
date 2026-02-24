@@ -28,6 +28,7 @@ class receitaList extends Component {
 
 
 
+
     render() {
         const esclarecimentos = this.state.esclarecimentos
 
@@ -52,6 +53,7 @@ class receitaList extends Component {
                 </div>
             </li>
         )
+
 
 
         return (
