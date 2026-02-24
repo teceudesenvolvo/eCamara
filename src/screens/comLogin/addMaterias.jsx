@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
+import { FaMagic } from 'react-icons/fa';
 
 // Importando imagem
 import camera from '../../assets/Camera.png';
@@ -56,6 +57,10 @@ class AddProducts extends Component {
 
             // Controle do preview PDF
             showPdfPopup: false, // Estado para controlar a visibilidade do popup do PDF
+
+            // Estado da IA
+            aiPrompt: '',
+            isGenerating: false,
         };
     }
 
@@ -95,6 +100,47 @@ class AddProducts extends Component {
     // Fecha o popup do PDF
     closePdfPopup = () => {
         this.setState({ showPdfPopup: false });
+    };
+
+    // Função para gerar conteúdo com IA (Simulada)
+    handleGenerateAI = () => {
+        const { aiPrompt } = this.state;
+        if (!aiPrompt.trim()) {
+            alert("Por favor, descreva a matéria para a IA gerar a minuta.");
+            return;
+        }
+
+        this.setState({ isGenerating: true });
+
+        // Simulação de delay de rede/processamento da IA
+        setTimeout(() => {
+            // Aqui entraria a chamada real para a API (OpenAI, etc.)
+            // Gerando dados fictícios baseados no prompt para demonstração
+            const generatedData = {
+                tipoMateria: 'Projeto de Lei Legislativo',
+                ano: new Date().getFullYear().toString(),
+                numero: Math.floor(Math.random() * 1000) + '/2026',
+                dataApresenta: new Date().toISOString().split('T')[0],
+                protocolo: Date.now().toString().slice(-8),
+                tipoApresentacao: 'Escrita',
+                tipoAutor: 'Parlamentar',
+                autor: 'Vereador Usuário', // Em produção, viria do contexto do usuário logado
+                apelido: aiPrompt.split(' ').slice(0, 3).join(' '),
+                prazo: '45',
+                materiaPolemica: 'Não',
+                objeto: 'Dispõe sobre ' + aiPrompt,
+                regTramita: 'Ordinária',
+                status: 'Sim',
+                titulo: ('Projeto de Lei: ' + aiPrompt).toUpperCase(),
+                ementa: `Institui diretrizes e normas sobre ${aiPrompt} no âmbito do município, visando o bem-estar social e o desenvolvimento local.`,
+                indexacao: `legislação, municipal, ${aiPrompt.split(' ')[0]}, inovação`,
+                observacao: 'Minuta gerada automaticamente por Inteligência Artificial (Camara AI). Requer revisão técnica.'
+            };
+
+            this.setState({ ...generatedData, isGenerating: false }, () => {
+                this.handleGeneratePDF(); // Regenera o PDF com os novos dados
+            });
+        }, 2000);
     };
 
     handleGeneratePDF = () => {
@@ -286,163 +332,51 @@ class AddProducts extends Component {
             <div className='App-header'>
                 <MenuDashboard />
                 <div className='conteinar-Add-Products'>
-                    <div>
-                        <form>
-                            <h1>Adicionar Matéria</h1>
-                            <p>Identificação Básica</p>
-                            <select
-                                className='conteinar-Add-Products-select'
-                                name="tipoMateria"
-                                value={this.state.tipoMateria}
-                                onChange={this.handleInputChange}
-                            >
-                                <option value="">Tipo de Materia</option>
-                                <option value="Projeto de Lei Legislativo">Projeto de Lei Legislativo</option>
-                                <option value="Proj. Lei Legislativo Substitutivo">Proj. Lei Legislativo Substitutivo</option>
-                                <option value="Proj. Lei Complementar Legislativo">Proj. Lei Complementar Legislativo</option>
-                                <option value="Projeto de Decreto Legislativo">Projeto de Decreto Legislativo</option>
-                                <option value="Projeto de Lei Executivo Substitutivo">Projeto de Lei Executivo Substitutivo</option>
-                                <option value="Projeto de Lei Complementar Executivo">Projeto de Lei Complementar Executivo</option>
-                                <option value="Razões do Veto">Razões do Veto</option>
-                                <option value="Requerimento Urgência">Requerimento Urgência</option>
-                                <option value="Projeto de Emenda">Projeto de Emenda</option>
-                                <option value="Pedido de Prorrogação">Pedido de Prorrogação</option>
-                                <option value="Emenda">Emenda</option>
-                                <option value="Parecer">Parecer</option>
-                                <option value="Projeto de Resolução">Projeto de Resolução</option>
-                                <option value="Requerimento">Requerimento</option>
-                                <option value="Moção">Moção</option>
-                            </select>
-                            <input type='number' name="ano" placeholder="Ano da Materia" value={this.state.ano} onChange={this.handleInputChange} />
-                            <input type="text" name="numero" placeholder="Número da Matéria" value={this.state.numero} onChange={this.handleInputChange} />
-                            <br /><label className='labelform-materia'>Data da Apresentação</label><br />
-                            <input type="date" name="dataApresenta" placeholder='Data da Apresentação' value={this.state.dataApresenta} onChange={this.handleInputChange} />
-                            <input type='text' name="protocolo" placeholder="Protocolo da Matéria" value={this.state.protocolo} onChange={this.handleInputChange} />
-
-
-                            <select name="tipoApresentacao" className="conteinar-Add-Products-select" value={this.state.tipoApresentacao} onChange={this.handleInputChange}>
-                                <option value="">Tipo de Apresentação</option>
-                                <option value="Oral">Oral</option>
-                                <option value="Escrita">Escrita</option>
-                            </select>
-
-                            <select name="tipoAutor" className="conteinar-Add-Products-select" value={this.state.tipoAutor} onChange={this.handleInputChange}>
-                                <option value="">Tipo de Autor</option>
-                                <option value="Bancada">Bancada</option>
-                                <option value="Bloco Parlamentar">Bloco Parlamentar</option>
-                                <option value="Comissão">Comissão</option>
-                                <option value="Externo">Externo</option>
-                                <option value="Frente Parlamentar">Frente Parlamentar</option>
-                                <option value="Mesa Diretora">Mesa Diretora</option>
-                                <option value="Órgão">Órgão</option>
-                                <option value="Parlamentar">Parlamentar</option>
-                            </select>
-                            <input type='text' name="autor" placeholder="Autor" value={this.state.autor} onChange={this.handleInputChange} />
-
-                            <br /><label className='labelform-materia'>Texto Original</label><br />
-                            <input type="file" onChange={this.handleFileChange} />
-
-                            <p>Outras Informações</p>
-                            <input type='text' name="apelido" placeholder="Apelido" value={this.state.apelido} onChange={this.handleInputChange} />
-                            <input type='number' name="prazo" placeholder="Dias de Prazo" value={this.state.prazo} onChange={this.handleInputChange} />
-
-                            <select className='conteinar-Add-Products-select' name="materiaPolemica" value={this.state.materiaPolemica} onChange={this.handleInputChange} >
-                                <option value="">Matéria polêmica?</option>
-                                <option value="Sim">Sim</option>
-                                <option value="Não">Não</option>
-                            </select>
-                            <input type='text' name="objeto" placeholder="Objeto" value={this.state.objeto} onChange={this.handleInputChange} />
-
-                            <select name="regTramita" className="conteinar-Add-Products-select" value={this.state.regTramita} onChange={this.handleInputChange}>
-                                <option value="">Regime de Tramitação</option>
-                                <option value="Ordinária">Ordinária</option>
-                                <option value="Urgência">Urgência</option>
-                                <option value="Prioridade">Prioridade</option>
-                                <option value="Especial - Veto">Especial - Veto</option>
-                                <option value="Especial - Leis Orçamentárias">Especial - Leis orçamentárias</option>
-                            </select>
-
-                            <select name="status" className="conteinar-Add-Products-select" value={this.state.status} onChange={this.handleInputChange}>
-                                <option value="">Em Tramitação?</option>
-                                <option value="Sim">Sim</option>
-                                <option value="Não">Não</option>
-                            </select>
-
-                            <br /><label className='labelform-materia'>Data Fim do Prazo</label><br />
-                            <input type='date' name="dataPrazo" placeholder="Data Fim do Prazo" value={this.state.dataPrazo} onChange={this.handleInputChange} />
-                            <br /><label className='labelform-materia'>Data da Publicação</label><br />
-                            <input type='date' name="publicacao" placeholder="Data da Publicação" value={this.state.publicacao} onChange={this.handleInputChange} />
-
-
-                            <select className='conteinar-Add-Products-select' name="isComplementar" value={this.state.isComplementar} onChange={this.handleInputChange}>
-                                <option value="">É Complementar?</option>
-                                <option value="Sim">Sim</option>
-                                <option value="Não">Não</option>
-                            </select>
-
-                            <p>Origem Externa</p>
-                            <select name="tipoMateriaExt" className="conteinar-Add-Products-select" value={this.state.tipoMateriaExt} onChange={this.handleInputChange}>
-                                <option value="">Tipo Matéria Externa</option>
-                                <option value="Parecer Prévio do Tribunal de Contas">Parecer Prévio do Tribunal de Contas</option>
-                                <option value="Veto">Veto</option>
-                                <option value="Projeto de Emenda à Lei Orgânica">Projeto de Emenda à Lei Orgânica</option>
-                                <option value="Projeto de Lei Complementar">Projeto de Lei Complementar</option>
-                                <option value="Projeto de Lei Ordinária">Projeto de Lei Ordinária</option>
-                                <option value="Projeto de Decreto Legislativo">Projeto de Decreto Legislativo</option>
-                                <option value="Projeto de Resolução">Projeto de Resolução</option>
-                                <option value="Indicação">Indicação</option>
-                                <option value="Moção">Moção</option>
-                                <option value="Requerimento">Requerimento</option>
-                                <option value="Recurso">Recurso</option>
-                                <option value="Requerimento de Urgência Especial">Requerimento de Urgência Especial</option>
-                                <option value="Requerimento de CPI">Requerimento de CPI</option>
-                            </select>
-
-                            <input type='number' name="numeroMateriaExt" placeholder="Numero da Materia Externa" value={this.state.numeroMateriaExt} onChange={this.handleInputChange} />
-                            <input type='number' name="anoMateriaExt" placeholder="Ano da Materia Externa" value={this.state.anoMateriaExt} onChange={this.handleInputChange} />
-                            <br /><label className='labelform-materia'>Data da Materia</label><br />
-                            <input type='date' name="dataMateriaExt" placeholder="Data Materia Externa" value={this.state.dataMateriaExt} onChange={this.handleInputChange} />
-
-
-                            <p>Dados Textuais</p>
-                            <input type="text" name="titulo" placeholder="Titulo" value={this.state.titulo} onChange={this.handleInputChange} />
-                            <textarea name="ementa" placeholder="Ementa" value={this.state.ementa} onChange={this.handleInputChange} />
-                            <textarea name="indexacao" placeholder="Indexação" value={this.state.indexacao} onChange={this.handleInputChange} />
-                            <textarea name="observacao" placeholder="Observação" value={this.state.observacao} onChange={this.handleInputChange} />
-
-                        </form>
-                        {isSigned ? (
-                            <p style={{ color: 'green', fontSize: '12px' }}>Documento Assinado Digitalmente por Blu Legis</p>
-                        ) : (
-                            <>
-                                <button className='btn-assinar' type="button" onClick={this.handleSignDocument}>
-                                    Assinar Documento
-                                </button>
-                            </>
-                        )}
-                        {/* Novo botão para visualizar PDF, dentro do fluxo do formulário */}
-                        {pdfData && (
-                            <button type="button" className='btn-visualizar-pdf' onClick={this.openPdfPopup} style={{ marginTop: '20px' }}>
-                                Visualizar PDF
-                            </button>
-                        )}
-                        {/* Botão "Gerar Protocolo" que navega para /materias-dash */}
-                        <button type="button" onClick={() => this.props.history.push('/materias-dash')} style={{ marginTop: '20px', marginRight: '10px' }}>
-                            Protocolar Matéria
-                        </button>
-
-                    </div>
-                    {/* O botão flutuante "Visualizar PDF" permanece fixo no canto da tela */}
-                    {pdfData ? (
-                        <button type="button" onClick={this.openPdfPopup} className="preview-pdf-button-fixed">
-                            Visualizar PDF
-                        </button>
-                    ) : (
-                        <div className='addImg'> {/* Mantém a div addImg para a imagem da câmera quando o PDF não é gerado */}
-                            <img src={camera} alt="Câmera" />
-                            <p>Preencha o formulário para gerar o PDF.</p>
+                    <div style={{ width: '100%' }}>
+                        {/* Seção de IA */}
+                        <div className="ai-generation-card full-screen-ai">
+                            <h3><FaMagic /> Assistente de Redação IA</h3>
+                            <div className="chat-interface-container">
+                                <p>Descreva a matéria que deseja protocolar (ex: "Criar um projeto de lei para incentivo ao esporte nas escolas") e nossa IA preencherá a minuta inicial para você.</p>
+                                <textarea 
+                                    className="ai-textarea chat-textarea-expanded"
+                                    placeholder="Digite aqui sua ideia para a IA..."
+                                    value={this.state.aiPrompt}
+                                    onChange={(e) => this.setState({ aiPrompt: e.target.value })}
+                                />
+                                <div className="ai-button-wrapper">
+                                    <button 
+                                        type="button" 
+                                        className="btn-ai-generate"
+                                        onClick={this.handleGenerateAI}
+                                        disabled={this.state.isGenerating}
+                                    >
+                                        {this.state.isGenerating ? 'Gerando Minuta...' : 'Gerar Matéria com IA'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    )}
+
+                        {pdfData && (
+                            <div className="generated-actions">
+                                {isSigned ? (
+                                    <p style={{ color: 'green', fontSize: '12px', margin: '10px' }}>Documento Assinado Digitalmente por Blu Legis</p>
+                                ) : (
+                                    <button className='btn-assinar' type="button" onClick={this.handleSignDocument}>
+                                        Assinar Documento
+                                    </button>
+                                )}
+                                
+                                <button type="button" className='btn-visualizar-pdf' onClick={this.openPdfPopup}>
+                                    Visualizar PDF
+                                </button>
+                                
+                                <button type="button" onClick={() => this.props.history.push('/materias-dash')} className="btn-protocolar">
+                                    Protocolar Matéria
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Popup de Preview do PDF */}

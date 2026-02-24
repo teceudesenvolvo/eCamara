@@ -2,6 +2,9 @@
   "name": "eCamara",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@date-io/dayjs": "^2.15.0",
     "@date-io/luxon": "^2.15.0",

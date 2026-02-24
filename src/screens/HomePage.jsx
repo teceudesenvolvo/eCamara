@@ -10,7 +10,7 @@ class HomePage extends Component {
         super(props);
         this.state = {
             // Configuração dinâmica da Câmara (simulando API/Config)
-            city: 'Blumenau',
+            city: 'Nossa Cidade',
             uf: 'SC',
             stats: {
                 aiLaws: 127,

@@ -1,7 +1,7 @@
 import './App.css';
 import { useState } from 'react';
 
-import { Switch, Route } from 'react-router-dom'
+import { Switch, Route, useLocation } from 'react-router-dom'
 
 //Screen Navigate
 import HomeDashboard from './screens/HomePage.jsx';
@@ -48,9 +48,13 @@ function App() {
   const openChat = () => setIsChatOpen(true);
   const closeChat = () => setIsChatOpen(false);
 
+  const location = useLocation();
+  // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
+  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia'].includes(location.pathname);
+
   return (
     <div className="App">
-      <MenuDesktop onOpenChat={openChat} />
+      {!hideMenuDesktop && <MenuDesktop onOpenChat={openChat} />}
       
       <div className="main-content-wrapper">
         <TopBar />

@@ -1036,6 +1036,7 @@ video {
   margin-top: 70px;
   margin-bottom: 100px;
   font-weight: 600 !important;
+  margin-left: 85px !important; /* Compensar menu (65px) + margem */
   color: #fff !important;
 
 }
@@ -2733,6 +2734,115 @@ video {
   flex-direction: row;
   z-index: 7;
   margin-bottom: 10%;
+  flex-direction: column; /* Alterado para coluna para o chat ocupar largura total */
+  padding-right: 20px; /* Adicionado padding à direita */
+  padding-left: 65px; /* Compensar menu fixo */
+}
+
+/* Card de Geração por IA */
+.ai-generation-card {
+  width: 90%;
+  background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 100%);
+  border: 2px solid #126B5E;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  margin-top: 30px;
+  box-shadow: 0 4px 15px rgba(18, 107, 94, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+
+.ai-generation-card h3 {
+  color: #126B5E !important;
+  margin: 0 0 10px 0 !important;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100% !important;
+  margin-left: 0 !important;
+}
+
+.ai-generation-card p {
+  color: #555;
+  font-size: 0.95rem;
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.ai-textarea {
+  width: 100% !important;
+  height: 80px !important;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc !important;
+  margin-bottom: 15px !important;
+  font-family: inherit;
+  resize: vertical;
+  background-color: white !important;
+  color: #333 !important;
+}
+
+.btn-ai-generate {
+  background: linear-gradient(90deg, #126B5E 0%, #0e5248 100%) !important;
+  color: white !important;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-weight: bold;
+  width: auto !important;
+  align-self: flex-end;
+}
+
+/* Estilos para o Chat Tela Cheia */
+.full-screen-ai {
+  height: 75vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-interface-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+}
+
+.chat-textarea-expanded {
+  flex: 1 !important;
+  height: auto !important;
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.ai-button-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+}
+
+.generated-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.generated-actions button {
+  width: auto !important;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  color: white;
+  border: none;
+}
+
+.btn-protocolar {
+  background-color: #FF740F !important;
 }
 
 .conteinar-Add-Products>div>form>input,
