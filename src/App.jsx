@@ -86,6 +86,7 @@ function App() {
           <Route path="/juizo-materia" component={JuizoMateria} />
         </Switch>
 
+        {!hideMenuDesktop && (
         <footer className='footer'>
           <div className='footer-content'>
             <div className='footer-section footer-about'>
@@ -137,6 +138,7 @@ function App() {
             </div>
           </div>
         </footer>
+        )}
       </div>
 
       <Menu />
