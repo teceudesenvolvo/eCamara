@@ -528,8 +528,8 @@ class AddProducts extends Component {
                                         <div className="a4-header">
                                             <img src={logo} alt="Brasão" className="a4-logo" />
                                             <div className="a4-header-text">
-                                                <h3>Câmara Municipal de Blumenau</h3>
-                                                <p>Estado de Santa Catarina</p>
+                                                <h3>Câmara Municipal</h3>
+                                                <p>Estado do Ceará</p>
                                             </div>
                                         </div>
                                         <div className="a4-content">
