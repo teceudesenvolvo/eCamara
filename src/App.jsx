@@ -20,8 +20,12 @@ import Perfil from './screens/comLogin/Perfil.jsx';
 
 import AddMateria from './screens/comLogin/addMaterias.jsx';
 import MateriasDash from './screens/comLogin/materiasDash.jsx';
-import JuizoMateria from './screens/juizoMateria.jsx';
+import JuizoMateria from './screens/comLogin/juizoMateria.jsx';
 import Register from './screens/comLogin/register.jsx';
+import JuizoPresidente from './screens/comLogin/juizoPresidente.jsx';
+import ComissoesDash from './screens/comLogin/comissoesDash.jsx';
+
+import MateriaDetails from './screens/comLogin/materiaDetails.jsx';
 
 // SingIn / SignUp
 import Login from './screens/login.jsx';
@@ -50,7 +54,7 @@ function App() {
 
   const location = useLocation();
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia'].includes(location.pathname);
+  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente'].includes(location.pathname);
 
   return (
     <div className="App">
@@ -81,9 +85,13 @@ function App() {
           {/* Páginas Filho */}
           <Route path="/materias-dash" component={MateriasDash} />
 
+          <Route path="/materia-detalhes" component={MateriaDetails} />
+
           {/* Páginas de Formulários */}
           <Route path="/protocolar-materia" component={AddMateria} />
           <Route path="/juizo-materia" component={JuizoMateria} />
+          <Route path="/juizo-presidente" component={JuizoPresidente} />
+          <Route path="/comissoes-dash" component={ComissoesDash} />
         </Switch>
 
         {!hideMenuDesktop && (

@@ -5,7 +5,9 @@ import {
     FaPlusCircle,
     FaPencilAlt,
     FaRegUser,
-    FaHome
+    FaHome,
+    FaUsers,
+    FaBalanceScale
 } from "react-icons/fa";
 import '../App.css';
 
@@ -37,6 +39,16 @@ const MenuDashboard = () => {
                 <Link to="/juizo-materia" className={`aDesktop ${isActive('/juizo-materia')}`}>
                     <FaPencilAlt className="icon-desktop" />
                     <span className="text-desktop">Parecer</span>
+                </Link>
+
+                <Link to="/juizo-presidente" className={`aDesktop ${isActive('/juizo-presidente')}`}>
+                    <FaBalanceScale className="icon-desktop" />
+                    <span className="text-desktop">Presidência</span>
+                </Link>
+
+                <Link to="/comissoes-dash" className={`aDesktop ${isActive('/comissoes-dash')}`}>
+                    <FaUsers className="icon-desktop" />
+                    <span className="text-desktop">Comissões</span>
                 </Link>
 
                 <div className="divider-desktop">Conta</div>

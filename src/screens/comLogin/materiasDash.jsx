@@ -116,6 +116,7 @@ class loginDashboard extends Component {
                                         cursor: 'pointer',
                                         transition: 'all 0.2s'
                                     }}
+                                    onClick={() => this.props.history.push('/materia-detalhes', { materiaId: row.id })}
                                     onMouseOver={(e) => { e.target.style.background = '#126B5E'; e.target.style.color = 'white'; }}
                                     onMouseOut={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#126B5E'; }}
                                     >

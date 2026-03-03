@@ -72,7 +72,9 @@ class AddProducts extends Component {
             protocolGenerated: null, // Armazena o protocolo gerado
             showPasswordModal: false, // Modal de senha
             passwordInput: '',
-            passwordError: ''
+            passwordError: '',
+            logoBase64: null, // Estado para armazenar logo convertida
+            signatureBase64: null // Estado para armazenar assinatura convertida
         };
         this.messagesEndRef = React.createRef();
         this.chatContainerRef = React.createRef();
@@ -97,9 +99,34 @@ class AddProducts extends Component {
 
     // Gerar PDF na montagem do componente e sempre que o estado do formulário muda
     componentDidMount() {
-        this.handleGeneratePDF(); // Gera o PDF inicial
+        this.loadImagesAndGeneratePDF(); // Carrega imagens e depois gera o PDF
         this.scrollToBottom();
     }
+
+    // Função auxiliar para converter imagem URL em Base64
+    loadImagesAndGeneratePDF = async () => {
+        try {
+            const getBase64 = async (url) => {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            };
+
+            const logoBase64 = await getBase64(logo);
+            const signatureBase64 = await getBase64(signature);
+
+            this.setState({ logoBase64, signatureBase64 }, () => {
+                this.handleGeneratePDF();
+            });
+        } catch (error) {
+            console.error("Erro ao carregar imagens para o PDF:", error);
+            this.handleGeneratePDF(); // Tenta gerar mesmo sem imagens em caso de erro
+        }
+    };
 
     handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -184,83 +211,186 @@ class AddProducts extends Component {
         }
     };
 
-    // Função para gerar conteúdo com IA (Simulada)
-    handleSendMessage = () => {
-        const { currentInput, messages, chatStep } = this.state;
+    // Função para gerar conteúdo com IA (Real)
+    handleSendMessage = async () => {
+        const { currentInput, messages, chatStep, objeto, tipoMateria } = this.state;
         if (!currentInput.trim()) return;
 
         const userMessage = { id: Date.now(), sender: 'user', text: currentInput };
         
         this.setState({
-            messages: [...this.state.messages, userMessage],
+            messages: [...messages, userMessage],
             currentInput: '',
             isGenerating: true
         });
 
-        // Simulação de delay de rede/processamento da IA
-        setTimeout(() => {
-            // Aqui entraria a chamada real para a API (OpenAI, etc.)
-            let aiResponseText = '';
+        try {
+            let prompt = '';
             let nextStep = chatStep;
             let nextStateUpdates = {};
+            let aiResponseText = '';
+
+            // --- CONTEXTO LEGISLATIVO (SIMULAÇÃO DE RAG) ---
+            // Na versão final, isso viria do seu Banco de Dados ou de um arquivo PDF processado
+            const REGIMENTO_INTERNO_RESUMO = `
+            REGRAS FUNDAMENTAIS DA CÂMARA:
+            1. É vedado ao Vereador apresentar projetos que gerem despesa direta ao Executivo (Vício de Iniciativa), exceto se indicar a fonte de custeio.
+            2. Matérias sobre trânsito e transporte são de competência privativa da União, cabendo ao município apenas legislar sobre circulação local.
+            3. Denominação de ruas deve vir acompanhada de abaixo-assinado dos moradores e certidão de óbito do homenageado.
+            4. Não são permitidas Moções de Repúdio sem prova documental do fato.
+            5. A criação de datas comemorativas deve ter relevância social comprovada.
+            `;
+
+            const MATERIAS_ANTERIORES = `
+            LISTA DE MATÉRIAS JÁ APROVADAS (PARA VERIFICAR DUPLICIDADE):
+            - Lei nº 1.234/2023: Institui a Semana da Saúde Mental nas escolas.
+            - Lei nº 1.235/2023: Obriga a instalação de câmeras em creches municipais.
+            - Lei nº 1.236/2024: Dispõe sobre a proibição de fogos de artifício com estampido.
+            - Indicação 45/2024: Solicita pavimentação da Rua XV de Novembro.
+            - Projeto de Lei 10/2024: Cria o programa "Adote uma Praça".
+            `;
+            // -------------------------------------------------
 
             if (chatStep === 0) {
-                // Usuário informou o Tema
-                aiResponseText = `Entendido. O tema é "${userMessage.text}". Qual é o tipo desta matéria? (Ex: Projeto de Lei, Indicação, Requerimento, Moção)`;
+                // Passo 0: Usuário informa o Tema
+                prompt = `Você é um assistente legislativo da Câmara Municipal. O usuário deseja criar uma nova matéria. O tema informado foi: "${currentInput}". Confirme que entendeu o tema e pergunte qual é o tipo da matéria (ex: Projeto de Lei, Requerimento, Indicação, Moção). Seja breve e cordial.`;
                 nextStep = 1;
-                nextStateUpdates = { objeto: userMessage.text }; 
+                nextStateUpdates = { objeto: currentInput };
             } else if (chatStep === 1) {
-                // Usuário informou o Tipo
-                aiResponseText = `Certo, será um(a) ${userMessage.text}. Há algum detalhe específico ou justificativa que devo incluir no texto?`;
+                // Passo 1: Usuário informa o Tipo
+                prompt = `Estamos criando uma matéria legislativa sobre o tema "${objeto}". O usuário informou que o tipo da matéria é: "${currentInput}". Confirme o tipo e peça para o usuário fornecer os detalhes específicos, justificativa ou pontos principais que devem constar no texto da lei.`;
                 nextStep = 2;
-                nextStateUpdates = { tipoMateria: userMessage.text };
+                nextStateUpdates = { tipoMateria: currentInput };
             } else if (chatStep === 2) {
-                // Usuário informou Detalhes. Gerar.
-                aiResponseText = `Perfeito! Estou gerando a minuta da matéria com base nas suas informações. Abrindo o editor...`;
-                nextStep = 3;
+                // Passo 2: Usuário informa Detalhes -> Gerar Minuta
+                prompt = `Atue como um consultor legislativo especialista e rigoroso.
                 
-                // Gerando dados fictícios baseados no chat
-                const generatedData = {
-                    tipoMateria: this.state.tipoMateria || 'Projeto de Lei',
-                    ano: new Date().getFullYear().toString(),
-                    numero: Math.floor(Math.random() * 1000) + '/2026',
-                    dataApresenta: new Date().toISOString().split('T')[0],
-                    protocolo: '', // Ainda não protocolado
-                    tipoApresentacao: 'Escrita',
-                    tipoAutor: 'Parlamentar',
-                    autor: 'Vereador Usuário', // Mock
-                    regTramita: 'Ordinária',
-                    status: 'Em Elaboração',
-                    titulo: (`${this.state.tipoMateria || 'Matéria'} sobre ${this.state.objeto}`).toUpperCase(),
-                    ementa: `Dispõe sobre ${this.state.objeto} e dá outras providências.`,
-                    textoMateria: `PROJETO DE LEI Nº ____/${new Date().getFullYear()}\n\n` +
-                        `Súmula: Dispõe sobre ${this.state.objeto}.\n\n` +
-                        `A CÂMARA MUNICIPAL APROVA:\n\n` +
-                        `Art. 1º Fica estabelecido que ${this.state.objeto}, com a finalidade de atender aos interesses da coletividade.\n\n` +
-                        `Art. 2º ${userMessage.text} \n\n` + 
-                        `Art. 3º As despesas decorrentes da execução desta Lei correrão por conta das dotações orçamentárias próprias.\n\n` +
-                        `Art. 4º Esta Lei entra em vigor na data de sua publicação.\n\n` +
-                        `JUSTIFICATIVA\n\n` +
-                        `A presente proposição tem por objetivo ${userMessage.text}. Trata-se de medida relevante para o município.\n\n` +
-                        `Sala das Sessões, ${new Date().toLocaleDateString('pt-BR')}.`,
-                    showEditor: true,
-                    isGenerating: false
-                };
+                CONTEXTO OBRIGATÓRIO:
+                ${REGIMENTO_INTERNO_RESUMO}
+                
+                HISTÓRICO DE MATÉRIAS (EVITE DUPLICIDADE):
+                ${MATERIAS_ANTERIORES}
+                
+                SUA TAREFA:
+                Analise o pedido de um(a) ${tipoMateria} sobre o tema "${objeto}".
+                Detalhes fornecidos: "${currentInput}".
 
-                setTimeout(() => {
-                    this.setState(generatedData);
-                }, 1500);
+                PASSO 1 - VALIDAÇÃO:
+                - Verifique se este tema já existe na lista de matérias anteriores. Se for duplicado, inicie sua resposta OBRIGATORIAMENTE com a palavra "BLOQUEIO:" seguida da explicação.
+                - Verifique se o tema viola o Regimento Interno (ex: vício de iniciativa). Se violar, inicie sua resposta OBRIGATORIAMENTE com a palavra "BLOQUEIO:" seguida da explicação.
+                
+                PASSO 2 - GERAÇÃO (Apenas se passou na validação):
+                Se NÃO houver impedimentos, NÃO use a palavra "BLOQUEIO". Apenas escreva a minuta seguindo estritamente a estrutura padrão de lei municipal:
+                1. Título (em caixa alta).
+                2. Ementa (resumo do que trata a lei).
+                3. Texto da lei articulado (Art. 1º, Art. 2º, etc).
+                4. Justificativa formal ao final.
+                
+                Não use formatação Markdown (como negrito **), use apenas texto puro.`;
+                nextStep = 3;
+            }
+
+            // Chamada real à API
+            const response = await this.callGeminiAPI(prompt);
+
+            if (chatStep === 2) {
+                // Verifica se a IA recusou a geração (procurando a tag de bloqueio solicitada no prompt)
+                const isRefusal = response.includes("BLOQUEIO:");
+
+                if (isRefusal) {
+                    // Se a IA recusou, mostramos a explicação no chat e NÃO abrimos o editor
+                    aiResponseText = response;
+                    nextStep = 2; // Mantém no passo 2 para o usuário tentar outro detalhe ou tema
+                } else {
+                    // Se a IA gerou a minuta, abrimos o editor
+                    aiResponseText = `Perfeito! Validei o regimento e a base de dados. Estou gerando a minuta da matéria. Abrindo o editor...`;
+                    
+                    const generatedData = {
+                        tipoMateria: this.state.tipoMateria || 'Projeto de Lei',
+                        ano: new Date().getFullYear().toString(),
+                        numero: Math.floor(Math.random() * 1000) + '/2026',
+                        dataApresenta: new Date().toISOString().split('T')[0],
+                        protocolo: '', 
+                        tipoApresentacao: 'Escrita',
+                        tipoAutor: 'Parlamentar',
+                        autor: 'Vereador Usuário',
+                        regTramita: 'Ordinária',
+                        status: 'Em Elaboração',
+                        titulo: (`${this.state.tipoMateria || 'Matéria'} sobre ${this.state.objeto}`).toUpperCase(),
+                        ementa: `Dispõe sobre ${this.state.objeto} e dá outras providências.`,
+                        textoMateria: response, // Texto gerado pela IA
+                        showEditor: true,
+                        isGenerating: false
+                    };
+
+                    setTimeout(() => {
+                        this.setState(generatedData);
+                    }, 1500);
+                }
+            } else {
+                aiResponseText = response;
             }
 
             this.setState(prevState => ({
                 messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: aiResponseText }],
-                isGenerating: chatStep === 2 ? true : false, // Mantém loading se for gerar
+                isGenerating: chatStep === 2 ? true : false, 
                 chatStep: nextStep,
                 ...nextStateUpdates
             }));
 
-        }, 1000);
+        } catch (error) {
+            console.error("Erro ao processar IA:", error);
+            this.setState(prevState => ({
+                messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: "Desculpe, não consegui processar sua solicitação. Verifique sua conexão." }],
+                isGenerating: false
+            }));
+        }
     };
+
+    // Função para chamar a API do Gemini (exemplo)
+    async callGeminiAPI(prompt) {
+        const API_KEY = 'AIzaSyDdvxyaBpOK098zGU8fq5dI6p_SeRARDvU';
+        // Usando 'gemini-1.5-flash' (alias padrão). Se der erro 404, o código abaixo listará os modelos disponíveis no console.
+        const MODEL_NAME = 'gemini-2.5-flash'; // Corrigido com base na lista de modelos disponíveis para sua chave.
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+
+            const data = await response.json();
+
+            // Verificação de segurança para evitar o crash
+            if (data.error) {
+                console.error("Erro retornado pela API Gemini:", data.error);
+                
+                // DEBUG: Se o modelo não for encontrado (404), tenta listar os modelos disponíveis para ajudar a corrigir
+                if (data.error.code === 404) {
+                    console.warn("Modelo não encontrado. Tentando listar modelos disponíveis para esta chave...");
+                    fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`)
+                        .then(res => res.json())
+                        .then(list => console.log(">>> MODELOS DISPONÍVEIS PARA SUA CHAVE:", list))
+                        .catch(err => console.error("Erro ao listar modelos:", err));
+                    
+                    return `Erro: O modelo ${MODEL_NAME} não está disponível para sua chave. Verifique o Console (F12) para ver a lista de modelos.`;
+                }
+
+                return `Erro na IA: ${data.error.message}`;
+            }
+
+            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
+                return data.candidates[0].content.parts[0].text;
+            }
+            
+            return "Não foi possível gerar uma resposta válida.";
+        } catch (error) {
+            console.error("Erro ao chamar a API do Gemini:", error);
+            return "Desculpe, não consegui processar sua solicitação no momento.";
+        }
+    }
 
     handleProtocolar = () => {
         // Simula a geração de protocolo e envio para o presidente
@@ -282,13 +412,14 @@ class AddProducts extends Component {
         const {
             tipoMateria, ano, numero, dataApresenta, protocolo, tipoApresentacao, tipoAutor, autor, apelido,
             prazo, materiaPolemica, objeto, regTramita, status, dataPrazo, publicacao, isComplementar, tipoMateriaExt,
-            numeroMateriaExt, anoMateriaExt, dataMateriaExt, titulo, ementa, indexacao, observacao, textoMateria, isSigned
+            numeroMateriaExt, anoMateriaExt, dataMateriaExt, titulo, ementa, indexacao, observacao, textoMateria, isSigned,
+            logoBase64, signatureBase64
         } = this.state;
 
         // Conteúdo base do PDF
         const docContent = [
-            {
-                image: logo, // Logo da Câmara
+            logoBase64 && {
+                image: logoBase64, // Usa a versão Base64
                 width: 80,
                 alignment: 'center'
             },
@@ -372,13 +503,13 @@ class AddProducts extends Component {
         ].filter(Boolean); // Filtra elementos falsy (como os blocos de Origem Externa vazios)
 
         // Adiciona a assinatura digital se isSigned for true
-        if (isSigned) {
+        if (isSigned && signatureBase64) {
             docContent.push(
                 {
                     text: '\n\n' // Espaço antes da assinatura
                 },
                 {
-                    image: signature, // Imagem da assinatura
+                    image: signatureBase64, // Usa a versão Base64
                     width: 150,
                     alignment: 'center',
                     style: 'assinatura'
