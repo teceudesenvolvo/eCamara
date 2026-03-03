@@ -146,6 +146,11 @@ class PautasSessao extends Component {
     // Função para chamar a API do Gemini
     async callGeminiAPI(prompt) {
         const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+        if (!API_KEY) {
+            return "Erro: Chave de API não configurada. Verifique o arquivo .env.";
+        }
+
         const MODEL_NAME = 'gemini-2.5-flash';
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 

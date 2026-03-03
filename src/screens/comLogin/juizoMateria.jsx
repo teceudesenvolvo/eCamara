@@ -168,7 +168,12 @@ class JuizoMateria extends Component {
 
     // Função para chamar a API do Gemini (copiada de addMaterias.jsx)
     async callGeminiAPI(prompt) {
-        const API_KEY = 'AIzaSyDdvxyaBpOK098zGU8fq5dI6p_SeRARDvU';
+        const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+        if (!API_KEY) {
+            return "Erro: Chave de API não configurada. Verifique o arquivo .env.";
+        }
+
         const MODEL_NAME = 'gemini-2.5-flash';
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
@@ -218,7 +223,7 @@ class JuizoMateria extends Component {
                     {/* Header */}
                     <div className="dashboard-header">
                         <h1 className="dashboard-header-title">
-                            <FaGavel className="icon-primary" /> Triagem e Pareceres
+                            <FaGavel style={{color: '#126B5E'}} /> Triagem e Pareceres
                         </h1>
                         <p className="dashboard-header-desc">Gestão jurídica e legislativa das matérias em tramitação.</p>
                     </div>

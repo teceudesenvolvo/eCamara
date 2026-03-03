@@ -2744,6 +2744,7 @@ video {
   width: 90%;
   background: linear-gradient(135deg, #e3e3e3 0%, #eeeeee 100%);
   border: 2px solid #126B5E;
+  color: #126B5E;
   border-radius: 40px;
   padding: 25px;
   margin-bottom: 30px;
@@ -2756,7 +2757,7 @@ video {
 }
 
 .ai-generation-card h3 {
-  color: #fff !important;
+  color: #126B5E !important;
   margin: 0 0 10px 0 !important;
   font-size: 1.3rem;
   display: flex;
@@ -2765,6 +2766,10 @@ video {
   width: 100% !important;
   margin-left: 0 !important;
 }
+
+.ai-generation-card svg {
+  color: #fff;
+} 
 
 .ai-generation-card p {
   color: #555;
@@ -2798,7 +2803,7 @@ video {
 
 /* Estilos para o Chat Tela Cheia */
 .full-screen-ai {
-  height: 80vh;
+  height: 700px;
   display: flex;
   flex-direction: column;
 }
@@ -4273,6 +4278,21 @@ footer>p {
   to { transform: translateY(0); opacity: 1; }
 }
 
+.ai-generation-header{
+  padding: 15px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ai-generation-header p{
+  width: 20%;
+  text-align: right;
+}
+
 .chat-header {
   background: linear-gradient(135deg, #126B5E 0%, #003f36 100%);
   padding: 15px 20px;
@@ -4326,7 +4346,7 @@ footer>p {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 800px;
+  width: 100%;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -4378,6 +4398,7 @@ footer>p {
   font-size: 0.95rem;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
   text-align: left;
+  white-space: pre-wrap;
 }
 
 .message-ai .message-bubble {

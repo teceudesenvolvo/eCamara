@@ -103,7 +103,7 @@ class HomePage extends Component {
 
                 {/* Popup do Chat AI */}
                 {isChatOpen && (
-                    <ChatAI onClose={this.closeChat} />
+                    <ChatAI onClose={this.closeChat} city={city} />
                 )}
             </div>
         );

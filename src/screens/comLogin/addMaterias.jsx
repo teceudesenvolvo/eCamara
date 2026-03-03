@@ -350,6 +350,12 @@ class AddProducts extends Component {
     // Função para chamar a API do Gemini (exemplo)
     async callGeminiAPI(prompt) {
         const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+        
+        if (!API_KEY) {
+            console.error("Chave de API não encontrada. Verifique se o arquivo .env foi criado corretamente na raiz do projeto.");
+            return "Erro de Configuração: Chave de API não encontrada. Crie um arquivo .env com VITE_GEMINI_API_KEY=sua_chave.";
+        }
+
         // Usando 'gemini-1.5-flash' (alias padrão). Se der erro 404, o código abaixo listará os modelos disponíveis no console.
         const MODEL_NAME = 'gemini-2.5-flash'; // Corrigido com base na lista de modelos disponíveis para sua chave.
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
@@ -614,7 +620,10 @@ class AddProducts extends Component {
                         <div style={{ width: '100%' }}>
                             {/* Chat de IA */}
                             <div className="ai-generation-card full-screen-ai">
-                            <h3><FaMagic /> Assistente de Redação IA</h3>
+                            <div className="ai-generation-header">
+                            <h3> Criar Matéria Legislativa</h3>
+                            <p> Assistente de Redação IA</p>
+                            </div>
                             <div className="chat-interface-container" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                                 <div className="chat-messages" ref={this.chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
                                     {this.state.messages.map(msg => (

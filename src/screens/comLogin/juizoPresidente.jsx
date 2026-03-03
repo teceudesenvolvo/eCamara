@@ -230,7 +230,12 @@ class JuizoPresidente extends Component {
 
     // Função para chamar a API do Gemini
     async callGeminiAPI(prompt) {
-        const API_KEY = 'AIzaSyDdvxyaBpOK098zGU8fq5dI6p_SeRARDvU';
+        const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+        if (!API_KEY) {
+            return "Erro: Chave de API não configurada. Verifique o arquivo .env.";
+        }
+
         const MODEL_NAME = 'gemini-2.5-flash';
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
@@ -421,7 +426,7 @@ class JuizoPresidente extends Component {
                         <div className="dashboard-header" style={{ marginBottom: '20px' }}>
                             <div>
                                 <h1 className="dashboard-header-title">
-                                <FaBalanceScale className="icon-primary" /> Juízo
+                                    <FaBalanceScale /> Juízo
                                 </h1>
                                 <p className="dashboard-header-desc">Despachos da Presidência.</p>
                             </div>
@@ -487,7 +492,7 @@ class JuizoPresidente extends Component {
                         {selectedMateria ? (
                             <div className="dashboard-card" style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                                 <h2 className="modal-header" style={{ justifyContent: 'flex-start' }}>
-                                    Despacho da Matéria
+                                    <FaGavel /> Despacho da Matéria
                                 </h2>
                                 <div className='detalhes-materia'>
                                     <p><strong>Matéria:</strong> {selectedMateria.tipo} {selectedMateria.numero}</p>
@@ -495,7 +500,7 @@ class JuizoPresidente extends Component {
                                 </div>
                                 
                                 <div style={{ textAlign: 'left', background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: `4px solid ${selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}` }}>
-                                    <h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}><FaFileAlt className="icon-primary" /> Parecer da Procuradoria</h4>
+                                    <h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}> Parecer da Procuradoria</h4>
                                     <p style={{ margin: 0, fontStyle: 'italic', color: '#555' }}>"{selectedMateria.parecer}"</p>
                                 </div>
 
@@ -522,7 +527,7 @@ class JuizoPresidente extends Component {
                                             className="btn-secondary"
                                             style={{ padding: '8px 15px', color: '#126B5E', borderColor: '#126B5E', display: 'flex', alignItems: 'center', gap: '8px' }}
                                         >
-                                            <FaMagic className="icon-primary" /> {this.state.isGeneratingDespacho ? 'Gerando...' : 'Sugerir com IA'}
+                                            <FaMagic style={{color: '#126B5E'}} /> {this.state.isGeneratingDespacho ? 'Gerando...' : 'Sugerir com IA'}
                                         </button>
                                     </div>
                                     <textarea 
@@ -553,8 +558,8 @@ class JuizoPresidente extends Component {
                     {showPasswordModal && (
                         <div className="modal-overlay">
                             <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
-                                <h3 style={{ color: '#333' }}>Assinatura Digital do Despacho</h3>
-                                <p style={{ marginBottom: '20px', color: '#666' }}>Digite sua senha para assinar e oficializar o despacho.</p>
+                                <h3>Assinatura Digital do Despacho</h3>
+                                <p style={{ marginBottom: '20px' }}>Digite sua senha para assinar e oficializar o despacho.</p>
                                 
                                 <input 
                                     type="password" 
