@@ -24,6 +24,7 @@ import JuizoMateria from './screens/comLogin/juizoMateria.jsx';
 import Register from './screens/comLogin/register.jsx';
 import JuizoPresidente from './screens/comLogin/juizoPresidente.jsx';
 import ComissoesDash from './screens/comLogin/comissoesDash.jsx';
+import PautasSessao from './screens/comLogin/pautasSessao.jsx';
 
 import MateriaDetails from './screens/comLogin/materiaDetails.jsx';
 
@@ -54,7 +55,7 @@ function App() {
 
   const location = useLocation();
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente'].includes(location.pathname);
+  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao'].includes(location.pathname);
 
   return (
     <div className="App">
@@ -92,6 +93,7 @@ function App() {
           <Route path="/juizo-materia" component={JuizoMateria} />
           <Route path="/juizo-presidente" component={JuizoPresidente} />
           <Route path="/comissoes-dash" component={ComissoesDash} />
+          <Route path="/pautas-sessao" component={PautasSessao} />
         </Switch>
 
         {!hideMenuDesktop && (

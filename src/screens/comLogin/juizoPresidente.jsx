@@ -1,16 +1,30 @@
 import React, { Component } from 'react';
-import { FaBalanceScale, FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaArchive, FaPaperPlane, FaFileAlt, FaGavel, FaMagic } from 'react-icons/fa';
+import { FaBalanceScale, FaSearch, FaCheckCircle, FaTimesCircle, FaArchive, FaPaperPlane, FaFileAlt, FaGavel, FaMagic, FaInbox } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuDashboard.jsx';
+import pdfMake from 'pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+import logo from '../../assets/logo.png';
+import signature from '../../assets/assinatura-teste-1.png'; // Assinatura do Presidente
+
+pdfMake.vfs = pdfFonts.vfs;
 
 class JuizoPresidente extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            showModal: false,
+            activeTab: 'Pendentes',
+            searchTerm: '',
             selectedMateria: null,
             despachoText: '',
             isGeneratingDespacho: false,
             selectedComissao: '',
+            // PDF and Signature state
+            logoBase64: null,
+            signatureBase64: null,
+            showPasswordModal: false,
+            passwordInput: '',
+            passwordError: '',
+            pendingAction: null,
             comissoesDisponiveis: [
                 'Comissão de Constituição, Justiça e Redação (CCJ)',
                 'Comissão de Finanças e Orçamento',
@@ -47,7 +61,7 @@ class JuizoPresidente extends Component {
                     tipo: 'Indicação', 
                     numero: '45/2024', 
                     ementa: 'Solicita pavimentação da Rua XV de Novembro.', 
-                    autor: 'Ver. João', 
+                    autor: 'Ver. João',
                     data: '21/02/2024', 
                     status: 'Encaminhado às Comissões', 
                     urgencia: false, 
@@ -82,16 +96,56 @@ class JuizoPresidente extends Component {
         };
     }
 
-    handleOpenModal = (materia) => {
-        this.setState({ showModal: true, selectedMateria: materia, despachoText: '', selectedComissao: '', isGeneratingDespacho: false });
+    componentDidMount() {
+        this.loadImages();
+    }
+
+    loadImages = async () => {
+        try {
+            const getBase64 = async (url) => {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            };
+            const logoBase64 = await getBase64(logo);
+            const signatureBase64 = await getBase64(signature);
+            this.setState({ logoBase64, signatureBase64 });
+        } catch (error) {
+            console.error("Erro ao carregar imagens para o PDF:", error);
+        }
     };
 
-    handleCloseModal = () => {
-        this.setState({ showModal: false, selectedMateria: null });
+    handleTabChange = (tab) => {
+        this.setState({ activeTab: tab, selectedMateria: null });
+    };
+
+    handleSearchChange = (e) => {
+        this.setState({ searchTerm: e.target.value });
+    };
+
+    handleSelectMateria = (materia) => {
+        this.setState({ selectedMateria: materia, despachoText: '', selectedComissao: '', isGeneratingDespacho: false });
+    };
+
+    handleCloseDetails = () => {
+        this.setState({ selectedMateria: null });
+    };
+
+    openPasswordModal = (action) => {
+        const { selectedComissao } = this.state;
+        if (action === 'Encaminhado às Comissões' && !selectedComissao) {
+            alert("Por favor, selecione uma comissão para encaminhar a matéria.");
+            return;
+        }
+        this.setState({ showPasswordModal: true, pendingAction: action, passwordInput: '', passwordError: '' });
     };
 
     handleSubmitDespacho = (novoStatus) => {
-        const { selectedMateria, materias, selectedComissao } = this.state;
+        const { selectedMateria, materias, selectedComissao, despachoText } = this.state;
         
         let statusFinal = novoStatus;
 
@@ -109,25 +163,56 @@ class JuizoPresidente extends Component {
 
         this.setState({ 
             materias: updatedMaterias, 
-            showModal: false,
-            selectedMateria: null 
+            selectedMateria: null, // Limpa a seleção após o despacho
         });
-        
-        alert(`Despacho realizado com sucesso! Novo status: ${statusFinal}`);
+
+        this.generateDespachoPDF(selectedMateria, despachoText, statusFinal);
     };
 
+    confirmSignature = () => {
+        if (this.state.passwordInput === '123456') { // Simulação de senha
+            this.handleSubmitDespacho(this.state.pendingAction); // Chama o despacho
+            this.setState({ showPasswordModal: false }); // Apenas fecha o modal de senha
+        } else {
+            this.setState({ passwordError: 'Senha incorreta.' });
+        }
+    };
+
+    handlePasswordChange = (e) => {
+        this.setState({ passwordInput: e.target.value });
+    };
     handleGenerateDespachoWithAI = async () => {
         const { selectedMateria, selectedComissao } = this.state;
         if (!selectedMateria) return;
 
         this.setState({ isGeneratingDespacho: true, despachoText: '' });
 
+        // --- Lógica Aprimorada para Contexto da Decisão ---
         let promptContext = '';
-        if (selectedComissao) {
-            promptContext = `A intenção é encaminhar para a comissão: ${selectedComissao}.`;
-        } else {
-            promptContext = `A intenção é realizar um despacho de admissibilidade padrão.`;
+
+        // Cenário 1: Matéria já aprovada na comissão
+        if (selectedMateria.status === 'Aprovado na Comissão') {
+            promptContext = `A matéria já foi aprovada pela comissão competente. O despacho deve, portanto, encaminhá-la para votação em Plenário.`;
+        } 
+        // Cenário 2: É um Requerimento
+        else if (selectedMateria.tipo === 'Requerimento') {
+            if (selectedMateria.decisaoParecer === 'favoravel') {
+                promptContext = `Trata-se de um Requerimento com parecer favorável. O despacho pode ser para 'Deferimento' (Despachado) ou para 'Inclusão em Pauta' para votação em Plenário. Elabore um texto para o despacho de deferimento simples.`;
+            } else {
+                promptContext = `Trata-se de um Requerimento com parecer contrário. O despacho deve ser para o arquivamento da matéria.`;
+            }
         }
+        // Cenário 3: Matéria geral (Projeto de Lei, etc.)
+        else {
+            if (selectedComissao) {
+                promptContext = `A intenção é encaminhar a matéria para a seguinte comissão: ${selectedComissao}. O despacho deve formalizar este encaminhamento.`;
+            } else if (selectedMateria.decisaoParecer === 'contrario') {
+                promptContext = `O parecer da procuradoria foi contrário. O despacho deve, portanto, fundamentar o arquivamento da matéria.`;
+            } else {
+                promptContext = `O parecer foi favorável. O despacho padrão é encaminhar para as comissões competentes. Elabore um texto genérico para encaminhamento, mesmo que uma comissão específica não tenha sido selecionada ainda.`;
+            }
+        }
+        // --- Fim da Lógica Aprimorada ---
 
         const prompt = `Atue como o Presidente da Câmara Municipal. Redija um despacho de admissibilidade formal e técnico para a seguinte matéria:
         - Tipo: ${selectedMateria.tipo}
@@ -137,7 +222,7 @@ class JuizoPresidente extends Component {
         
         Contexto da decisão: ${promptContext}
 
-        O texto deve ser direto, formal e autorizar o trâmite ou arquivamento conforme o parecer. Não use markdown.`;
+        O texto deve ser direto, formal e consistente com o contexto fornecido. Não use markdown.`;
 
         const response = await this.callGeminiAPI(prompt);
         this.setState({ despachoText: response, isGeneratingDespacho: false });
@@ -177,6 +262,61 @@ class JuizoPresidente extends Component {
         }
     }
 
+    generateDespachoPDF = (materia, despachoText, statusFinal) => {
+        const { logoBase64 } = this.state;
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
+
+        const docDefinition = {
+            content: [
+                logoBase64 && { image: logoBase64, width: 80, alignment: 'center', marginBottom: 10 },
+                { text: 'Câmara Municipal de Teste', style: 'header', alignment: 'center' },
+                { text: 'Gabinete da Presidência', style: 'subheader', alignment: 'center', marginBottom: 30 },
+
+                { text: 'DESPACHO DE ADMISSIBILIDADE', style: 'title', alignment: 'center' },
+
+                {
+                    style: 'infoBox',
+                    table: {
+                        widths: ['*'],
+                        body: [
+                            [[
+                                { text: `Matéria: ${materia.tipo} nº ${materia.numero}`, style: 'infoText' },
+                                { text: `Ementa: ${materia.ementa}`, style: 'infoText' },
+                                { text: `Autor: ${materia.autor}`, style: 'infoText' },
+                            ]]
+                        ]
+                    },
+                    layout: 'lightHorizontalLines'
+                },
+
+                { text: 'I - DO PARECER JURÍDICO', style: 'sectionHeader' },
+                { text: `A Procuradoria Jurídica desta Casa emitiu parecer opinando pela ${materia.decisaoParecer === 'favoravel' ? 'constitucionalidade e legalidade' : 'inconstitucionalidade e ilegalidade'} da matéria, nos seguintes termos: "${materia.parecer}"`, style: 'bodyText' },
+
+                { text: 'II - DO DESPACHO', style: 'sectionHeader' },
+                { text: despachoText || 'Considerando o parecer da Procuradoria Jurídica e a competência desta Presidência, decido pelo trâmite a seguir.', style: 'bodyText' },
+
+                { text: 'III - DECISÃO', style: 'sectionHeader' },
+                { text: [ 'Diante do exposto, determino o: ', { text: statusFinal.toUpperCase(), bold: true }], style: 'bodyText' },
+
+                { text: `\n\nCâmara Municipal, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
+
+                { text: '\n\n\n\n________________________________', style: 'signature', alignment: 'center' },
+                { text: 'Presidente da Câmara', style: 'signatureName', alignment: 'center' },
+                { text: `Assinado Digitalmente em: ${new Date().toLocaleString()}, Blu Legis`, alignment: 'center', style: 'digitalSignatureInfo' }
+            ].filter(Boolean),
+            styles: {
+                header: { fontSize: 16, bold: true }, subheader: { fontSize: 12, color: '#555' },
+                title: { fontSize: 14, bold: true, marginBottom: 20 }, infoBox: { margin: [0, 0, 0, 20] },
+                infoText: { fontSize: 10, margin: [5, 2, 5, 2] }, sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 5, color: '#126B5E' },
+                bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 }, signature: { fontSize: 11 },
+                signatureName: { fontSize: 11, bold: true },
+                digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 5, italics: true }
+            }
+        };
+
+        pdfMake.createPdf(docDefinition).open();
+    };
+
     renderActionButtons = () => {
         const { selectedMateria } = this.state;
         if (!selectedMateria) return null;
@@ -185,8 +325,8 @@ class JuizoPresidente extends Component {
         if (selectedMateria.status === 'Aprovado na Comissão') {
             return (
                 <button 
-                    onClick={() => this.handleSubmitDespacho('Enviado para Plenário')}
-                    style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#126B5E', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    onClick={() => this.openPasswordModal('Enviado para Plenário')}
+                    className="btn-primary"
                 >
                     <FaPaperPlane /> Enviar para Plenário
                 </button>
@@ -198,14 +338,14 @@ class JuizoPresidente extends Component {
             return (
                 <>
                     <button 
-                        onClick={() => this.handleSubmitDespacho('Despachado')}
-                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#4CAF50', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}
+                        onClick={() => this.openPasswordModal('Despachado')}
+                        className="btn-success"
                     >
                         <FaCheckCircle /> Despachar
                     </button>
                     <button 
-                        onClick={() => this.handleSubmitDespacho('Enviado para Plenário')}
-                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#126B5E', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}
+                        onClick={() => this.openPasswordModal('Enviado para Plenário')}
+                        className="btn-primary"
                     >
                         <FaPaperPlane /> Enviar para Plenário
                     </button>
@@ -217,14 +357,14 @@ class JuizoPresidente extends Component {
         return (
             <>
                 <button 
-                    onClick={() => this.handleSubmitDespacho('Arquivado')}
-                    style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#d32f2f', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    onClick={() => this.openPasswordModal('Arquivado')}
+                    className="btn-danger"
                 >
                     <FaArchive /> Arquivar
                 </button>
                 <button 
-                    onClick={() => this.handleSubmitDespacho('Encaminhado às Comissões')}
-                    style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#126B5E', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    onClick={() => this.openPasswordModal('Encaminhado às Comissões')}
+                    className="btn-primary"
                 >
                     <FaPaperPlane /> Enviar para Comissão
                 </button>
@@ -233,107 +373,136 @@ class JuizoPresidente extends Component {
     };
 
     render() {
-        const { materias, showModal, selectedMateria } = this.state;
+        const { materias, activeTab, searchTerm, selectedMateria, showPasswordModal, passwordInput, passwordError } = this.state;
 
-        // Filtra matérias aguardando despacho inicial OU que retornaram das comissões
-        const materiasPendentes = materias.filter(m => 
-            m.status === 'Aguardando Despacho da Presidência' || 
-            m.status === 'Aprovado na Comissão'
-        );
+        const getFilteredMaterias = () => {
+            const lowercasedSearchTerm = searchTerm.toLowerCase();
+            let filtered = [];
+
+            switch (activeTab) {
+                case 'Comissão':
+                    filtered = materias.filter(m => m.status.includes('Encaminhado à'));
+                    break;
+                case 'Plenário':
+                    filtered = materias.filter(m => m.status === 'Enviado para Plenário');
+                    break;
+                case 'Finalizadas':
+                    filtered = materias.filter(m => m.status.includes('Arquivado') || m.status === 'Despachado');
+                    break;
+                case 'Pendentes':
+                default:
+                    filtered = materias.filter(m => 
+                        m.status === 'Aguardando Despacho da Presidência' || 
+                        m.status === 'Aprovado na Comissão'
+                    );
+                    break;
+            }
+
+            if (searchTerm) {
+                return filtered.filter(m => 
+                    m.ementa.toLowerCase().includes(lowercasedSearchTerm) ||
+                    m.numero.toLowerCase().includes(lowercasedSearchTerm) ||
+                    m.autor.toLowerCase().includes(lowercasedSearchTerm)
+                );
+            }
+            return filtered;
+        };
+
+        const materiasFiltradas = getFilteredMaterias();
 
         return (
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
 
-                <div className="dashboard-content" style={{ marginLeft: '85px', width: '100%', padding: '40px', boxSizing: 'border-box', minHeight: '100vh' }}>
-                    
-                    {/* Header */}
-                    <div style={{ marginBottom: '40px', textAlign: 'left' }}>
-                        <h1 style={{ color: '#126B5E', margin: 0, fontSize: '2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <FaBalanceScale /> Juízo de Admissibilidade
-                        </h1>
-                        <p style={{ color: '#666', margin: '5px 0 0 0' }}>Despachos da Presidência sobre a tramitação das matérias.</p>
-                    </div>
+                <div className="dashboard-content" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
+                    {/* --- Coluna da Esquerda: Lista e Filtros --- */}
+                    <div style={{ flex: 1, maxWidth: '500px' }}>
+                        {/* Header */}
+                        <div className="dashboard-header" style={{ marginBottom: '20px' }}>
+                            <div>
+                                <h1 className="dashboard-header-title">
+                                <FaBalanceScale className="icon-primary" /> Juízo
+                                </h1>
+                                <p className="dashboard-header-desc">Despachos da Presidência.</p>
+                            </div>
+                        </div>
 
-                    {/* Lista de Matérias Pendentes */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        {materiasPendentes.length > 0 ? materiasPendentes.map((materia) => (
-                            <div key={materia.id} style={{ 
-                                background: 'white', 
-                                padding: '25px', 
-                                borderRadius: '12px', 
-                                boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                borderLeft: materia.decisaoParecer === 'contrario' ? '4px solid #d32f2f' : '4px solid #4CAF50'
-                            }}>
-                                <div style={{ flex: 1, marginRight: '20px', textAlign: 'left' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                        <span style={{ fontWeight: 'bold', color: '#126B5E', background: '#e0f2f1', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
-                                            {materia.tipo} {materia.numero}
-                                        </span>
-                                        <span style={{ 
-                                            fontWeight: 'bold', 
-                                            color: materia.decisaoParecer === 'contrario' ? '#d32f2f' : '#2e7d32', 
-                                            background: materia.decisaoParecer === 'contrario' ? '#ffebee' : '#e8f5e9', 
-                                            padding: '4px 8px', 
-                                            borderRadius: '4px', 
-                                            fontSize: '0.8rem', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            gap: '5px' 
-                                        }}>
-                                            {materia.decisaoParecer === 'contrario' ? <FaTimesCircle size={12} /> : <FaCheckCircle size={12} />}
-                                            Parecer {materia.decisaoParecer}
-                                        </span>
-                                    </div>
-                                    <h3 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '1.1rem', lineHeight: '1.4' }}>{materia.ementa}</h3>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: '#666' }}>
-                                        <span><strong>Autor:</strong> {materia.autor}</span>
-                                        <span style={{ color: '#ccc' }}>|</span>
-                                        <span><strong>Data:</strong> {materia.data}</span>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        {/* Search and Tabs */}
+                        <div className="dashboard-card" style={{ padding: '15px', marginBottom: '20px' }}>
+                            <div className="search-input-wrapper" style={{ marginBottom: '15px' }}>
+                                <FaSearch className="search-icon" />
+                                <input 
+                                    type="text"
+                                    placeholder="Buscar matérias..."
+                                    className="search-input"
+                                    value={searchTerm}
+                                    onChange={this.handleSearchChange}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                {['Pendentes', 'Comissão', 'Plenário', 'Finalizadas'].map(tab => (
                                     <button 
-                                        onClick={() => this.handleOpenModal(materia)}
-                                        style={{ background: '#126B5E', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                        key={tab} 
+                                        onClick={() => this.handleTabChange(tab)}
+                                        className={activeTab === tab ? 'btn-primary' : 'btn-secondary'}
+                                        style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}
                                     >
-                                        <FaGavel /> Despachar
+                                        {tab}
                                     </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Lista de Matérias */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', paddingRight: '10px' }}>
+                            {materiasFiltradas.length > 0 ? materiasFiltradas.map((materia) => (
+                                <div 
+                                    key={materia.id} 
+                                    className="list-item dashboard-card-hover" 
+                                    style={{ 
+                                        flexDirection: 'column', 
+                                        alignItems: 'flex-start', 
+                                        padding: '15px', 
+                                        cursor: 'pointer',
+                                        borderLeft: `4px solid ${selectedMateria && selectedMateria.id === materia.id ? '#FF740F' : (materia.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50')}`
+                                    }}
+                                    onClick={() => this.handleSelectMateria(materia)}
+                                >
+                                    <div className="list-item-header" style={{ marginBottom: '5px' }}>
+                                        <span className="tag tag-primary">{materia.tipo} {materia.numero}</span>
+                                        <span className={`tag ${materia.status.includes('Aguardando') || materia.status.includes('Aprovado') ? 'tag-warning' : 'tag-neutral'}`}>{materia.status}</span>
+                                    </div>
+                                    <p className="list-item-title" style={{ fontSize: '1rem', margin: 0 }}>{materia.ementa}</p>
                                 </div>
-                            </div>
-                        )) : (
-                            <div style={{ background: 'white', padding: '40px', borderRadius: '12px', textAlign: 'center', color: '#888' }}>
-                                <FaCheckCircle size={40} style={{ marginBottom: '15px', color: '#126B5E' }} />
-                                <h3 style={{margin: 0}}>Nenhuma matéria aguardando seu despacho.</h3>
-                            </div>
-                        )}
+                            )) : (
+                                <div className="dashboard-card" style={{ textAlign: 'center', color: '#888' }}>
+                                    <p>Nenhuma matéria encontrada nesta aba.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Modal de Despacho */}
-                    {showModal && selectedMateria && (
-                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                            <div style={{ background: 'white', padding: '30px', borderRadius: '16px', width: '600px', maxWidth: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-                                <h2 style={{ marginTop: 0, color: '#126B5E', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
-                                    Despacho da Presidência
+                    {/* --- Coluna da Direita: Detalhes e Ações --- */}
+                    <div style={{ flex: 1.5, position: 'sticky', top: '40px', height: 'calc(100vh - 80px)' }}>
+                        {selectedMateria ? (
+                            <div className="dashboard-card" style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                                <h2 className="modal-header" style={{ justifyContent: 'flex-start' }}>
+                                    Despacho da Matéria
                                 </h2>
-                                <div style={{ marginBottom: '20px' }}>
+                                <div className='detalhes-materia'>
                                     <p><strong>Matéria:</strong> {selectedMateria.tipo} {selectedMateria.numero}</p>
                                     <p><strong>Ementa:</strong> {selectedMateria.ementa}</p>
                                 </div>
                                 
-                                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: `4px solid ${selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}` }}>
-                                    <h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}><FaFileAlt /> Parecer da Procuradoria</h4>
+                                <div style={{ textAlign: 'left', background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: `4px solid ${selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}` }}>
+                                    <h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}><FaFileAlt className="icon-primary" /> Parecer da Procuradoria</h4>
                                     <p style={{ margin: 0, fontStyle: 'italic', color: '#555' }}>"{selectedMateria.parecer}"</p>
                                 </div>
 
                                 <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#555' }}>Destino (Comissão)</label>
+                                    <label style={{ textAlign: 'left', display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#555' }}>Destino (Comissão)</label>
                                     <select
-                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', backgroundColor: '#fff', fontSize: '1rem', color: '#333' }}
+                                        className="modal-input"
                                         value={this.state.selectedComissao}
                                         onChange={(e) => this.setState({ selectedComissao: e.target.value })}
                                     >
@@ -350,14 +519,16 @@ class JuizoPresidente extends Component {
                                         <button 
                                             onClick={this.handleGenerateDespachoWithAI}
                                             disabled={this.state.isGeneratingDespacho}
-                                            style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid #126B5E', background: 'white', color: '#126B5E', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                            className="btn-secondary"
+                                            style={{ padding: '8px 15px', color: '#126B5E', borderColor: '#126B5E', display: 'flex', alignItems: 'center', gap: '8px' }}
                                         >
-                                            <FaMagic /> {this.state.isGeneratingDespacho ? 'Gerando...' : 'Sugerir com IA'}
+                                            <FaMagic className="icon-primary" /> {this.state.isGeneratingDespacho ? 'Gerando...' : 'Sugerir com IA'}
                                         </button>
                                     </div>
                                     <textarea 
                                         rows="4" 
-                                        style={{ width: '100%', padding: '15px', borderRadius: '8px', border: '1px solid #ccc', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', backgroundColor: this.state.isGeneratingDespacho ? '#f5f5f5' : '#fff' }}
+                                        className="modal-textarea"
+                                        style={{ color: '#000', backgroundColor: this.state.isGeneratingDespacho ? '#f5f5f5' : '#fff' }}
                                         placeholder={this.state.isGeneratingDespacho ? "Aguarde, a IA está redigindo o despacho..." : "Ex: Encaminhe-se às comissões competentes para análise..."}
                                         value={this.state.despachoText}
                                         onChange={(e) => this.setState({ despachoText: e.target.value })}
@@ -365,16 +536,40 @@ class JuizoPresidente extends Component {
                                     ></textarea>
                                 </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                                    <button 
-                                        onClick={this.handleCloseModal}
-                                        style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #ccc', background: 'white', cursor: 'pointer', color: '#666' }}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        {this.renderActionButtons()}
-                                    </div>
+                                <div className="modal-footer" style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+                                    {this.renderActionButtons()}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="dashboard-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#888', textAlign: 'center' }}>
+                                <FaInbox size={50} style={{ marginBottom: '20px' }} />
+                                <h3>Selecione uma matéria</h3>
+                                <p>Clique em uma matéria na lista à esquerda para ver os detalhes e realizar o despacho.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Modal de Senha para Assinatura */}
+                    {showPasswordModal && (
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+                                <h3 style={{ color: '#333' }}>Assinatura Digital do Despacho</h3>
+                                <p style={{ marginBottom: '20px', color: '#666' }}>Digite sua senha para assinar e oficializar o despacho.</p>
+                                
+                                <input 
+                                    type="password" 
+                                    className="modal-input"
+                                    style={{ marginBottom: '10px' }}
+                                    placeholder="Sua senha (ex: 123456)"
+                                    value={passwordInput}
+                                    onChange={this.handlePasswordChange}
+                                />
+                                
+                                {passwordError && <p style={{ color: 'red', fontSize: '12px', marginBottom: '10px' }}>{passwordError}</p>}
+
+                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px' }}>
+                                    <button className="btn-secondary" onClick={() => this.setState({ showPasswordModal: false, passwordError: '' })}>Cancelar</button>
+                                    <button className="btn-primary" onClick={this.confirmSignature}>Assinar e Despachar</button>
                                 </div>
                             </div>
                         </div>

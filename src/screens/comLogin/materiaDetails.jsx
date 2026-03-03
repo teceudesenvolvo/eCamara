@@ -57,26 +57,22 @@ class MateriaDetails extends Component {
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
 
-                <div className="dashboard-content" style={{ marginLeft: '85px', width: '100%', padding: '40px', boxSizing: 'border-box', minHeight: '100vh' }}>
+                <div className="dashboard-content">
                     
                     {/* Navegação de Voltar */}
-                    <div style={{ marginBottom: '20px' }}>
                         <button 
                             onClick={() => this.props.history.goBack()}
-                            style={{ background: 'none', border: 'none', color: '#666', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500', transition: 'color 0.2s' }}
-                            onMouseOver={(e) => e.target.style.color = '#126B5E'}
-                            onMouseOut={(e) => e.target.style.color = '#666'}
+                            className="btn-back"
                         >
                             <FaArrowLeft /> Voltar para Matérias
                         </button>
-                    </div>
 
                     {/* Cabeçalho Principal Moderno */}
-                    <div style={{ background: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', marginBottom: '30px', borderLeft: '5px solid #126B5E' }}>
+                    <div className="dashboard-card" style={{ marginBottom: '30px', borderLeft: '5px solid #126B5E' }}>
                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', alignItems: 'center' }}>
-                                    <span style={{ background: '#e0f2f1', color: '#126B5E', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    <span className="tag tag-primary">
                                         {materia.tipo} nº {materia.numero}
                                     </span>
                                     <span style={{ color: '#888', fontSize: '0.9rem' }}>|</span>
@@ -127,7 +123,7 @@ class MateriaDetails extends Component {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                             
                             {/* Card de Resumo e Texto */}
-                            <div style={{ background: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                            <div className="dashboard-card">
                                 <h3 style={{ margin: '0 0 20px 0', color: '#126B5E', fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <span style={{ width: '4px', height: '20px', background: '#126B5E', borderRadius: '2px', display: 'block' }}></span>
                                     Resumo da Matéria
@@ -146,7 +142,7 @@ class MateriaDetails extends Component {
                             </div>
 
                             {/* Card de Documentos */}
-                            <div style={{ background: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                            <div className="dashboard-card">
                                 <h3 style={{ margin: '0 0 20px 0', color: '#126B5E', fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <span style={{ width: '4px', height: '20px', background: '#126B5E', borderRadius: '2px', display: 'block' }}></span>
                                     Documentos Oficiais
@@ -189,7 +185,7 @@ class MateriaDetails extends Component {
 
                         {/* Coluna Direita: Tramitação */}
                         <div>
-                            <div style={{ background: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', position: 'sticky', top: '20px' }}>
+                            <div className="dashboard-card" style={{ position: 'sticky', top: '20px' }}>
                                 <h3 style={{ margin: '0 0 25px 0', color: '#126B5E', fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <FaHistory /> Linha do Tempo
                                 </h3>

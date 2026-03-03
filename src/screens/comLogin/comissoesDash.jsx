@@ -64,20 +64,20 @@ class ComissoesDash extends Component {
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
 
-                <div className="dashboard-content" style={{ marginLeft: '85px', width: '100%', padding: '40px', boxSizing: 'border-box', minHeight: '100vh' }}>
+                <div className="dashboard-content">
                     
                     {/* Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+                    <div className="dashboard-header">
                         <div>
-                            <h1 style={{ color: '#126B5E', margin: 0, fontSize: '2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <h1 className="dashboard-header-title">
                                 <FaUsers /> Gestão de Comissões
                             </h1>
-                            <p style={{ color: '#666', margin: '5px 0 0 0' }}>Crie e gerencie as comissões permanentes e temporárias da câmara.</p>
+                            <p className="dashboard-header-desc">Crie e gerencie as comissões permanentes e temporárias da câmara.</p>
                         </div>
                         <button 
                             onClick={this.handleOpenModal}
-                            className="btn-protocolar-final" 
-                            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 25px' }}
+                            className="btn-primary" 
+                            style={{ width: 'auto' }}
                         >
                             <FaPlus /> Nova Comissão
                         </button>
@@ -86,7 +86,7 @@ class ComissoesDash extends Component {
                     {/* Grid de Comissões */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '25px' }}>
                         {comissoes.map(comissao => (
-                            <div key={comissao.id} style={{ background: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                            <div key={comissao.id} className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
                                 <div style={{ padding: '25px' }}>
                                     <h3 style={{ margin: '0 0 10px 0', color: '#126B5E', fontSize: '1.2rem' }}>{comissao.nome}</h3>
                                     <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>{comissao.descricao}</p>
@@ -106,7 +106,7 @@ class ComissoesDash extends Component {
                                         )}
                                     </div>
                                 </div>
-                                <div style={{ padding: '15px 25px', background: '#fafafa', borderTop: '1px solid #eee', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+                                <div style={{ padding: '15px 25px', background: '#fafafa', borderTop: '1px solid #eee' }}>
                                     <button style={{ background: 'none', border: 'none', color: '#126B5E', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <FaUserPlus /> Gerenciar Membros
                                     </button>
@@ -117,10 +117,10 @@ class ComissoesDash extends Component {
 
                     {/* Modal de Criação */}
                     {showModal && (
-                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                            <div style={{ background: 'white', padding: '30px', borderRadius: '16px', width: '500px', maxWidth: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '20px' }}>
-                                    <h2 style={{ margin: 0, color: '#126B5E' }}>Criar Nova Comissão</h2>
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ width: '500px' }}>
+                                <div className="modal-header">
+                                    <h2 style={{ margin: 0 }}>Criar Nova Comissão</h2>
                                     <button onClick={this.handleCloseModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}><FaTimes /></button>
                                 </div>
                                 
@@ -130,7 +130,7 @@ class ComissoesDash extends Component {
                                         type="text"
                                         value={newComissaoName}
                                         onChange={(e) => this.setState({ newComissaoName: e.target.value })}
-                                        style={{ width: '95%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc' }}
+                                        className="modal-input"
                                         placeholder="Ex: Comissão de Educação e Cultura"
                                     />
                                 </div>
@@ -141,21 +141,21 @@ class ComissoesDash extends Component {
                                         rows="4"
                                         value={newComissaoDesc}
                                         onChange={(e) => this.setState({ newComissaoDesc: e.target.value })}
-                                        style={{ width: '95%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontFamily: 'inherit', resize: 'vertical' }}
+                                        className="modal-textarea"
                                         placeholder="Descreva brevemente a finalidade da comissão..."
                                     ></textarea>
                                 </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                <div className="modal-footer">
                                     <button 
                                         onClick={this.handleCloseModal}
-                                        style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #ccc', background: 'white', cursor: 'pointer', color: '#666' }}
+                                        className="btn-secondary"
                                     >
                                         Cancelar
                                     </button>
                                     <button 
                                         onClick={this.handleCreateComissao}
-                                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#126B5E', cursor: 'pointer', color: 'white' }}
+                                        className="btn-primary"
                                     >
                                         Criar Comissão
                                     </button>

@@ -213,42 +213,42 @@ class JuizoMateria extends Component {
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
 
-                <div className="dashboard-content" style={{ marginLeft: '85px', width: '100%', padding: '40px', boxSizing: 'border-box', minHeight: '100vh' }}>
+                <div className="dashboard-content">
                     
                     {/* Header */}
-                    <div style={{ marginBottom: '40px', textAlign: 'left' }}>
-                        <h1 style={{ color: '#126B5E', margin: 0, fontSize: '2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <FaGavel style={{color: '#126B5E'}} /> Triagem e Pareceres
+                    <div className="dashboard-header">
+                        <h1 className="dashboard-header-title">
+                            <FaGavel className="icon-primary" /> Triagem e Pareceres
                         </h1>
-                        <p style={{ color: '#666', margin: '5px 0 0 0' }}>Gestão jurídica e legislativa das matérias em tramitação.</p>
+                        <p className="dashboard-header-desc">Gestão jurídica e legislativa das matérias em tramitação.</p>
                     </div>
 
                     {/* Stats Cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #f57c00' }}>
+                    <div className="dashboard-grid-stats">
+                        <div className="stat-card" style={{ borderLeftColor: '#f57c00' }}>
                             <h3 style={{ margin: 0, color: '#f57c00', fontSize: '2rem' }}>12</h3>
                             <p style={{ margin: 0, color: '#666' }}>Aguardando Parecer</p>
                         </div>
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #126B5E' }}>
+                        <div className="stat-card" style={{ borderLeftColor: '#126B5E' }}>
                             <h3 style={{ margin: 0, color: '#126B5E', fontSize: '2rem' }}>45</h3>
                             <p style={{ margin: 0, color: '#666' }}>Pareceres Emitidos</p>
                         </div>
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #d32f2f' }}>
+                        <div className="stat-card" style={{ borderLeftColor: '#d32f2f' }}>
                             <h3 style={{ margin: 0, color: '#d32f2f', fontSize: '2rem' }}>3</h3>
                             <p style={{ margin: 0, color: '#666' }}>Urgências Pendentes</p>
                         </div>
                     </div>
 
                     {/* Filtros e Busca */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: '30px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                        <div style={{ position: 'relative', flex: 1 }}>
-                            <FaSearch style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#aaa' }} />
+                    <div className="dashboard-filter-bar">
+                        <div className="search-input-wrapper">
+                            <FaSearch className="search-icon" />
                             <input 
                                 type="text"  
                                 placeholder="Buscar por número, ementa ou autor..." 
                                 value={searchTerm}
                                 onChange={(e) => this.setState({ searchTerm: e.target.value })}
-                                style={{ width: '94%', padding: '12px 12px 12px 45px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none', fontSize: '1rem' }}
+                                className="search-input"
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -256,7 +256,7 @@ class JuizoMateria extends Component {
                             <select 
                                 value={filterStatus}
                                 onChange={(e) => this.setState({ filterStatus: e.target.value })}
-                                style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd', background: 'white', color: '#555', minWidth: '150px' }}
+                                className="filter-select"
                             >
                                 <option value="Todos">Todos os Status</option>
                                 <option value="Aguardando Parecer">Aguardando Parecer</option>
@@ -269,36 +269,27 @@ class JuizoMateria extends Component {
                     {/* Lista de Matérias */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                         {filteredMaterias.map((materia) => (
-                            <div key={materia.id} style={{ 
-                                background: 'white', 
-                                padding: '25px', 
-                                borderRadius: '12px', 
-                                boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                borderLeft: materia.urgencia ? '4px solid #d32f2f' : '4px solid transparent'
-                            }}>
-                                <div style={{ flex: 1, marginRight: '20px', textAlign: 'left' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                        <span style={{ fontWeight: 'bold', color: '#126B5E', background: '#e0f2f1', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
+                            <div key={materia.id} className="list-item" style={{ borderLeft: materia.urgencia ? '4px solid #d32f2f' : '4px solid transparent' }}>
+                                <div className="list-item-content">
+                                    <div className="list-item-header">
+                                        <span className="tag tag-primary">
                                             {materia.tipo} {materia.numero}
                                         </span>
                                         {materia.urgencia && (
-                                            <span style={{ fontWeight: 'bold', color: '#d32f2f', background: '#ffebee', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <span className="tag tag-danger">
                                                 <FaExclamationTriangle size={12} /> Urgente
                                             </span>
                                         )}
                                     </div>
-                                    <h3 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '1.1rem', lineHeight: '1.4' }}>{materia.ementa}</h3>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: '#666' }}>
+                                    <h3 className="list-item-title">{materia.ementa}</h3>
+                                    <div className="list-item-meta">
                                         <span><strong>Autor:</strong> {materia.autor}</span>
                                         <span style={{ color: '#ccc' }}>|</span>
                                         <span><strong>Data:</strong> {materia.data}</span>
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                <div className="list-item-actions">
                                     <div style={{ textAlign: 'right' }}>
                                         <span style={{ 
                                             display: 'block',
@@ -315,25 +306,14 @@ class JuizoMateria extends Component {
                                     {materia.parecer ? (
                                         <button 
                                             onClick={() => this.generateParecerPDF(materia, materia.parecer, materia.decisao)}
-                                            style={{ background: '#126B5E', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                            className="btn-primary"
                                         >
                                             <FaFileAlt /> Visualizar
                                         </button>
                                     ) : (
                                         <button 
                                             onClick={() => this.handleOpenParecer(materia)}
-                                            style={{ 
-                                                background: '#126B5E', 
-                                                color: 'white', 
-                                                border: 'none', 
-                                                padding: '10px 20px', 
-                                                borderRadius: '8px', 
-                                                cursor: 'pointer', 
-                                                fontWeight: '600',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px'
-                                            }}
+                                            className="btn-primary"
                                         >
                                             <FaPenFancy /> Analisar
                                         </button>
@@ -345,9 +325,9 @@ class JuizoMateria extends Component {
 
                     {/* Modal de Parecer */}
                     {showParecerModal && selectedMateria && (
-                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                            <div style={{ background: 'white', padding: '30px', borderRadius: '16px', width: '600px', maxWidth: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-                                <h2 style={{ marginTop: 0, color: '#126B5E', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+                        <div className="modal-overlay">
+                            <div className="modal-content">
+                                <h2 className="modal-header">
                                     Emitir Parecer Jurídico
                                 </h2>
                                 <div style={{ marginBottom: '20px', color: '#126B5E' }}>
@@ -361,14 +341,16 @@ class JuizoMateria extends Component {
                                         <button 
                                             onClick={this.handleGenerateParecerWithAI}
                                             disabled={this.state.isGeneratingParecer}
-                                            style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid #126B5E', background: 'white', color: '#126B5E', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                            className="btn-secondary"
+                                            style={{ padding: '8px 15px', color: '#126B5E', borderColor: '#126B5E', display: 'flex', alignItems: 'center', gap: '8px' }}
                                         >
                                             <FaMagic /> {this.state.isGeneratingParecer ? 'Gerando...' : 'Sugerir com IA'}
                                         </button>
                                     </div>
                                     <textarea 
                                         rows="15" 
-                                        style={{ width: '90%', padding: '15px', borderRadius: '8px', border: '1px solid #ccc', fontFamily: 'inherit', resize: 'vertical', background: this.state.isGeneratingParecer ? '#f5f5f5' : '#f9f9f9', color: '#333' }}
+                                        className="modal-textarea"
+                                        style={{ background: this.state.isGeneratingParecer ? '#f5f5f5' : '#f9f9f9' }}
                                         placeholder={this.state.isGeneratingParecer ? "Aguarde, a IA está elaborando uma sugestão de parecer..." : "Escreva aqui a fundamentação jurídica ou clique em 'Sugerir com IA'."}
                                         value={this.state.parecerText}
                                         onChange={(e) => this.setState({ parecerText: e.target.value })}
@@ -376,22 +358,22 @@ class JuizoMateria extends Component {
                                     ></textarea>
                                 </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                <div className="modal-footer">
                                     <button 
                                         onClick={this.handleCloseParecer}
-                                        style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #ccc', background: 'white', cursor: 'pointer', color: '#666' }}
+                                        className="btn-secondary"
                                     >
                                         Cancelar
                                     </button>
                                     <button 
                                         onClick={() => this.handleSubmitParecer('contrario')}
-                                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#d32f2f', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                        className="btn-danger"
                                     >
                                         <FaTimesCircle /> Contrário
                                     </button>
                                     <button 
                                         onClick={() => this.handleSubmitParecer('favoravel')}
-                                        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#2e7d32', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                        className="btn-success"
                                     >
                                         <FaCheckCircle /> Favorável
                                     </button>

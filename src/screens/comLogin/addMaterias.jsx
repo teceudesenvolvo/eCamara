@@ -349,7 +349,7 @@ class AddProducts extends Component {
 
     // Função para chamar a API do Gemini (exemplo)
     async callGeminiAPI(prompt) {
-        const API_KEY = 'AIzaSyDdvxyaBpOK098zGU8fq5dI6p_SeRARDvU';
+        const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
         // Usando 'gemini-1.5-flash' (alias padrão). Se der erro 404, o código abaixo listará os modelos disponíveis no console.
         const MODEL_NAME = 'gemini-2.5-flash'; // Corrigido com base na lista de modelos disponíveis para sua chave.
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
