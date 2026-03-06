@@ -5,6 +5,7 @@ import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../assets/logo.png';
 import signature from '../../assets/assinatura-teste-1.png'; // Assinatura do Presidente
+import { sendMessageToAIPrivate } from '../../aiService';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -224,48 +225,14 @@ class JuizoPresidente extends Component {
 
         O texto deve ser direto, formal e consistente com o contexto fornecido. Não use markdown.`;
 
-        const response = await this.callGeminiAPI(prompt);
-        this.setState({ despachoText: response, isGeneratingDespacho: false });
-    };
-
-    // Função para chamar a API do Gemini
-    async callGeminiAPI(prompt) {
-        const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-        if (!API_KEY) {
-            return "Erro: Chave de API não configurada. Verifique o arquivo .env.";
-        }
-
-        const MODEL_NAME = 'gemini-2.5-flash';
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
-
         try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-
-            const data = await response.json();
-
-            if (data.error) {
-                console.error("Erro retornado pela API Gemini:", data.error);
-                if (data.error.code === 404) {
-                    return `Erro: O modelo ${MODEL_NAME} não está disponível.`;
-                }
-                return `Erro na IA: ${data.error.message}`;
-            }
-
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-                return data.candidates[0].content.parts[0].text;
-            }
-            
-            return "Não foi possível gerar uma resposta válida.";
+            const response = await sendMessageToAIPrivate(prompt);
+            this.setState({ despachoText: response, isGeneratingDespacho: false });
         } catch (error) {
-            console.error("Erro ao chamar a API do Gemini:", error);
-            return "Desculpe, não consegui processar sua solicitação no momento.";
+            console.error("Erro na IA:", error);
+            this.setState({ despachoText: "Erro ao gerar despacho. Tente novamente.", isGeneratingDespacho: false });
         }
-    }
+    };
 
     generateDespachoPDF = (materia, despachoText, statusFinal) => {
         const { logoBase64 } = this.state;

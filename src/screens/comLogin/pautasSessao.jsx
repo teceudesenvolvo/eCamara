@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaSearch, FaTrash, FaFileAlt, FaMagic } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuDashboard.jsx';
+import { sendMessageToAIPrivate } from '../../aiService';
 
 class PautasSessao extends Component {
     constructor(props) {
@@ -118,11 +119,15 @@ class PautasSessao extends Component {
     
         Com base no regimento e na lista de matérias, gere o documento "Roteiro da Sessão" completo, detalhando cada fase e incluindo os nomes das matérias nos locais apropriados da Ordem do Dia. O texto deve ser formal e pronto para ser lido pelo Presidente da Câmara. Não use markdown.`;
     
-        const roteiroText = await this.callGeminiAPI(prompt);
-        
-        this.generateRoteiroPDF(selectedPauta, roteiroText);
-    
-        this.setState({ isFinalizing: false });
+        try {
+            const roteiroText = await sendMessageToAIPrivate(prompt);
+            this.generateRoteiroPDF(selectedPauta, roteiroText);
+        } catch (error) {
+            console.error("Erro na IA:", error);
+            alert("Erro ao gerar roteiro com IA.");
+        } finally {
+            this.setState({ isFinalizing: false });
+        }
     };
 
     generateRoteiroPDF = (pauta, roteiroText) => {
@@ -143,45 +148,6 @@ class PautasSessao extends Component {
         pdfMake.createPdf(docDefinition).open();
     };
 
-    // Função para chamar a API do Gemini
-    async callGeminiAPI(prompt) {
-        const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-        if (!API_KEY) {
-            return "Erro: Chave de API não configurada. Verifique o arquivo .env.";
-        }
-
-        const MODEL_NAME = 'gemini-2.5-flash';
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
-
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-
-            const data = await response.json();
-
-            if (data.error) {
-                console.error("Erro retornado pela API Gemini:", data.error);
-                if (data.error.code === 404) {
-                    return `Erro: O modelo ${MODEL_NAME} não está disponível.`;
-                }
-                return `Erro na IA: ${data.error.message}`;
-            }
-
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-                return data.candidates[0].content.parts[0].text;
-            }
-            
-            return "Não foi possível gerar uma resposta válida.";
-        } catch (error) {
-            console.error("Erro ao chamar a API do Gemini:", error);
-            return "Desculpe, não consegui processar sua solicitação no momento.";
-        }
-    }
-
     handleGenerateEditalWithAI = async () => {
         const { selectedPauta } = this.state;
         if (!selectedPauta) return;
@@ -197,8 +163,13 @@ class PautasSessao extends Component {
 
         O texto deve seguir a estrutura padrão de editais legislativos, convocando os Senhores Vereadores, mencionando o horário regimental (ou definir 19h) e o local (Plenário da Câmara). Finalize com a data e assinatura. Não use markdown.`;
 
-        const response = await this.callGeminiAPI(prompt);
-        this.setState({ editalText: response, isGeneratingEdital: false });
+        try {
+            const response = await sendMessageToAIPrivate(prompt);
+            this.setState({ editalText: response, isGeneratingEdital: false });
+        } catch (error) {
+            console.error("Erro na IA:", error);
+            this.setState({ editalText: "Erro ao gerar edital.", isGeneratingEdital: false });
+        }
     };
 
     render() {

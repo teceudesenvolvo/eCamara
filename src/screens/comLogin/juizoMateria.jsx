@@ -4,6 +4,7 @@ import MenuDashboard from '../../componets/menuDashboard.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../assets/logo.png';
+import { sendMessageToAIPrivate } from '../../aiService';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -100,8 +101,13 @@ class JuizoMateria extends Component {
         Na conclusão, opine de forma clara pela constitucionalidade/legalidade ou inconstitucionalidade/ilegalidade da matéria.
         Use uma linguagem formal e técnica.`;
 
-        const response = await this.callGeminiAPI(prompt);
-        this.setState({ parecerText: response, isGeneratingParecer: false });
+        try {
+            const response = await sendMessageToAIPrivate(prompt);
+            this.setState({ parecerText: response, isGeneratingParecer: false });
+        } catch (error) {
+            console.error("Erro na IA:", error);
+            this.setState({ parecerText: "Erro ao gerar parecer. Tente novamente.", isGeneratingParecer: false });
+        }
     };
 
     generateParecerPDF = (materia, parecerText, decisao) => {
@@ -165,45 +171,6 @@ class JuizoMateria extends Component {
 
         pdfMake.createPdf(docDefinition).open();
     };
-
-    // Função para chamar a API do Gemini (copiada de addMaterias.jsx)
-    async callGeminiAPI(prompt) {
-        const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-        if (!API_KEY) {
-            return "Erro: Chave de API não configurada. Verifique o arquivo .env.";
-        }
-
-        const MODEL_NAME = 'gemini-2.5-flash';
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
-
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-
-            const data = await response.json();
-
-            if (data.error) {
-                console.error("Erro retornado pela API Gemini:", data.error);
-                if (data.error.code === 404) {
-                    return `Erro: O modelo ${MODEL_NAME} não está disponível. Verifique o nome do modelo.`;
-                }
-                return `Erro na IA: ${data.error.message}`;
-            }
-
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-                return data.candidates[0].content.parts[0].text;
-            }
-            
-            return "Não foi possível gerar uma resposta válida.";
-        } catch (error) {
-            console.error("Erro ao chamar a API do Gemini:", error);
-            return "Desculpe, não consegui processar sua solicitação no momento.";
-        }
-    }
 
     render() {
         const { searchTerm, filterStatus, materias, showParecerModal, selectedMateria } = this.state;

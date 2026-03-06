@@ -11,6 +11,8 @@ import logo from '../../assets/logo.png';
 import signature from '../../assets/assinatura-teste-1.png'; // Imagem da assinatura
 
 import MenuDashboard from '../../componets/menuDashboard.jsx'; // Certifique-se de que este caminho está correto
+import { sendMessageToAIPrivate } from '../../aiService';
+import { auth } from '../../firebaseConfig';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -216,6 +218,14 @@ class AddProducts extends Component {
         const { currentInput, messages, chatStep, objeto, tipoMateria } = this.state;
         if (!currentInput.trim()) return;
 
+        if (!auth.currentUser) {
+            this.setState({
+                messages: [...messages, { id: Date.now(), sender: 'user', text: currentInput }, { id: Date.now() + 1, sender: 'ai', text: "🔒 Você precisa estar autenticado para usar este recurso. Por favor, faça login no sistema." }],
+                currentInput: ''
+            });
+            return;
+        }
+
         const userMessage = { id: Date.now(), sender: 'user', text: currentInput };
         
         this.setState({
@@ -291,7 +301,7 @@ class AddProducts extends Component {
             }
 
             // Chamada real à API
-            const response = await this.callGeminiAPI(prompt);
+            const response = await sendMessageToAIPrivate(prompt);
 
             if (chatStep === 2) {
                 // Verifica se a IA recusou a geração (procurando a tag de bloqueio solicitada no prompt)
@@ -341,62 +351,11 @@ class AddProducts extends Component {
         } catch (error) {
             console.error("Erro ao processar IA:", error);
             this.setState(prevState => ({
-                messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: "Desculpe, não consegui processar sua solicitação. Verifique sua conexão." }],
+                messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: error.message || "Desculpe, não consegui processar sua solicitação." }],
                 isGenerating: false
             }));
         }
     };
-
-    // Função para chamar a API do Gemini (exemplo)
-    async callGeminiAPI(prompt) {
-        const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-        
-        if (!API_KEY) {
-            console.error("Chave de API não encontrada. Verifique se o arquivo .env foi criado corretamente na raiz do projeto.");
-            return "Erro de Configuração: Chave de API não encontrada. Crie um arquivo .env com VITE_GEMINI_API_KEY=sua_chave.";
-        }
-
-        // Usando 'gemini-1.5-flash' (alias padrão). Se der erro 404, o código abaixo listará os modelos disponíveis no console.
-        const MODEL_NAME = 'gemini-2.5-flash'; // Corrigido com base na lista de modelos disponíveis para sua chave.
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
-
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-
-            const data = await response.json();
-
-            // Verificação de segurança para evitar o crash
-            if (data.error) {
-                console.error("Erro retornado pela API Gemini:", data.error);
-                
-                // DEBUG: Se o modelo não for encontrado (404), tenta listar os modelos disponíveis para ajudar a corrigir
-                if (data.error.code === 404) {
-                    console.warn("Modelo não encontrado. Tentando listar modelos disponíveis para esta chave...");
-                    fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`)
-                        .then(res => res.json())
-                        .then(list => console.log(">>> MODELOS DISPONÍVEIS PARA SUA CHAVE:", list))
-                        .catch(err => console.error("Erro ao listar modelos:", err));
-                    
-                    return `Erro: O modelo ${MODEL_NAME} não está disponível para sua chave. Verifique o Console (F12) para ver a lista de modelos.`;
-                }
-
-                return `Erro na IA: ${data.error.message}`;
-            }
-
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-                return data.candidates[0].content.parts[0].text;
-            }
-            
-            return "Não foi possível gerar uma resposta válida.";
-        } catch (error) {
-            console.error("Erro ao chamar a API do Gemini:", error);
-            return "Desculpe, não consegui processar sua solicitação no momento.";
-        }
-    }
 
     handleProtocolar = () => {
         // Simula a geração de protocolo e envio para o presidente
