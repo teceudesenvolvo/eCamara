@@ -9,7 +9,8 @@ import {
     FaUsers,
     FaBalanceScale,
     FaList,
-    FaCog
+    FaCog,
+    FaRobot
 } from "react-icons/fa";
 import '../App.css';
 
@@ -61,6 +62,11 @@ const MenuDashboard = () => {
                 <Link to="/configuracoes" className={`aDesktop ${isActive('/configuracoes')}`}>
                     <FaCog className="icon-desktop" />
                     <span className="text-desktop">Configurações</span>
+                </Link>
+
+                <Link to="/assistente-admin" className={`aDesktop ${isActive('/assistente-admin')}`}>
+                    <FaRobot className="icon-desktop" />
+                    <span className="text-desktop">Assistente</span>
                 </Link>
 
                 <div className="divider-desktop">Conta</div>

@@ -4977,6 +4977,7 @@ footer>p {
   border-radius: 12px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
   margin-bottom: 15px;
+  text-align: left;
 }
 
 .dashboard-card-hover:hover {
@@ -5174,6 +5175,13 @@ footer>p {
   font-family: inherit;
   resize: vertical;
   box-sizing: border-box;
+  color: #000 !important;
+  background-color: #f9f9f9 !important;
+}
+
+.label-form{
+  font-size: 14px;
+  color: #333;
 }
 
 .modal-input {
@@ -5183,6 +5191,11 @@ footer>p {
   border: 1px solid #ccc;
   box-sizing: border-box;
 }
+
+.inputLogin::placeholder {
+  color: #a0a0a0; /* Cor mais clara para o placeholder em fundo escuro */
+}
+
 
 /* Status Tags */
 .tag {

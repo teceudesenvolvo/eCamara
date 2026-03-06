@@ -2,6 +2,8 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { validateYoutubeUrl } from "./youtube";
+import { ataJobService } from "./ataJobService";
 
 setGlobalOptions({ maxInstances: 10, region: "southamerica-east1" });
 
@@ -135,6 +137,57 @@ export const falarComCamaraAIPrivado = onCall(
 );
 
 /**
+ * Função para iniciar o processo de geração de Ata via YouTube (Assíncrono).
+ * Recebe a URL e o ID da sessão, valida e cria um job no Firestore.
+ * O processamento real será feito por um worker que escuta a coleção 'ataJobs'.
+ */
+export const gerarAtaViaYoutube = onCall(
+  {
+    region: "southamerica-east1",
+    maxInstances: 10,
+  },
+  async (request) => {
+    // 1. Validação de autenticação
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "O usuário precisa estar autenticado para solicitar a geração de ata."
+      );
+    }
+
+    const { videoUrl, sessaoId } = request.data;
+
+    // 2. Validação de dados obrigatórios
+    if (!videoUrl || !sessaoId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Os campos 'videoUrl' e 'sessaoId' são obrigatórios."
+      );
+    }
+
+    // 3. Validação da URL do YouTube
+    if (!validateYoutubeUrl(videoUrl)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "A URL fornecida não é um link válido do YouTube."
+      );
+    }
+
+    try {
+      logger.info(`Criando job de ata para sessão ${sessaoId} e vídeo ${videoUrl}`);
+
+      // 4. Criação do Job no Firestore via Service
+      const jobId = await ataJobService.createJob(videoUrl, sessaoId);
+
+      return { success: true, jobId };
+    } catch (error) {
+      logger.error("Erro ao criar job de ata:", error);
+      throw new HttpsError("internal", "Erro interno ao criar o job de processamento.");
+    }
+  }
+);
+
+/**
  * Função PÚBLICA para interagir com a IA
  * Usada no chat público da Câmara
  */
@@ -206,4 +259,3 @@ Se não souber a informação, diga que precisa consultar o setor responsável.
     }
   }
 );
-

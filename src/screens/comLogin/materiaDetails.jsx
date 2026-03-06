@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
-import { FaArrowLeft, FaFilePdf, FaHistory, FaCheckCircle, FaClock, FaUserTie, FaCalendarAlt, FaPrint, FaExchangeAlt, FaDownload, FaShareAlt } from 'react-icons/fa';
+import { FaArrowLeft, FaFilePdf, FaHistory, FaCheckCircle, FaClock, FaUserTie, FaCalendarAlt, FaPrint, FaExchangeAlt, FaDownload, FaShareAlt, FaGavel } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuDashboard.jsx';
+import { db } from '../../firebaseConfig';
+import { ref, get } from 'firebase/database';
 
 class MateriaDetails extends Component {
     constructor(props) {
@@ -11,36 +13,100 @@ class MateriaDetails extends Component {
         };
     }
 
-    componentDidMount() {
-        // Simulação de busca de dados baseada no ID recebido (via state ou params)
-        // Na versão final, isso seria um this.props.match.params.id e uma chamada API
+    async componentDidMount() {
         const { state } = this.props.location || {};
-        const materiaId = state ? state.materiaId : 1;
+        const materiaId = state ? state.materiaId : null;
 
-        // Dados Mockados para visualização
-        setTimeout(() => {
-            this.setState({
-                loading: false,
-                materia: {
-                    id: materiaId,
-                    titulo: 'DISPÕE SOBRE A OBRIGATORIEDADE DE INSTALAÇÃO DE CÂMERAS DE SEGURANÇA EM ESCOLAS MUNICIPAIS E DÁ OUTRAS PROVIDÊNCIAS.',
-                    tipo: 'Projeto de Lei',
-                    numero: '12/2024',
-                    autor: 'Vereador Teste',
-                    dataApresentacao: '20/02/2024',
-                    status: 'Em Tramitação',
-                    regime: 'Urgência',
-                    ementa: 'Estabelece normas de segurança para monitoramento escolar visando a proteção de alunos e servidores.',
-                    textoCompleto: 'Art. 1º Fica obrigatória a instalação de câmeras...',
-                    historico: [
-                        { data: '25/02/2024', status: 'Encaminhado às Comissões', descricao: 'Matéria enviada para a Comissão de Constituição e Justiça (CCJ).', icon: <FaExchangeAlt /> },
-                        { data: '21/02/2024', status: 'Leitura em Plenário', descricao: 'Matéria lida no expediente da 15ª Sessão Ordinária.', icon: <FaClock /> },
-                        { data: '20/02/2024', status: 'Protocolado', descricao: 'Matéria protocolada digitalmente sob nº 2024/00012.', icon: <FaCheckCircle /> }
-                    ]
+        if (!materiaId) {
+            this.setState({ loading: false });
+            return;
+        }
+
+        try {
+            const materiaRef = ref(db, `camara-teste/materias/${materiaId}`);
+            const snapshot = await get(materiaRef);
+
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                
+                // Constrói o histórico com base nos eventos registrados na matéria
+                const historico = [];
+
+                // 1. Protocolo (Criação)
+                if (data.createdAt) {
+                    historico.push({
+                        data: new Date(data.createdAt).toLocaleDateString('pt-BR'),
+                        status: 'Protocolado',
+                        descricao: `Matéria protocolada digitalmente sob nº ${data.protocolo || 'S/N'}.`,
+                        icon: <FaCheckCircle />
+                    });
                 }
-            });
-        }, 500);
+
+                // 2. Parecer Jurídico (se houver)
+                if (data.parecerDate) {
+                    historico.unshift({
+                        data: new Date(data.parecerDate).toLocaleDateString('pt-BR'),
+                        status: data.decisao === 'favoravel' ? 'Parecer Favorável' : 'Parecer Contrário',
+                        descricao: `Parecer emitido pela Procuradoria: ${data.parecer ? this.stripHtml(data.parecer).substring(0, 100) + '...' : ''}`,
+                        icon: <FaExchangeAlt />
+                    });
+                }
+
+                // 3. Despacho da Presidência (se houver)
+                if (data.despachoDate) {
+                    historico.unshift({
+                        data: new Date(data.despachoDate).toLocaleDateString('pt-BR'),
+                        status: data.status, // O status atual geralmente reflete a última ação
+                        descricao: `Despacho da Presidência: ${data.despachoPresidente || ''}`,
+                        icon: <FaGavel />
+                    });
+                }
+
+                const materia = {
+                    id: materiaId,
+                    titulo: data.titulo || 'SEM TÍTULO',
+                    tipo: data.tipoMateria || 'Matéria',
+                    numero: data.numero || 'S/N',
+                    autor: data.autor || 'Desconhecido',
+                    dataApresenta: data.dataApresenta || 'Data não informada',
+                    status: data.status || 'Em Tramitação',
+                    regime: data.regTramita || 'Ordinária',
+                    ementa: data.ementa || '',
+                    textoCompleto: data.textoMateria || '',
+                    pdfBase64: data.pdfBase64,
+                    historico: historico
+                };
+
+                this.setState({ materia, loading: false });
+            } else {
+                this.setState({ loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar detalhes da matéria:", error);
+            this.setState({ loading: false });
+        }
     }
+
+    stripHtml = (html) => {
+        if (!html) return "";
+        let tmp = document.createElement("DIV");
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || "";
+    };
+
+    downloadPDF = () => {
+        const { materia } = this.state;
+        if (materia && materia.pdfBase64) {
+            const link = document.createElement('a');
+            link.href = `data:application/pdf;base64,${materia.pdfBase64}`;
+            link.download = `Materia_${materia.numero ? materia.numero.replace('/', '-') : 'doc'}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            alert("PDF não disponível para esta matéria.");
+        }
+    };
 
     render() {
         const { materia, loading } = this.state;
@@ -53,24 +119,25 @@ class MateriaDetails extends Component {
             );
         }
 
+        if (!materia) {
+            return (
+                <div className='App-header' style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f0f2f5' }}>
+                    <p>Matéria não encontrada.</p>
+                    <button onClick={() => this.props.history.goBack()} className="btn-back">Voltar</button>
+                </div>
+            );
+        }
+
         return (
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
 
                 <div className="dashboard-content">
                     
-                    {/* Navegação de Voltar */}
-                        <button 
-                            onClick={() => this.props.history.goBack()}
-                            className="btn-back"
-                        >
-                            <FaArrowLeft /> Voltar para Matérias
-                        </button>
-
                     {/* Cabeçalho Principal Moderno */}
                     <div className="dashboard-card" style={{ marginBottom: '30px', borderLeft: '5px solid #126B5E' }}>
                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-                            <div style={{ flex: 1 }}>
+                            <div style={{ flex: 1, textAlign: 'left' }}>
                                 <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', alignItems: 'center' }}>
                                     <span className="tag tag-primary">
                                         {materia.tipo} nº {materia.numero}
@@ -80,7 +147,7 @@ class MateriaDetails extends Component {
                                         <FaCalendarAlt size={14} /> {materia.dataApresenta}
                                     </span>
                                 </div>
-                                <h1 style={{ color: '#2c3e50', margin: '0 0 15px 0', fontSize: '1.8rem', lineHeight: '1.4', fontWeight: '700' }}>
+                                <h1 style={{ color: '#2c3e50', margin: '0 0 15px 0', fontSize: '1.5rem', lineHeight: '1.4', fontWeight: '700' }}>
                                     {materia.titulo}
                                 </h1>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -135,7 +202,7 @@ class MateriaDetails extends Component {
                                 <div style={{ marginTop: '25px' }}>
                                     <h4 style={{ fontSize: '1rem', color: '#333', marginBottom: '15px' }}>Texto Inicial</h4>
                                     <p style={{ color: '#666', lineHeight: '1.6' }}>
-                                        {materia.textoCompleto}
+                                        {this.stripHtml(materia.textoCompleto).substring(0, 400)}...
                                         <span style={{ color: '#126B5E', cursor: 'pointer', fontWeight: '600', marginLeft: '5px' }}>Ler completo</span>
                                     </p>
                                 </div>
@@ -151,6 +218,7 @@ class MateriaDetails extends Component {
                                     <div style={{ flex: 1, minWidth: '200px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.2s', cursor: 'pointer' }}
                                          onMouseOver={(e) => e.currentTarget.style.borderColor = '#126B5E'}
                                          onMouseOut={(e) => e.currentTarget.style.borderColor = '#e0e0e0'}
+                                         onClick={this.downloadPDF}
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                             <div style={{ width: '45px', height: '45px', borderRadius: '8px', background: '#ffebee', color: '#d32f2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
