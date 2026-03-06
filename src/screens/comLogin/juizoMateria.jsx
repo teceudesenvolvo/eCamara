@@ -5,6 +5,8 @@ import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../assets/logo.png';
 import { sendMessageToAIPrivate } from '../../aiService';
+import { db } from '../../firebaseConfig';
+import { ref, query, orderByChild, equalTo, get, update } from 'firebase/database';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -19,17 +21,35 @@ class JuizoMateria extends Component {
             parecerText: '',
             logoBase64: null,
             isGeneratingParecer: false,
-            materias: [
-                { id: 1, tipo: 'Projeto de Lei', numero: '12/2024', ementa: 'Dispõe sobre a obrigatoriedade de instalação de câmeras de segurança em escolas municipais.', autor: 'Ver. Teste', data: '20/02/2024', status: 'Aguardando Parecer', urgencia: true, parecer: null, decisao: null },
-                { id: 2, tipo: 'Indicação', numero: '45/2024', ementa: 'Solicita pavimentação da Rua XV de Novembro.', autor: 'Ver. João', data: '21/02/2024', status: 'Em Análise', urgencia: false, parecer: null, decisao: null },
-                { id: 3, tipo: 'Requerimento', numero: '08/2024', ementa: 'Requer informações sobre gastos com publicidade.', autor: 'Ver. Maria', data: '22/02/2024', status: 'Parecer Favorável', urgencia: false, parecer: 'Após análise, constatou-se que o requerimento está em conformidade com as normas regimentais e legais, não havendo óbice para sua tramitação.', decisao: 'favoravel' },
-            ]
+            materias: [],
+            loading: true
         };
     }
 
     componentDidMount() {
         this.loadLogo();
+        this.fetchMaterias();
     }
+
+    fetchMaterias = async () => {
+        this.setState({ loading: true });
+        try {
+            const materiasRef = ref(db, 'camara-teste/materias');
+            // Busca matérias que precisam de parecer
+            const q = query(materiasRef, orderByChild('status'), equalTo('Aguardando Parecer'));
+            const snapshot = await get(q);
+            const materias = [];
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    materias.push({ id: childSnapshot.key, ...childSnapshot.val() });
+                });
+            }
+            this.setState({ materias, loading: false });
+        } catch (error) {
+            console.error("Erro ao buscar matérias para parecer:", error);
+            this.setState({ loading: false });
+        }
+    };
 
     loadLogo = async () => {
         try {
@@ -57,26 +77,36 @@ class JuizoMateria extends Component {
         this.setState({ showParecerModal: false, selectedMateria: null });
     };
 
-    handleSubmitParecer = (decisao) => {
-        const { selectedMateria, materias, parecerText } = this.state;
-        // Atualiza o status da matéria na lista (simulação)
-        const updatedMaterias = materias.map(m => 
-            m.id === selectedMateria.id ? { 
-                ...m, 
-                status: decisao === 'favoravel' ? 'Parecer Favorável' : 'Parecer Contrário',
-                parecer: parecerText || "Não foi fornecida fundamentação.", // Salva o texto do parecer
-                decisao: decisao // Salva a decisão
-            } : m
-        );
+    handleSubmitParecer = async (decisao) => {
+        const { selectedMateria, parecerText } = this.state;
+        if (!selectedMateria) return;
 
-        this.setState({ 
-            materias: updatedMaterias, 
-            showParecerModal: false,
-            selectedMateria: null 
-        });
-        
-        // Gera o edital em PDF em vez de um simples alerta
-        this.generateParecerPDF(selectedMateria, parecerText, decisao);
+        const newStatus = decisao === 'favoravel' ? 'Parecer Favorável' : 'Parecer Contrário';
+        const parecerData = {
+            status: newStatus,
+            parecer: parecerText || "Não foi fornecida fundamentação.",
+            decisao: decisao,
+            parecerDate: new Date().toISOString(),
+        };
+
+        try {
+            // Salva o parecer no nó da matéria
+            const materiaRef = ref(db, `camara-teste/materias/${selectedMateria.id}`);
+            await update(materiaRef, parecerData);
+
+            // Gera o PDF
+            this.generateParecerPDF(selectedMateria, parecerText, decisao);
+
+            // Atualiza a lista local e fecha o modal
+            this.setState(prevState => ({
+                materias: prevState.materias.filter(m => m.id !== selectedMateria.id),
+                showParecerModal: false,
+                selectedMateria: null
+            }));
+        } catch (error) {
+            console.error("Erro ao salvar parecer:", error);
+            alert("Ocorreu um erro ao salvar o parecer. Tente novamente.");
+        }
     };
 
     handleGenerateParecerWithAI = async () => {

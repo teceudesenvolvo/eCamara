@@ -1,0 +1,11 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "camara-teste": {
+      "materias": {
+        ".indexOn": ["userId", "status"]
+      }
+    }
+  }
+}

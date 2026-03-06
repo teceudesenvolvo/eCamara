@@ -12,7 +12,8 @@ import signature from '../../assets/assinatura-teste-1.png'; // Imagem da assina
 
 import MenuDashboard from '../../componets/menuDashboard.jsx'; // Certifique-se de que este caminho está correto
 import { sendMessageToAIPrivate } from '../../aiService';
-import { auth } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
+import { ref, push } from 'firebase/database';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -154,6 +155,26 @@ class AddProducts extends Component {
         return text.replace(/<[^>]+>/g, '');
     };
 
+    // Processa o HTML do editor para criar parágrafos formatados no PDF
+    processHtmlToPdfMake = (html) => {
+        if (!html) return [];
+        // Divide por parágrafos para aplicar formatação individual
+        const paragraphs = html.split(/<\/p>/gi);
+        
+        return paragraphs.map(p => {
+            let text = p.replace(/<br\s*\/?>/gi, '\n');
+            // Remove tags HTML restantes e decodifica entidades
+            text = text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+            
+            if (!text) return null;
+
+            return {
+                text: text,
+                style: 'textoLeiParagraph'
+            };
+        }).filter(Boolean);
+    };
+
     componentDidUpdate(prevProps, prevState) {
         if (prevState.messages.length !== this.state.messages.length) {
             this.scrollToBottom();
@@ -290,13 +311,18 @@ class AddProducts extends Component {
                 - Verifique se o tema viola o Regimento Interno (ex: vício de iniciativa). Se violar, inicie sua resposta OBRIGATORIAMENTE com a palavra "BLOQUEIO:" seguida da explicação.
                 
                 PASSO 2 - GERAÇÃO (Apenas se passou na validação):
-                Se NÃO houver impedimentos, NÃO use a palavra "BLOQUEIO". Apenas escreva a minuta seguindo estritamente a estrutura padrão de lei municipal:
-                1. Título (em caixa alta).
-                2. Ementa (resumo do que trata a lei).
-                3. Texto da lei articulado (Art. 1º, Art. 2º, etc).
-                4. Justificativa formal ao final.
+                Se NÃO houver impedimentos, NÃO use a palavra "BLOQUEIO". Apenas escreva a minuta seguindo estritamente a estrutura padrão de lei municipal.
                 
-                Não use formatação Markdown (como negrito **), use apenas texto puro.`;
+                IMPORTANTE: Formate a resposta utilizando tags HTML para garantir a formatação correta no editor:
+                - Envolva cada parágrafo em tags <p>.
+                - Use <strong> para negrito em títulos e destaques.
+                - Adicione espaçamento adequado entre as seções.
+                
+                Estrutura:
+                1. Título (em caixa alta e negrito).
+                2. Ementa (resumo do que trata a lei).
+                3. Texto da lei articulado (Art. 1º, Art. 2º, etc) em parágrafos separados.
+                4. Justificativa formal ao final.`;
                 nextStep = 3;
             }
 
@@ -357,19 +383,68 @@ class AddProducts extends Component {
         }
     };
 
-    handleProtocolar = () => {
+    handleProtocolar = async () => {
         // Simula a geração de protocolo e envio para o presidente
         const newProtocol = `${new Date().getFullYear()}/${Math.floor(Math.random() * 100000)}`;
         
-        this.setState({ 
-            protocolGenerated: newProtocol,
+        // Prepara os dados para salvar no Firestore
+        const materiaData = {
+            userId: auth.currentUser?.uid,
+            userEmail: auth.currentUser?.email,
             protocolo: newProtocol,
-            status: 'Aguardando Parecer'
-        }, () => {
-            this.handleGeneratePDF(); // Atualiza PDF com o protocolo
-            alert(`Documento Assinado Digitalmente e Protocolado!\nProtocolo: ${newProtocol}\nStatus: Enviado para Parecer da Presidência.`);
-            this.props.history.push('/materias-dash');
-        });
+            status: 'Aguardando Parecer',
+            createdAt: new Date().toISOString(),
+            
+            // Identificação
+            tipoMateria: this.state.tipoMateria,
+            ano: this.state.ano,
+            numero: this.state.numero,
+            dataApresenta: this.state.dataApresenta,
+            tipoApresentacao: this.state.tipoApresentacao,
+            tipoAutor: this.state.tipoAutor,
+            autor: this.state.autor,
+
+            // Detalhes
+            apelido: this.state.apelido,
+            prazo: this.state.prazo,
+            materiaPolemica: this.state.materiaPolemica,
+            objeto: this.state.objeto,
+            regTramita: this.state.regTramita,
+            dataPrazo: this.state.dataPrazo,
+            publicacao: this.state.publicacao,
+            isComplementar: this.state.isComplementar,
+
+            // Conteúdo
+            titulo: this.state.titulo,
+            ementa: this.state.ementa,
+            indexacao: this.state.indexacao,
+            observacao: this.state.observacao,
+            textoMateria: this.state.textoMateria,
+
+            // Histórico do Chat com a IA
+            chatHistory: this.state.messages
+        };
+        materiaData.pdfBase64 = this.state.pdfData;
+
+        try {
+            if (auth.currentUser) {
+                const materiasRef = ref(db, 'camara-teste/materias');
+                await push(materiasRef, materiaData);
+            }
+
+            this.setState({ 
+                protocolGenerated: newProtocol,
+                protocolo: newProtocol,
+                status: 'Aguardando Parecer'
+            }, () => {
+                this.handleGeneratePDF(); // Atualiza PDF com o protocolo
+                alert(`Documento Assinado Digitalmente e Protocolado!\nProtocolo: ${newProtocol}\nStatus: Enviado para Parecer da Presidência.`);
+                this.props.history.push('/materias-dash');
+            });
+        } catch (error) {
+            console.error("Erro ao salvar matéria no Firebase:", error);
+            alert("Erro ao protocolar matéria. Tente novamente.");
+        }
     };
 
     handleGeneratePDF = () => {
@@ -464,7 +539,7 @@ class AddProducts extends Component {
             textoMateria && { text: '\n\n' },
             textoMateria && { canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1 }] },
             textoMateria && { text: '\nMINUTA DO PROJETO (Gerada por IA)', style: 'subheader', alignment: 'center' },
-            textoMateria && { text: this.stripHtml(textoMateria), style: 'textoLei' },
+            textoMateria && { stack: this.processHtmlToPdfMake(textoMateria), marginTop: 15 },
         ].filter(Boolean); // Filtra elementos falsy (como os blocos de Origem Externa vazios)
 
         // Adiciona a assinatura digital se isSigned for true
@@ -499,6 +574,15 @@ class AddProducts extends Component {
 
         const docDefinition = {
             content: docContent,
+            // Adiciona numeração de páginas no rodapé
+            footer: (currentPage, pageCount) => {
+                return {
+                    text: `Página ${currentPage} de ${pageCount}`,
+                    alignment: 'right',
+                    margin: [0, 0, 40, 0], // Margem direita alinhada com o texto
+                    fontSize: 8
+                };
+            },
             styles: {
                 header: {
                     fontSize: 18,
@@ -552,11 +636,12 @@ class AddProducts extends Component {
                     marginTop: 5,
                     italics: true
                 },
-                textoLei: {
-                    fontSize: 11,
+                textoLeiParagraph: {
+                    fontSize: 12,
                     alignment: 'justify',
                     lineHeight: 1.5,
-                    marginTop: 15
+                    marginBottom: 10, // Espaço entre parágrafos
+                    leadingIndent: 30 // Identação da primeira linha (padrão legislativo)
                 }
             }
         };
@@ -587,9 +672,7 @@ class AddProducts extends Component {
                                 <div className="chat-messages" ref={this.chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
                                     {this.state.messages.map(msg => (
                                         <div key={msg.id} className={`message ${msg.sender === 'user' ? 'message-user' : 'message-ai'}`}>
-                                            <div className="message-bubble">
-                                                {msg.text}
-                                            </div>
+                                            <div className="message-bubble" dangerouslySetInnerHTML={{ __html: msg.text }} />
                                         </div>
                                     ))}
                                     {this.state.isGenerating && (
@@ -686,30 +769,24 @@ class AddProducts extends Component {
 
                             {/* Área Principal Direita - Editor A4 */}
                             <div className="editor-main">
-                                <div className="editor-text-area-wrapper">
-                                    <div className="a4-page">
-                                        <div className="a4-header">
-                                            <img src={logo} alt="Brasão" className="a4-logo" />
-                                            <div className="a4-header-text">
-                                                <h3>Câmara Municipal</h3>
-                                                <p>Estado do Ceará</p>
-                                            </div>
-                                        </div>
-                                        <div className="a4-content">
-                                            <ReactQuill 
-                                                theme="snow"
-                                                value={this.state.textoMateria} 
-                                                onChange={this.handleEditorChange} 
-                                                modules={this.modules}
-                                                formats={this.formats}
-                                                className="quill-editor-a4"
-                                            />
-                                        </div>
-                                        <div className="a4-footer">
-                                            <p>Rua XV de Novembro, 55 - Centro - Blumenau/SC</p>
-                                        </div>
-                                    </div>
+                                <div style={{ marginBottom: '15px', alignSelf: 'flex-end' }}>
+                                    <button 
+                                        onClick={this.openPdfPopup} 
+                                        className="btn-secondary"
+                                    >
+                                        Visualizar PDF
+                                    </button>
                                 </div>
+                                {/* Removida a simulação de página A4 que limitava a altura.
+                                    O editor agora ocupa o espaço disponível, permitindo rolagem para conteúdo longo. */}
+                                <ReactQuill 
+                                    theme="snow"
+                                    value={this.state.textoMateria} 
+                                    onChange={this.handleEditorChange} 
+                                    modules={this.modules}
+                                    formats={this.formats}
+                                    className="full-page-quill-editor" // Classe para garantir que o editor preencha o contêiner
+                                />
                             </div>
                         </div>
                     </div>

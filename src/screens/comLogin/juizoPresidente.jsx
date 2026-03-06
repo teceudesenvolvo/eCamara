@@ -6,6 +6,8 @@ import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../assets/logo.png';
 import signature from '../../assets/assinatura-teste-1.png'; // Assinatura do Presidente
 import { sendMessageToAIPrivate } from '../../aiService';
+import { db } from '../../firebaseConfig';
+import { ref, query, get, update, onValue } from 'firebase/database';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -32,74 +34,33 @@ class JuizoPresidente extends Component {
                 'Comissão de Obras e Serviços Públicos',
                 'Comissão de Educação, Saúde e Assistência'
             ],
-            materias: [
-                { 
-                    id: 1, 
-                    tipo: 'Projeto de Lei', 
-                    numero: '12/2024', 
-                    ementa: 'Dispõe sobre a obrigatoriedade de instalação de câmeras de segurança em escolas municipais.', 
-                    autor: 'Ver. Teste', 
-                    data: '20/02/2024', 
-                    status: 'Aguardando Despacho da Presidência', 
-                    urgencia: true, 
-                    parecer: 'O projeto apresenta conformidade com a Lei Orgânica Municipal e a Constituição Federal. Não há vício de iniciativa. Opina-se pela constitucionalidade e legalidade.', 
-                    decisaoParecer: 'favoravel' 
-                },
-                { 
-                    id: 2, 
-                    tipo: 'Projeto de Lei Complementar', 
-                    numero: '03/2024', 
-                    ementa: 'Altera o Código Tributário Municipal para instituir nova taxa de serviço.', 
-                    autor: 'Poder Executivo', 
-                    data: '18/02/2024', 
-                    status: 'Aguardando Despacho da Presidência', 
-                    urgencia: false, 
-                    parecer: 'A matéria, por criar despesa sem indicar a fonte de custeio e invadir competência do executivo, apresenta vício de iniciativa. Opina-se pela inconstitucionalidade.', 
-                    decisaoParecer: 'contrario' 
-                },
-                 { 
-                    id: 3, 
-                    tipo: 'Indicação', 
-                    numero: '45/2024', 
-                    ementa: 'Solicita pavimentação da Rua XV de Novembro.', 
-                    autor: 'Ver. João',
-                    data: '21/02/2024', 
-                    status: 'Encaminhado às Comissões', 
-                    urgencia: false, 
-                    parecer: 'Matéria de competência do executivo, segue como indicação. Legal.', 
-                    decisaoParecer: 'favoravel' 
-                },
-                { 
-                    id: 4, 
-                    tipo: 'Requerimento', 
-                    numero: '100/2024', 
-                    ementa: 'Requer voto de pesar pelo falecimento de cidadão ilustre.', 
-                    autor: 'Ver. Maria', 
-                    data: '23/02/2024', 
-                    status: 'Aguardando Despacho da Presidência', 
-                    urgencia: false, 
-                    parecer: 'Regular.', 
-                    decisaoParecer: 'favoravel' 
-                },
-                { 
-                    id: 5, 
-                    tipo: 'Projeto de Lei', 
-                    numero: '05/2024', 
-                    ementa: 'Institui o dia do ciclista no município.', 
-                    autor: 'Ver. Pedro', 
-                    data: '10/01/2024', 
-                    status: 'Aprovado na Comissão', 
-                    urgencia: false, 
-                    parecer: 'Aprovado pela Comissão de Constituição e Justiça.', 
-                    decisaoParecer: 'favoravel' 
-                }
-            ]
+            materias: [],
+            loading: true,
         };
     }
 
     componentDidMount() {
         this.loadImages();
+        this.fetchMaterias();
     }
+
+    fetchMaterias = () => {
+        this.setState({ loading: true });
+        const materiasRef = ref(db, 'camara-teste/materias');
+        // Usar onValue para atualizações em tempo real
+        onValue(materiasRef, (snapshot) => {
+            const materias = [];
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    materias.push({ id: childSnapshot.key, ...childSnapshot.val() });
+                });
+            }
+            this.setState({ materias, loading: false });
+        }, (error) => {
+            console.error("Erro ao buscar matérias para despacho:", error);
+            this.setState({ loading: false });
+        });
+    };
 
     loadImages = async () => {
         try {
@@ -145,11 +106,11 @@ class JuizoPresidente extends Component {
         this.setState({ showPasswordModal: true, pendingAction: action, passwordInput: '', passwordError: '' });
     };
 
-    handleSubmitDespacho = (novoStatus) => {
-        const { selectedMateria, materias, selectedComissao, despachoText } = this.state;
-        
-        let statusFinal = novoStatus;
+    handleSubmitDespacho = async (novoStatus) => {
+        const { selectedMateria, selectedComissao, despachoText } = this.state;
+        if (!selectedMateria) return;
 
+        let statusFinal = novoStatus;
         if (novoStatus === 'Encaminhado às Comissões') {
             if (!selectedComissao) {
                 alert("Por favor, selecione uma comissão para encaminhar a matéria.");
@@ -158,16 +119,24 @@ class JuizoPresidente extends Component {
             statusFinal = `Encaminhado à ${selectedComissao}`;
         }
 
-        const updatedMaterias = materias.map(m => 
-            m.id === selectedMateria.id ? { ...m, status: statusFinal } : m
-        );
+        const despachoData = {
+            status: statusFinal,
+            despachoPresidente: despachoText || `Despacho padrão para: ${statusFinal}`,
+            despachoDate: new Date().toISOString(),
+        };
 
-        this.setState({ 
-            materias: updatedMaterias, 
-            selectedMateria: null, // Limpa a seleção após o despacho
-        });
+        try {
+            const materiaRef = ref(db, `camara-teste/materias/${selectedMateria.id}`);
+            await update(materiaRef, despachoData);
 
-        this.generateDespachoPDF(selectedMateria, despachoText, statusFinal);
+            this.generateDespachoPDF(selectedMateria, despachoText, statusFinal);
+
+            // A atualização do estado será feita automaticamente pelo listener `onValue`
+            this.setState({ selectedMateria: null });
+        } catch (error) {
+            console.error("Erro ao salvar despacho:", error);
+            alert("Ocorreu um erro ao salvar o despacho.");
+        }
     };
 
     confirmSignature = () => {

@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import { FaUsers, FaPlus, FaTimes, FaUserPlus } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuDashboard.jsx';
 import ProfileImage from '../../assets/vereador.jpg'; // Reusing for member avatar
+import { db } from '../../firebaseConfig';
+import { ref, push, onValue } from 'firebase/database';
 
 class ComissoesDash extends Component {
     constructor(props) {
@@ -10,35 +12,36 @@ class ComissoesDash extends Component {
             showModal: false,
             newComissaoName: '',
             newComissaoDesc: '',
-            comissoes: [
-                { 
-                    id: 1, 
-                    nome: 'Comissão de Constituição, Justiça e Redação (CCJ)', 
-                    descricao: 'Analisa a constitucionalidade e legalidade das matérias.',
-                    membros: [
-                        { id: 1, nome: 'Diogo Queiroz', cargo: 'Presidente', avatar: ProfileImage },
-                        { id: 2, nome: 'Vereador Teste', cargo: 'Relator', avatar: ProfileImage },
-                        { id: 3, nome: 'Ver. Maria', cargo: 'Membro', avatar: ProfileImage },
-                    ] 
-                },
-                { 
-                    id: 2, 
-                    nome: 'Comissão de Finanças e Orçamento', 
-                    descricao: 'Responsável pela análise de matérias de impacto financeiro e orçamentário.',
-                    membros: [
-                        { id: 4, nome: 'Ver. João', cargo: 'Presidente', avatar: ProfileImage },
-                        { id: 5, nome: 'Vereador Teste', cargo: 'Membro', avatar: ProfileImage },
-                    ]
-                },
-            ]
+            comissoes: [],
+            loading: true,
         };
     }
+
+    componentDidMount() {
+        this.fetchComissoes();
+    }
+
+    fetchComissoes = () => {
+        const comissoesRef = ref(db, 'camara-teste/comissoes');
+        onValue(comissoesRef, (snapshot) => {
+            const comissoes = [];
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    comissoes.push({ id: childSnapshot.key, ...childSnapshot.val() });
+                });
+            }
+            this.setState({ comissoes, loading: false });
+        }, (error) => {
+            console.error("Erro ao buscar comissões:", error);
+            this.setState({ loading: false });
+        });
+    };
 
     handleOpenModal = () => this.setState({ showModal: true, newComissaoName: '', newComissaoDesc: '' });
     handleCloseModal = () => this.setState({ showModal: false });
 
-    handleCreateComissao = () => {
-        const { newComissaoName, newComissaoDesc, comissoes } = this.state;
+    handleCreateComissao = async () => {
+        const { newComissaoName, newComissaoDesc } = this.state;
         if (!newComissaoName.trim()) {
             alert('O nome da comissão é obrigatório.');
             return;
@@ -48,13 +51,17 @@ class ComissoesDash extends Component {
             id: Date.now(),
             nome: newComissaoName,
             descricao: newComissaoDesc,
-            membros: []
+            membros: {} // Usar objeto para membros é melhor no RTDB
         };
 
-        this.setState({
-            comissoes: [...comissoes, newComissao],
-            showModal: false
-        });
+        try {
+            const comissoesRef = ref(db, 'camara-teste/comissoes');
+            await push(comissoesRef, newComissao);
+            this.setState({ showModal: false });
+        } catch (error) {
+            console.error("Erro ao criar comissão:", error);
+            alert("Erro ao criar comissão.");
+        }
     };
 
     render() {

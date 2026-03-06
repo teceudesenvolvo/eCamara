@@ -72,9 +72,7 @@ const ChatAI = ({ onClose, city }) => {
                         <div className="message-icon">
                             {msg.sender === 'ai' ? <FaRobot /> : <FaUser />}
                         </div>
-                        <div className="message-bubble">
-                            {msg.text}
-                        </div>
+                        <div className="message-bubble" dangerouslySetInnerHTML={{ __html: msg.text }} />
                     </div>
                 ))}
                 {isGenerating && (

@@ -2898,7 +2898,8 @@ video {
   display: flex;
   gap: 30px;
   align-items: flex-start;
-  height: calc(100vh - 180px); /* Altura ajustada para caber na tela */
+  height: 100%; /* Altura ajustada para caber na tela */
+  width: 90%;
 }
 
 .editor-sidebar {

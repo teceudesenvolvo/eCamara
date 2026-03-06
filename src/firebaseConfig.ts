@@ -1,7 +1,7 @@
 import {initializeApp, getApp, getApps} from "firebase/app";
 import {getAuth} from "firebase/auth";
-import {getFirestore} from "firebase/firestore";
 import {getFunctions} from "firebase/functions";
+import { getDatabase } from "firebase/database";
 
 // Suas credenciais do Firebase para o projeto web (são seguras para expor)
 const firebaseConfig = {
@@ -18,7 +18,7 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getDatabase(app); // Alterado para Realtime Database
 // IMPORTANT: Especifique a região da sua função. Se não especificou, o padrão
 // é 'us-central1'. Para projetos no Brasil, 'southamerica-east1' (São Paulo)
 // é recomendado.

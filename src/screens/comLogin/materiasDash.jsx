@@ -1,18 +1,69 @@
 import React, { Component } from 'react';
-import { FaPlus, FaFileAlt, FaCalendarAlt, FaUserTie, FaExchangeAlt, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaFileAlt, FaCalendarAlt, FaUserTie, FaExchangeAlt, FaSearch, FaSpinner } from 'react-icons/fa';
+import { ref, query, orderByChild, equalTo, get } from 'firebase/database';
+import { auth, db } from '../../firebaseConfig';
 
 // Components
 import MenuDashboard from '../../componets/menuDashboard.jsx';
 
-// Dados simulados (agora com mais detalhes para os cards)
-const rows = [
-    { id: 1, numero: '4', materia: 'IND 4/2024', situacao: 'Em Votação', autor: 'Vereador Teste', apresentacao: 'Escrita', tramitacao: 'Ordinária', exercicio: 2024, status: 'Aguardando Presidente', data: '25/02/2024' },
-    { id: 2, numero: '5', materia: 'PL 12/2024', situacao: 'Aprovado', autor: 'Vereador Teste', apresentacao: 'Escrita', tramitacao: 'Urgência', exercicio: 2024, status: 'Sancionado', data: '20/02/2024' },
-    { id: 3, numero: '6', materia: 'REQ 8/2024', situacao: 'Em Análise', autor: 'Vereador Teste', apresentacao: 'Oral', tramitacao: 'Ordinária', exercicio: 2024, status: 'Comissão de Justiça', data: '18/02/2024' },
-];
-
 class loginDashboard extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            materias: [],
+            loading: true,
+            searchTerm: '',
+            filterStatus: 'Todos os Status'
+        };
+    }
+
+    componentDidMount() {
+        this.fetchMaterias();
+    }
+
+    fetchMaterias = async () => {
+        const user = auth.currentUser;
+        if (user) {
+            try {
+                const materiasRef = ref(db, 'camara-teste/materias');
+                const q = query(materiasRef, orderByChild('userId'), equalTo(user.uid));
+                const snapshot = await get(q);
+                const materias = [];
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        materias.push({ id: childSnapshot.key, ...childSnapshot.val() });
+                    });
+                }
+                this.setState({ materias, loading: false });
+            } catch (error) {
+                console.error("Erro ao buscar matérias:", error);
+                this.setState({ loading: false });
+            }
+        } else {
+            // Se não houver usuário logado (ou delay no auth), pode-se tentar novamente ou redirecionar
+            // Aqui apenas paramos o loading para não travar a tela
+            setTimeout(() => {
+                if (auth.currentUser) this.fetchMaterias();
+                else this.setState({ loading: false });
+            }, 1000);
+        }
+    };
+
     render() {
+        const { materias, loading, searchTerm, filterStatus } = this.state;
+
+        // Filtragem local
+        const filteredMaterias = materias.filter(materia => {
+            const matchesSearch = 
+                (materia.titulo && materia.titulo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (materia.numero && materia.numero.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (materia.tipoMateria && materia.tipoMateria.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            const matchesStatus = filterStatus === 'Todos os Status' || materia.status === filterStatus;
+
+            return matchesSearch && matchesStatus;
+        });
+
         return (
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
@@ -42,28 +93,35 @@ class loginDashboard extends Component {
                                 type="text"  
                                 placeholder="Buscar por número, tipo ou status..." 
                                 className="search-input"
+                                value={searchTerm}
+                                onChange={(e) => this.setState({ searchTerm: e.target.value })}
                             />
                         </div>
-                        <select className="filter-select">
+                        <select className="filter-select" value={filterStatus} onChange={(e) => this.setState({ filterStatus: e.target.value })}>
                             <option>Todos os Status</option>
+                            <option>Aguardando Parecer</option>
                             <option>Em Tramitação</option>
-                            <option>Aprovados</option>
-                            <option>Arquivados</option>
+                            <option>Sancionado</option>
                         </select>
                     </div>
 
                     {/* Grid de Cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '25px' }}>
-                        {rows.map((row) => (
-                            <div key={row.id} className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
+                    {loading ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '50px', width: '100%' }}>
+                            <FaSpinner className="icon-spin" size={30} color="#126B5E" />
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '25px' }}>
+                            {filteredMaterias.length > 0 ? filteredMaterias.map((row) => (
+                                <div key={row.id} className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
                                 <div style={{ padding: '20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fafafa' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left' }}>
                                         <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#e0f2f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#126B5E' }}>
                                             <FaFileAlt size={20} />
                                         </div>
                                         <div>
-                                            <h3 style={{ margin: 0, color: '#333', fontSize: '1.1rem' }}>{row.materia}</h3>
-                                            <span style={{ fontSize: '0.8rem', color: '#888' }}>{row.data}</span>
+                                            <h3 style={{ margin: 0, color: '#333', fontSize: '1.0rem' }}>{row.tipoMateria} {row.numero}</h3>
+                                            <span style={{ fontSize: '0.8rem', color: '#888' }}>{row.dataApresenta}</span>
                                         </div>
                                     </div>
                                     <span style={{ 
@@ -86,11 +144,11 @@ class loginDashboard extends Component {
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#555', fontSize: '0.95rem' }}>
                                             <FaExchangeAlt style={{ color: '#aaa' }} /> 
-                                            <span><strong>Tramitação:</strong> {row.tramitacao}</span>
+                                            <span><strong>Tramitação:</strong> {row.regTramita}</span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#555', fontSize: '0.95rem' }}>
                                             <FaCalendarAlt style={{ color: '#aaa' }} /> 
-                                            <span><strong>Exercício:</strong> {row.exercicio}</span>
+                                            <span><strong>Exercício:</strong> {row.ano}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -105,8 +163,11 @@ class loginDashboard extends Component {
                                     </button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                            )) : (
+                                <p style={{ color: '#666', gridColumn: '1/-1', textAlign: 'center' }}>Nenhuma matéria encontrada.</p>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         );
