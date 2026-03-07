@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebaseConfig";
+import { auth } from "../../firebaseConfig";
 
 //Imagens
 

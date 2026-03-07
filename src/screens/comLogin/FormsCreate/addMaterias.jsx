@@ -6,13 +6,13 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
 // Importando imagem
-import camera from '../../assets/Camera.png';
-import logo from '../../assets/logo.png';
-import signature from '../../assets/assinatura-teste-1.png'; // Imagem da assinatura
+import camera from '../../../assets/Camera.png';
+import logo from '../../../assets/logo.png';
+import signature from '../../../assets/assinatura-teste-1.png'; // Imagem da assinatura
 
-import MenuDashboard from '../../componets/menuDashboard.jsx'; // Certifique-se de que este caminho está correto
-import { sendMessageToAIPrivate } from '../../aiService';
-import { auth, db } from '../../firebaseConfig';
+import MenuDashboard from '../../../componets/menuDashboard.jsx'; // Certifique-se de que este caminho está correto
+import { sendMessageToAIPrivate } from '../../../aiService';
+import { auth, db } from '../../../firebaseConfig';
 import { ref, push } from 'firebase/database';
 
 pdfMake.vfs = pdfFonts.vfs;

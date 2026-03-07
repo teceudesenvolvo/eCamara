@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaArrowLeft, FaPaperPlane, FaRobot, FaUser } from 'react-icons/fa';
-import '../App.css';
+import '../../App.css';
 
-import { sendMessageToAIPublic } from '../aiService';
+import { sendMessageToAIPublic } from '../../aiService';
 
 const ChatAI = ({ onClose, city }) => {
     const [messages, setMessages] = useState([

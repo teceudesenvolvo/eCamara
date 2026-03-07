@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Switch, Route, useLocation } from 'react-router-dom'
 
 //Screen Navigate
-import HomeDashboard from './screens/HomePage.jsx';
+import HomeDashboard from './screens/semLogin/HomePage.jsx';
 
 // Páginas Principais
 import Sessoes from './screens/semLogin/Sessoes.jsx';
@@ -13,29 +13,35 @@ import SessaoVirtual from './screens/semLogin/SessaoVirtual.jsx';
 import NormasJuridicas from './screens/semLogin/NormasJuridicas.jsx';
 import Comissoes from './screens/semLogin/Comissoes.jsx';
 
-// Páginas Secundárias
-import Materias from './screens/semLogin/Materias.jsx';
-import Mais from './screens/semLogin/Mais.jsx';
-import Perfil from './screens/comLogin/Perfil.jsx';
+// Com Login - Formulários e Dashboards
+import AddMateria from './screens/comLogin/FormsCreate/addMaterias.jsx';
+import Configuracoes from './screens/comLogin/FormsCreate/Configuracoes.jsx';
+import AdminAssistant from './screens/comLogin/FormsCreate/AdminAssistant.jsx';
 
-import AddMateria from './screens/comLogin/addMaterias.jsx';
+// Com Login - Dashboards e Detalhes
 import MateriasDash from './screens/comLogin/materiasDash.jsx';
 import JuizoMateria from './screens/comLogin/juizoMateria.jsx';
-import Register from './screens/comLogin/register.jsx';
 import JuizoPresidente from './screens/comLogin/juizoPresidente.jsx';
 import ComissoesDash from './screens/comLogin/comissoesDash.jsx';
 import PautasSessao from './screens/comLogin/pautasSessao.jsx';
-import Configuracoes from './screens/comLogin/Configuracoes.jsx';
-import AdminAssistant from './screens/comLogin/AdminAssistant.jsx';
 import AdminDocumentsDash from './screens/comLogin/AdminDocumentsDash.jsx';
+import AdminDocumentDetails from './screens/comLogin/AdminDocumentDetails.jsx';
 
+// Páginas Secundárias
 import MateriaDetails from './screens/comLogin/materiaDetails.jsx';
+import Perfil from './screens/comLogin/Perfil.jsx';
 
-// SingIn / SignUp
-import Login from './screens/login.jsx';
+// Páginas de Login e Registro
+import Register from './screens/semLogin/register.jsx';
+import Login from './screens/semLogin/login.jsx';
+
+// Páginas Publico
+import Mais from './screens/semLogin/Mais.jsx';
+import Materias from './screens/semLogin/Materias.jsx';
+
 
 // Navigate Components
-import ChatAI from './screens/ChatAI.jsx';
+import ChatAI from './screens/semLogin/ChatAI.jsx';
 import TopBar from './componets/topBarSearch.jsx';
 import Menu from './componets/menu.jsx';
 import MenuDesktop from './componets/menuDesktop.jsx'; // Verifique se este arquivo existe ou se deveria ser menuDashboard.jsx
@@ -58,7 +64,7 @@ function App() {
 
   const location = useLocation();
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin', '/assistente-admin/novo'].includes(location.pathname);
+  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin', '/assistente-admin/novo', '/assistente-admin/detalhes'].includes(location.pathname);
 
   return (
     <div className="App">
@@ -100,6 +106,7 @@ function App() {
           <Route path="/configuracoes" component={Configuracoes} />
           <Route exact path="/assistente-admin" component={AdminDocumentsDash} />
           <Route path="/assistente-admin/novo" component={AdminAssistant} />
+          <Route path="/assistente-admin/detalhes" component={AdminDocumentDetails} />
         </Switch>
 
         {!hideMenuDesktop && (

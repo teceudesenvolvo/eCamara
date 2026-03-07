@@ -92,7 +92,7 @@ class AdminDocumentsDash extends Component {
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                             {filteredDocs.map((doc) => (
-                                <div key={doc.id} className="dashboard-card" style={{ cursor: 'pointer' }} onClick={() => alert('Visualização detalhada em breve!')}>
+                                <div key={doc.id} className="dashboard-card" style={{ cursor: 'pointer' }} onClick={() => this.props.history.push('/assistente-admin/detalhes', { docId: doc.id })}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                         <span className="tag tag-primary">{doc.tipo}</span>
                                         <span style={{ fontSize: '0.8rem', color: '#888' }}>{new Date(doc.createdAt).toLocaleDateString()}</span>

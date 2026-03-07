@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 
-import './Perfil.css';
 // Imagens
 import ProfileImage from '../../assets/vereador.jpg'; // Imagem do perfil do vereador
 import MenuDashboard from '../../componets/menuDashboard.jsx'; // Certifique-se de que este caminho está correto

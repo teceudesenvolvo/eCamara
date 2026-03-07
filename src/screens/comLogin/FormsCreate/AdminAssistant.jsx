@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone, FaCheck, FaUpload, FaEye, FaArrowLeft } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import MenuDashboard from '../../componets/menuDashboard.jsx';
-import { sendMessageToAIPrivate, startAtaGenerationJob, listenToAtaJob } from '../../aiService';
+import MenuDashboard from '../../../componets/menuDashboard.jsx';
+import { sendMessageToAIPrivate, startAtaGenerationJob, listenToAtaJob } from '../../../aiService.js';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { auth, db } from '../../firebaseConfig';
+import { auth, db } from '../../../firebaseConfig.js';
 import { ref, push } from 'firebase/database';
-import logo from '../../assets/logo.png';
+import logo from '../../../assets/logo.png';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -303,7 +303,8 @@ const AdminAssistant = () => {
             titulo: formData.assunto || formData.reuniao || 'Documento Sem Título',
             conteudo: generatedContent,
             createdAt: new Date().toISOString(),
-            status: isSigned ? 'Assinado' : 'Rascunho'
+            status: isSigned ? 'Assinado' : 'Rascunho',
+            metadata: formData // Salva os dados do formulário para exibição
         };
 
         try {
