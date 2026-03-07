@@ -4,7 +4,7 @@ import * as admin from "firebase-admin";
 // Certifique-se de que as credenciais (GOOGLE_APPLICATION_CREDENTIALS) estejam configuradas no ambiente
 if (!admin.apps.length) {
   admin.initializeApp({
-    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://camara-ai-default-rtdb.firebaseio.com/",
+    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://camara-ai-default-rtdb.firebaseio.com",
   });
 }
 

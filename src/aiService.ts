@@ -1,6 +1,7 @@
 import {httpsCallable} from "firebase/functions";
-import {functions, db} from "./firebaseConfig";
+import {functions, db, storage} from "./firebaseConfig";
 import { ref, onValue, off } from "firebase/database";
+import { ref as storageRef, uploadBytes } from "firebase/storage";
 
 // Referência para a função PÚBLICA (usada na Home)
 const falarComIAPublico = httpsCallable(functions, "falarComCamaraAIPublico");
@@ -8,8 +9,8 @@ const falarComIAPublico = httpsCallable(functions, "falarComCamaraAIPublico");
 // Referência para a função PRIVADA (usada nas áreas logadas)
 const falarComIAPrivado = httpsCallable(functions, "falarComCamaraAIPrivado");
 
-// Referência para a função de Geração de Ata via YouTube
-const gerarAtaYoutubeFunc = httpsCallable(functions, "gerarAtaViaYoutube");
+// Referência para a função de Geração de Ata via Arquivo
+const gerarAtaViaArquivoFunc = httpsCallable(functions, "gerarAtaViaArquivo");
 
 /**
  * Envia uma mensagem para a Cloud Function PÚBLICA (sem autenticação).
@@ -30,47 +31,52 @@ export const sendMessageToAIPublic = async (message: string): Promise<string> =>
 };
 
 /**
- * Gera uma Ata Oficial a partir de uma URL de vídeo do YouTube.
- * @param {string} videoUrl A URL do vídeo do YouTube.
- * @return {Promise<string>} O texto da ata formatado em HTML.
+ * Inicia o job de geração de ata a partir de um arquivo de áudio.
+ * @param {File} file O arquivo de áudio selecionado.
+ * @return {Promise<string>} O ID do job criado.
  */
-export const generateAtaFromYoutube = async (videoUrl: string): Promise<string> => {
+export const startAtaGenerationJob = async (file: File): Promise<string> => {
   try {
     // Gera um ID de sessão temporário para o job
     const sessaoId = `assistente-${Date.now()}`;
     
-    // 1. Inicia o Job no Backend
-    const result = await gerarAtaYoutubeFunc({ videoUrl, sessaoId });
+    // 1. Upload do arquivo para o Firebase Storage
+    const fileRef = storageRef(storage, `atas/temp/${sessaoId}_${file.name}`);
+    await uploadBytes(fileRef, file);
+    const storagePath = fileRef.fullPath;
+
+    // 2. Inicia o Job no Backend passando o caminho do arquivo
+    const result = await gerarAtaViaArquivoFunc({ storagePath, sessaoId });
     const data = result.data as { success: boolean; jobId: string };
-    const jobId = data.jobId;
 
-    if (!jobId) throw new Error("Não foi possível iniciar o processamento.");
-
-    // 2. Aguarda a conclusão (Escuta o Realtime Database)
-    return new Promise((resolve, reject) => {
-      const jobRef = ref(db, `camara-teste/ataJobs/${jobId}`);
-      
-      const listener = onValue(jobRef, (snapshot) => {
-        const job = snapshot.val();
-        if (!job) return;
-
-        if (job.status === 'completed' && job.ata) {
-          off(jobRef, 'value', listener); // Para de escutar
-          resolve(job.ata);
-        } else if (job.status === 'error') {
-          off(jobRef, 'value', listener);
-          reject(new Error(job.error || "Erro desconhecido durante o processamento."));
-        }
-      }, (error) => {
-        off(jobRef, 'value', listener);
-        reject(error);
-      });
-    });
+    if (!data.jobId) {
+      throw new Error("Não foi possível iniciar o processamento. O backend não retornou um ID de job.");
+    }
+    return data.jobId;
   } catch (error) {
-    console.error("Erro ao gerar ata via YouTube:", error);
-    const msg = (error as Error).message || "Erro ao processar o vídeo.";
+    console.error("Erro ao gerar ata via arquivo:", error);
+    const msg = (error as Error).message || "Erro ao processar o arquivo.";
     throw new Error(msg);
   }
+};
+
+/**
+ * Escuta as atualizações de um job de ata no Realtime Database.
+ * @param {string} jobId O ID do job para escutar.
+ * @param {(status: string, data?: string) => void} onUpdate Callback acionado a cada atualização de status.
+ * @return {() => void} Uma função para parar de escutar (unsubscribe).
+ */
+export const listenToAtaJob = (jobId: string, onUpdate: (status: string, data?: string) => void): () => void => {
+  const jobRef = ref(db, `camara-teste/ataJobs/${jobId}`);
+  const listener = onValue(jobRef, (snapshot) => {
+    const job = snapshot.val();
+    if (job) {
+      onUpdate(job.status, job.ata || job.error);
+    }
+  });
+
+  // Retorna uma função para que o componente possa se desinscrever do listener
+  return () => off(jobRef, 'value', listener);
 };
 
 /**

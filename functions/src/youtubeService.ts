@@ -1,32 +1,32 @@
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
+import ytdl from "@distube/ytdl-core";
+import * as fs from "fs";
 
 export const youtubeService = {
   /**
-   * Baixa o áudio de um vídeo do YouTube usando yt-dlp.
+   * Baixa o áudio de um vídeo do YouTube usando ytdl-core.
    * @param {string} videoUrl URL do vídeo
    * @param {string} outputPath Caminho onde o arquivo de áudio será salvo
    */
   async downloadAudio(videoUrl: string, outputPath: string): Promise<void> {
     console.log(`[YouTube] Iniciando download: ${videoUrl}`);
 
-    // Comando para baixar apenas o áudio, converter para mp3 e salvar no caminho especificado
-    // -x: Extrair áudio
-    // --audio-format mp3: Converter para MP3
-    // -o: Caminho de saída
-    const command = `yt-dlp -x --audio-format mp3 -o "${outputPath}" "${videoUrl}"`;
+    return new Promise((resolve, reject) => {
+      const stream = ytdl(videoUrl, {
+        quality: "highestaudio",
+        filter: "audioonly",
+      });
 
-    try {
-      const { stderr } = await execAsync(command);
-      if (stderr) {
-        console.warn(`[YouTube] Aviso durante download: ${stderr}`);
-      }
-      console.log(`[YouTube] Download concluído: ${outputPath}`);
-    } catch (error) {
-      console.error("[YouTube] Erro no download:", error);
-      throw new Error(`Falha ao baixar áudio do YouTube: ${(error as Error).message}`);
-    }
+      stream.pipe(fs.createWriteStream(outputPath));
+
+      stream.on("end", () => {
+        console.log(`[YouTube] Download concluído: ${outputPath}`);
+        resolve();
+      });
+
+      stream.on("error", (error) => {
+        console.error("[YouTube] Erro no download:", error);
+        reject(new Error(`Falha ao baixar áudio do YouTube: ${error.message}`));
+      });
+    });
   },
 };

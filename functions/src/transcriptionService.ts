@@ -13,7 +13,7 @@ export const transcriptionService = {
     // 1. Upload do arquivo para o Google AI File Manager
     const uploadResponse = await fileManager.uploadFile(filePath, {
       mimeType: "audio/mp3",
-      displayName: "Audio Sessão Legislativa",
+      displayName: "Audio Sessão Legislativa Chunk",
     });
 
     const fileUri = uploadResponse.file.uri;
@@ -45,5 +45,20 @@ export const transcriptionService = {
     ]);
 
     return result.response.text();
+  },
+
+  /**
+   * Transcreve múltiplos blocos de áudio e concatena o resultado.
+   * @param {string[]} chunks Array com caminhos dos arquivos de áudio
+   * @return {Promise<string>} Texto completo transcrito
+   */
+  async transcribeChunks(chunks: string[]): Promise<string> {
+    let fullTranscription = "";
+    for (const chunkPath of chunks) {
+      console.log(`[Transcription] Processando bloco: ${chunkPath}`);
+      const chunkText = await transcriptionService.transcribeAudio(chunkPath);
+      fullTranscription += chunkText + "\n\n";
+    }
+    return fullTranscription;
   },
 };

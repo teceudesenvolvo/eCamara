@@ -27,6 +27,7 @@ import ComissoesDash from './screens/comLogin/comissoesDash.jsx';
 import PautasSessao from './screens/comLogin/pautasSessao.jsx';
 import Configuracoes from './screens/comLogin/Configuracoes.jsx';
 import AdminAssistant from './screens/comLogin/AdminAssistant.jsx';
+import AdminDocumentsDash from './screens/comLogin/AdminDocumentsDash.jsx';
 
 import MateriaDetails from './screens/comLogin/materiaDetails.jsx';
 
@@ -57,7 +58,7 @@ function App() {
 
   const location = useLocation();
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin'].includes(location.pathname);
+  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin', '/assistente-admin/novo'].includes(location.pathname);
 
   return (
     <div className="App">
@@ -97,7 +98,8 @@ function App() {
           <Route path="/comissoes-dash" component={ComissoesDash} />
           <Route path="/pautas-sessao" component={PautasSessao} />
           <Route path="/configuracoes" component={Configuracoes} />
-          <Route path="/assistente-admin" component={AdminAssistant} />
+          <Route exact path="/assistente-admin" component={AdminDocumentsDash} />
+          <Route path="/assistente-admin/novo" component={AdminAssistant} />
         </Switch>
 
         {!hideMenuDesktop && (

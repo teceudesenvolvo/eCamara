@@ -1,6 +1,6 @@
 export interface AtaJob {
   id: string;
-  videoUrl: string;
+  storagePath: string;
   sessaoId: string;
   status: "pending" | "processing" | "completed" | "error";
   createdAt: number;

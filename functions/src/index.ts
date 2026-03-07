@@ -1,147 +1,122 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onValueCreated } from "firebase-functions/v2/database";
 import { setGlobalOptions } from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { validateYoutubeUrl } from "./youtube";
 import { ataJobService } from "./ataJobService";
+import { workerService } from "./workerService";
 
 setGlobalOptions({ maxInstances: 10, region: "southamerica-east1" });
 
 /**
- * Tipo mínimo esperado da resposta do Gemini
- */
-type GeminiResponse = {
-  response: {
-    text: () => string;
-  };
-};
-
-/**
- * Interface mínima do modelo Gemini
- */
-interface GeminiModel {
-  generateContent: (input: unknown) => Promise<GeminiResponse>;
-}
-
-/**
- * Executa chamada ao Gemini com retry automático
- *
- * @param {GeminiModel} model Instância do modelo Gemini
- * @param {unknown} prompt Conteúdo enviado ao modelo
- * @return {Promise<string>} Texto retornado pela IA
- */
-async function gerarComRetry(
-  model: GeminiModel,
-  prompt: unknown
-): Promise<string> {
-  const MAX_TENTATIVAS = 3;
-
-  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
-    try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      return text;
-    } catch (error: unknown) {
-      logger.error(`Erro na tentativa ${tentativa}`, { error });
-
-      if (tentativa === MAX_TENTATIVAS) {
-        throw error;
-      }
-
-      const err = error as { status?: number };
-
-      if (err?.status === 429 || err?.status === 500 || err?.status === 503) {
-        const delay = Math.pow(2, tentativa) * 1000;
-
-        logger.warn(`Retry em ${delay}ms...`);
-
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  throw new Error("Falha ao gerar conteúdo.");
-}
-
-/**
- * Função PRIVADA para interagir com a IA
- * Exige autenticação do usuário
+ * Função PRIVADA para interagir com a IA. Exige autenticação.
+ * Usada nas áreas logadas do sistema.
  */
 export const falarComCamaraAIPrivado = onCall(
-  {
-    secrets: ["GEMINI_API_KEY"],
-    timeoutSeconds: 60,
-    memory: "512MiB",
-  },
+  { secrets: ["GEMINI_API_KEY"] },
   async (request) => {
+    // 1. Validação de autenticação do usuário
     if (!request.auth) {
       throw new HttpsError(
         "unauthenticated",
-        "O usuário precisa estar autenticado para usar esta função."
+        "O usuário precisa estar autenticado para usar esta função.",
       );
     }
 
+    // 2. Validação da chave de API no ambiente do servidor
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
       logger.error(
-        "A variável de ambiente GEMINI_API_KEY não está definida no servidor."
+        "A variável de ambiente GEMINI_API_KEY não está definida no servidor.",
       );
-      throw new HttpsError(
-        "internal",
-        "Configuração do servidor incompleta."
-      );
+      throw new HttpsError("internal", "Configuração do servidor incompleta.");
     }
 
+    // 3. Validação da mensagem enviada pelo cliente
     const userMessage = request.data.message;
-
     if (!userMessage || typeof userMessage !== "string") {
       throw new HttpsError(
         "invalid-argument",
-        "A propriedade 'message' é obrigatória e deve ser um texto."
+        "A propriedade 'message' é obrigatória e deve ser um texto.",
       );
     }
 
     try {
-      logger.info(
-        `Iniciando chamada IA PRIVADA: "${userMessage.substring(0, 30)}..."`
-      );
-
+      const logMessage = `[PRIVADO] Iniciando chamada para a IA com a mensagem: "${userMessage.substring(0, 30)}..."`;
+      logger.info(logMessage);
       const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-      }) as unknown as GeminiModel;
-
-      const text = await gerarComRetry(model, {
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: userMessage }],
-          },
-        ],
-      });
+      const result = await model.generateContent(userMessage);
+      const response = await result.response;
+      const text = response.text();
 
       return { response: text };
     } catch (error) {
-      logger.error("Erro na chamada da API do Gemini:", { error });
+      logger.error("Erro na chamada da API do Gemini:", error);
+      throw new HttpsError("internal", "Erro ao processar a resposta da IA.");
+    }
+  });
 
+/**
+ * Função PÚBLICA para interagir com a IA. NÃO exige autenticação.
+ * Usada no chat da Home Page.
+ */
+export const falarComCamaraAIPublico = onCall(
+  { secrets: ["GEMINI_API_KEY"] },
+  async (request) => {
+    // 1. Validação da chave de API no ambiente do servidor
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      logger.error(
+        "A variável de ambiente GEMINI_API_KEY não está definida no servidor.",
+      );
+      throw new HttpsError("internal", "Configuração do servidor incompleta.");
+    }
+
+    // 2. Validação da mensagem enviada pelo cliente
+    const userMessage = request.data.message;
+    if (!userMessage || typeof userMessage !== "string") {
       throw new HttpsError(
-        "internal",
-        "Erro ao processar a resposta da IA."
+        "invalid-argument",
+        "A propriedade 'message' é obrigatória e deve ser um texto.",
       );
     }
-  }
+
+    try {
+      const msg = `[PÚBLICO] Iniciando chamada para a IA com a mensagem: "${userMessage.substring(0, 30)}..."`;
+      logger.info(msg);
+
+      const systemInstruction = "Você é o 'Camara AI', um assistente virtual " +
+        "da Câmara Municipal. Sua função é responder perguntas dos cidadãos " +
+        "sobre leis municipais, projetos em tramitação, sessões plenárias e " +
+        "o trabalho dos vereadores. Use uma linguagem clara, objetiva e " +
+        "neutra.";
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        systemInstruction: systemInstruction,
+      });
+
+      const result = await model.generateContent(userMessage);
+      const response = await result.response;
+      const text = response.text();
+
+      return { response: text };
+    } catch (error) {
+      logger.error("[PÚBLICO] Erro na chamada da API do Gemini:", error);
+      throw new HttpsError("internal", "Erro ao processar a resposta da IA.");
+    }
+  },
 );
 
 /**
- * Função para iniciar o processo de geração de Ata via YouTube (Assíncrono).
- * Recebe a URL e o ID da sessão, valida e cria um job no Firestore.
+ * Função para iniciar o processo de geração de Ata via Arquivo de Áudio (Assíncrono).
+ * Recebe o caminho do arquivo no Storage e o ID da sessão, valida e cria um job no Firestore.
  * O processamento real será feito por um worker que escuta a coleção 'ataJobs'.
  */
-export const gerarAtaViaYoutube = onCall(
+export const gerarAtaViaArquivo = onCall(
   {
     region: "southamerica-east1",
     maxInstances: 10,
@@ -155,29 +130,21 @@ export const gerarAtaViaYoutube = onCall(
       );
     }
 
-    const { videoUrl, sessaoId } = request.data;
+    const { storagePath, sessaoId } = request.data;
 
     // 2. Validação de dados obrigatórios
-    if (!videoUrl || !sessaoId) {
+    if (!storagePath || !sessaoId) {
       throw new HttpsError(
         "invalid-argument",
-        "Os campos 'videoUrl' e 'sessaoId' são obrigatórios."
-      );
-    }
-
-    // 3. Validação da URL do YouTube
-    if (!validateYoutubeUrl(videoUrl)) {
-      throw new HttpsError(
-        "invalid-argument",
-        "A URL fornecida não é um link válido do YouTube."
+        "Os campos 'storagePath' e 'sessaoId' são obrigatórios."
       );
     }
 
     try {
-      logger.info(`Criando job de ata para sessão ${sessaoId} e vídeo ${videoUrl}`);
+      logger.info(`Criando job de ata para sessão ${sessaoId} e arquivo ${storagePath}`);
 
       // 4. Criação do Job no Firestore via Service
-      const jobId = await ataJobService.createJob(videoUrl, sessaoId);
+      const jobId = await ataJobService.createJob(storagePath, sessaoId);
 
       return { success: true, jobId };
     } catch (error) {
@@ -188,74 +155,32 @@ export const gerarAtaViaYoutube = onCall(
 );
 
 /**
- * Função PÚBLICA para interagir com a IA
- * Usada no chat público da Câmara
+ * Gatilho automático: Processa a Ata assim que o job é criado no banco.
+ * Substitui a necessidade de um worker externo.
+ * Usando v2 (Node 24) em us-central1 para compatibilidade com o trigger do banco.
  */
-export const falarComCamaraAIPublico = onCall(
+export const processarAtaOnCreate = onValueCreated(
   {
+    ref: "camara-teste/ataJobs/{jobId}",
+    region: "us-central1", // Região padrão para triggers de banco Gen 2
+    timeoutSeconds: 540, // 9 minutos para processar vídeos longos
+    memory: "2GiB", // Mais memória para o download/processamento
     secrets: ["GEMINI_API_KEY"],
-    timeoutSeconds: 60,
-    memory: "512MiB",
   },
-  async (request) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+  async (event) => {
+    const jobId = event.params.jobId;
+    const jobData = event.data.val();
 
-    if (!apiKey) {
-      logger.error(
-        "A variável de ambiente GEMINI_API_KEY não está definida no servidor."
-      );
-
-      throw new HttpsError(
-        "internal",
-        "Configuração do servidor incompleta."
-      );
-    }
-
-    const userMessage = request.data.message;
-
-    if (!userMessage || typeof userMessage !== "string") {
-      throw new HttpsError(
-        "invalid-argument",
-        "A propriedade 'message' é obrigatória e deve ser um texto."
-      );
+    // Apenas processa se o status for 'pending'
+    if (!jobData || jobData.status !== "pending") {
+      return;
     }
 
     try {
-      logger.info(
-        `[PÚBLICO] Chamada IA: "${userMessage.substring(0, 30)}..."`
-      );
-
-      const systemInstruction = `
-Você é um assistente legislativo da Câmara Municipal.
-
-Funções:
-- responder cidadãos sobre leis municipais
-- explicar projetos de lei
-- gerar documentos legislativos
-- orientar sobre funcionamento da Câmara
-
-Use linguagem clara, formal e institucional.
-Nunca invente leis inexistentes.
-Se não souber a informação, diga que precisa consultar o setor responsável.
-`;
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-        systemInstruction: systemInstruction,
-      }) as unknown as GeminiModel;
-
-      const text = await gerarComRetry(model, userMessage);
-
-      return { response: text };
+      logger.info(`[Trigger] Iniciando processamento do job ${jobId}`);
+      await workerService.processJob(jobId, jobData.storagePath);
     } catch (error) {
-      logger.error("[PÚBLICO] Erro na chamada da API do Gemini:", { error });
-
-      throw new HttpsError(
-        "internal",
-        "Erro ao processar a resposta da IA."
-      );
+      logger.error(`[Trigger] Erro fatal no job ${jobId}:`, error);
     }
   }
 );

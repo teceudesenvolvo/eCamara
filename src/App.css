@@ -5180,8 +5180,14 @@ footer>p {
 }
 
 .label-form{
-  font-size: 14px;
+  font-size: 14px !important;
   color: #333;
+}
+
+.process-text{
+  margin-top: 10px;
+  font-size: 12px !important;
+  color: #04b398;
 }
 
 .modal-input {
@@ -5281,4 +5287,27 @@ footer>p {
 }
 .icon-primary {
   color: #126B5E;
+}
+
+.animate-spin {
+  animation: App-logo-spin infinite 1s linear;
+}
+
+.full-page-quill-editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.full-page-quill-editor .ql-container {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 1.1rem;
+}
+
+.process-container{
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: left;
 }

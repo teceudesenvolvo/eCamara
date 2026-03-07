@@ -13,13 +13,13 @@ export const ataJobService = {
   /**
    * Cria um novo registro de job na coleção 'ataJobs'.
    *
-   * @param {string} videoUrl URL do vídeo do YouTube
+   * @param {string} storagePath Caminho do arquivo de áudio no Storage
    * @param {string} sessaoId ID da sessão legislativa
    * @return {Promise<string>} O ID do documento criado (jobId)
    */
-  async createJob(videoUrl: string, sessaoId: string): Promise<string> {
+  async createJob(storagePath: string, sessaoId: string): Promise<string> {
     const jobData: Omit<AtaJob, "id"> = {
-      videoUrl,
+      storagePath,
       sessaoId,
       status: "pending",
       createdAt: Date.now(),
