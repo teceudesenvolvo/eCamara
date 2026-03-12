@@ -2,9 +2,9 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onValueCreated } from "firebase-functions/v2/database";
 import { setGlobalOptions } from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ataJobService } from "./ataJobService";
 import { workerService } from "./workerService";
+import { genAI } from "./gemini";
 
 setGlobalOptions({ maxInstances: 10, region: "southamerica-east1" });
 
@@ -23,16 +23,7 @@ export const falarComCamaraAIPrivado = onCall(
       );
     }
 
-    // 2. Validação da chave de API no ambiente do servidor
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      logger.error(
-        "A variável de ambiente GEMINI_API_KEY não está definida no servidor.",
-      );
-      throw new HttpsError("internal", "Configuração do servidor incompleta.");
-    }
-
-    // 3. Validação da mensagem enviada pelo cliente
+    // 2. Validação da mensagem enviada pelo cliente
     const userMessage = request.data.message;
     if (!userMessage || typeof userMessage !== "string") {
       throw new HttpsError(
@@ -44,8 +35,8 @@ export const falarComCamaraAIPrivado = onCall(
     try {
       const logMessage = `[PRIVADO] Iniciando chamada para a IA com a mensagem: "${userMessage.substring(0, 30)}..."`;
       logger.info(logMessage);
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      // Usa o cliente importado do gemini.ts. A chave é gerenciada lá.
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Ajustado para modelo válido
 
       const result = await model.generateContent(userMessage);
       const response = await result.response;
@@ -65,16 +56,7 @@ export const falarComCamaraAIPrivado = onCall(
 export const falarComCamaraAIPublico = onCall(
   { secrets: ["GEMINI_API_KEY"] },
   async (request) => {
-    // 1. Validação da chave de API no ambiente do servidor
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      logger.error(
-        "A variável de ambiente GEMINI_API_KEY não está definida no servidor.",
-      );
-      throw new HttpsError("internal", "Configuração do servidor incompleta.");
-    }
-
-    // 2. Validação da mensagem enviada pelo cliente
+    // 1. Validação da mensagem enviada pelo cliente
     const userMessage = request.data.message;
     if (!userMessage || typeof userMessage !== "string") {
       throw new HttpsError(
@@ -93,9 +75,8 @@ export const falarComCamaraAIPublico = onCall(
         "o trabalho dos vereadores. Use uma linguagem clara, objetiva e " +
         "neutra.";
 
-      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash", // Ajustado para modelo válido (2.5 ainda não é publico padrão)
         systemInstruction: systemInstruction,
       });
 
