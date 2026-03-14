@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
-import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel } from 'react-icons/fa';
+import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel, FaSpinner } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import { db } from '../../../firebaseConfig';
+import { ref, get, update } from 'firebase/database';
 
 class Configuracoes extends Component {
     constructor(props) {
@@ -11,30 +13,54 @@ class Configuracoes extends Component {
             leiOrganicaText: '',
             materiasText: '',
             atasText: '',
-            isSaving: false
+            isSaving: false,
+            loading: true,
+            camaraId: 'camara-teste'
         };
     }
 
     componentDidMount() {
-        // Carrega configurações salvas (Simulação de persistência)
-        const savedConfig = localStorage.getItem('camara_ai_config');
-        if (savedConfig) {
-            this.setState(JSON.parse(savedConfig));
-        }
+        // Extrai o camaraId da URL ou usa o padrão
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const camaraId = pathParts.length > 1 ? pathParts[1] : 'camara-teste';
+        
+        this.setState({ camaraId }, () => {
+            this.fetchConfig();
+        });
     }
 
-    handleSave = () => {
+    fetchConfig = async () => {
+        const { camaraId } = this.state;
+        const configRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
+        try {
+            const snapshot = await get(configRef);
+            if (snapshot.exists()) {
+                this.setState({ ...snapshot.val(), loading: false });
+            } else {
+                this.setState({ loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar configurações da base:", error);
+            this.setState({ loading: false });
+        }
+    };
+
+    handleSave = async () => {
+        const { camaraId, regimentoText, leiOrganicaText, materiasText, atasText } = this.state;
         this.setState({ isSaving: true });
         
-        // Salva no localStorage para persistir entre recarregamentos
-        const { regimentoText, leiOrganicaText, materiasText, atasText } = this.state;
+        const configRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
         const config = { regimentoText, leiOrganicaText, materiasText, atasText };
-        localStorage.setItem('camara_ai_config', JSON.stringify(config));
         
-        setTimeout(() => {
-            this.setState({ isSaving: false });
+        try {
+            await update(configRef, config);
             alert('Base de Conhecimento atualizada com sucesso! A IA agora utilizará estas informações para gerar documentos mais precisos.');
-        }, 1000);
+        } catch (error) {
+            console.error("Erro ao salvar base de conhecimento:", error);
+            alert('Erro ao salvar as configurações.');
+        } finally {
+            this.setState({ isSaving: false });
+        }
     };
 
     renderContent = () => {
@@ -73,7 +99,7 @@ class Configuracoes extends Component {
 
         return (
             <div className="dashboard-card">
-                <div className="dashboard-header" style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+                <div className="dashboard-header" style={{ marginBottom: '25px', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
                     <div>
                         <h2 style={{ margin: 0, color: '#126B5E', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             {activeTab === 'regimento' && <FaBook />}
@@ -82,31 +108,33 @@ class Configuracoes extends Component {
                             {activeTab === 'atas' && <FaFileAlt />}
                             {title}
                         </h2>
-                        <p style={{ color: '#666', margin: '5px 0 0 0' }}>{description}</p>
+                        <p style={{ color: '#666', margin: '8px 0 0 0', fontSize: '0.95rem' }}>{description}</p>
                     </div>
-                    <button className="btn-primary" onClick={this.handleSave} disabled={this.state.isSaving}>
-                        <FaSave /> {this.state.isSaving ? 'Salvando...' : 'Salvar Base de Conhecimento'}
+                    <button className="btn-primary" onClick={this.handleSave} disabled={this.state.isSaving} style={{ height: '45px' }}>
+                        {this.state.isSaving ? <FaSpinner className="animate-spin" /> : <FaSave />} {this.state.isSaving ? 'Salvando...' : 'Salvar Dados'}
                     </button>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#555' }}>Conteúdo de Texto (Para Treinamento da IA)</label>
+                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: '700', color: '#333', fontSize: '0.9rem' }}>CONTEÚDO E REGRAS (PARA A IA)</label>
                     <textarea 
                         className="modal-textarea" 
                         rows="20"
                         placeholder={`Cole o conteúdo do ${title} aqui...`}
                         value={value}
                         onChange={(e) => this.setState({ [onChangeKey]: e.target.value })}
-                        style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                        style={{ fontFamily: "'Inter', sans-serif", fontSize: '1rem', lineHeight: '1.6', color: '#333', padding: '20px' }}
                     ></textarea>
                 </div>
 
                 <div style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#555' }}>Upload de Arquivos (PDF/DOCX)</label>
-                    <div style={{ border: '2px dashed #ccc', borderRadius: '8px', padding: '30px', textAlign: 'center', color: '#888', cursor: 'pointer', backgroundColor: '#fafafa' }}>
+                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: '700', color: '#333', fontSize: '0.9rem' }}>UPLOAD DE DOCUMENTOS COMPLEMENTARES</label>
+                    <div style={{ border: '2px dashed #ccc', borderRadius: '12px', padding: '40px', textAlign: 'center', color: '#888', cursor: 'pointer', backgroundColor: '#fcfcfc', transition: 'all 0.2s' }}
+                         onMouseOver={(e) => e.currentTarget.style.borderColor = '#126B5E'}
+                         onMouseOut={(e) => e.currentTarget.style.borderColor = '#ccc'}>
                         <FaUpload size={30} style={{ marginBottom: '10px', color: '#126B5E' }} />
-                        <p style={{ margin: 0, fontWeight: 'bold', color: '#333' }}>Arraste arquivos aqui ou clique para selecionar</p>
-                        <p style={{ fontSize: '0.8rem', margin: '5px 0 0 0' }}>(O processamento de arquivos PDF para extração de texto será implementado em breve)</p>
+                        <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>Arraste arquivos aqui ou clique para selecionar</p>
+                        <p style={{ fontSize: '0.8rem', margin: '8px 0 0 0' }}>(PDF, DOCX ou TXT)</p>
                     </div>
                 </div>
             </div>
@@ -114,7 +142,15 @@ class Configuracoes extends Component {
     };
 
     render() {
-        const { activeTab } = this.state;
+        const { activeTab, loading } = this.state;
+
+        if (loading) {
+            return (
+                <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}>
+                    <FaSpinner className="animate-spin" size={40} color="#126B5E" />
+                </div>
+            );
+        }
 
         return (
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>

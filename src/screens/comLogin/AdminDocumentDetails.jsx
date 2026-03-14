@@ -227,6 +227,29 @@ class AdminDocumentDetails extends Component {
                                 </div>
                             ) : (
                                 <div style={{ textAlign: 'center', padding: '40px', color: '#000 !important' }}>
+                            
+                            {/* Exibição de Anexo Base64 se existir */}
+                            {documento.attachment && (
+                                <div style={{ marginTop: '20px', padding: '15px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ textAlign: 'left' }}>
+                                        <p style={{ margin: 0, fontWeight: 'bold', color: '#166534', fontSize: '0.9rem' }}>Anexo Vinculado</p>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#15803d' }}>{documento.attachment.name}</p>
+                                    </div>
+                                    <button 
+                                        className="btn-primary" 
+                                        style={{ width: 'auto', padding: '8px 15px', fontSize: '0.8rem', background: '#16a34a' }}
+                                        onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = documento.attachment.base64;
+                                            link.download = documento.attachment.name;
+                                            link.click();
+                                        }}
+                                    >
+                                        <FaDownload /> Baixar Anexo
+                                    </button>
+                                </div>
+                            )}
+
                                     <p style={{ fontSize: '0.9rem', color: '#555'}}>Este documento não possui metadados estruturados para exibição.</p>
                                     <p style={{ fontSize: '0.9rem', color: '#555'}}>Utilize a opção "Visualizar PDF" para ver o conteúdo completo.</p>
                                 </div>

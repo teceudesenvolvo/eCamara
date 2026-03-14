@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone, FaCheck, FaUpload, FaEye, FaArrowLeft } from 'react-icons/fa';
+import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone, FaUpload, FaEye } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
@@ -7,8 +7,7 @@ import { sendMessageToAIPrivate, startAtaGenerationJob, listenToAtaJob } from '.
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { auth, db } from '../../../firebaseConfig.js';
-import { ref, push } from 'firebase/database';
-import logo from '../../../assets/logo.png';
+import { ref, push, get } from 'firebase/database';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -63,7 +62,16 @@ const AdminAssistant = () => {
     const [pdfData, setPdfData] = useState(null);
     const [showPdfPopup, setShowPdfPopup] = useState(false);
     const [isSigned, setIsSigned] = useState(false);
-    const [logoBase64, setLogoBase64] = useState(null);
+    const [camaraConfigs, setCamaraConfigs] = useState({
+        baseConhecimento: {},
+        layout: {},
+        home: {},
+        footer: {},
+        logoBase64: null,
+        camaraId: 'camara-teste'
+    });
+    const [attachment, setAttachment] = useState(null);
+    const [loadingConfigs, setLoadingConfigs] = useState(true);
 
     // Atualiza o formulário quando o tipo de documento muda
     useEffect(() => {
@@ -75,20 +83,56 @@ const AdminAssistant = () => {
         setGeneratedContent(''); // Limpa o conteúdo gerado ao trocar de tipo
     }, [docType]);
 
-    // Carregar logo para PDF
+    // Carregar configurações do Firebase ao iniciar
     useEffect(() => {
+        const fetchConfigs = async () => {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const camaraId = pathParts.length > 1 ? pathParts[ pathParts.length - 1] : 'camara-teste';
+            
+            try {
+                const [baseSnap, layoutSnap, homeSnap, footerSnap] = await Promise.all([
+                    get(ref(db, `${camaraId}/dados-config/base-conhecimento`)),
+                    get(ref(db, `${camaraId}/dados-config/layout`)),
+                    get(ref(db, `${camaraId}/dados-config/home`)),
+                    get(ref(db, `${camaraId}/dados-config/footer`))
+                ]);
+
+                const layoutData = layoutSnap.val() || {};
+                let logoB64 = null;
+                if (layoutData.logo) {
+                    logoB64 = await getBase64(layoutData.logo);
+                }
+
+                setCamaraConfigs({
+                    camaraId,
+                    baseConhecimento: baseSnap.val() || {},
+                    layout: layoutData,
+                    home: homeSnap.val() || {},
+                    footer: footerSnap.val() || {},
+                    logoBase64: logoB64
+                });
+            } catch (error) {
+                console.error("Erro ao carregar configurações da Câmara:", error);
+            } finally {
+                setLoadingConfigs(false);
+            }
+        };
+
         const getBase64 = async (url) => {
             try {
                 const response = await fetch(url);
                 const blob = await response.blob();
-                const reader = new FileReader();
-                reader.onload = () => setLogoBase64(reader.result);
-                reader.readAsDataURL(blob);
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
             } catch (e) {
-                console.error("Erro ao carregar logo", e);
+                return null;
             }
         };
-        getBase64(logo);
+
+        fetchConfigs();
     }, []);
 
     // Timer para o tempo decorrido
@@ -109,9 +153,26 @@ const AdminAssistant = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleAttachmentChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAttachment({
+                    name: file.name,
+                    base64: reader.result,
+                    type: file.type
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleGenerate = async () => {
         setIsLoading(true);
         setGeneratedContent('');
+
+        const { baseConhecimento } = camaraConfigs;
 
         // Constrói um prompt detalhado para a IA
         const fieldsDescription = Object.entries(formData)
@@ -119,7 +180,15 @@ const AdminAssistant = () => {
             .join('\n');
 
         const prompt = `
-            Atue como um especialista em redação oficial e técnica legislativa.
+            Atue como um especialista em redação oficial e técnica legislativa brasileira.
+            
+            CONTEXTO LEGISLATIVO DA CASA:
+            - Regimento Interno: ${baseConhecimento.regimentoText || 'Seguir normas padrão.'}
+            - Lei Orgânica: ${baseConhecimento.leiOrganicaText || 'Seguir normas padrão.'}
+            - Histórico/Jurisprudência: ${baseConhecimento.materiasText || ''}
+            
+            Use o contexto acima para garantir que a terminologia e os ritos citados no documento estejam corretos.
+
             Sua tarefa é gerar um documento oficial do tipo "${docType.toUpperCase()}" com base nas seguintes informações:
 
             ${fieldsDescription}
@@ -232,25 +301,39 @@ const AdminAssistant = () => {
     };
 
     const generateDocDefinition = () => {
+        const { logoBase64, home, footer } = camaraConfigs;
+
         const content = [
-            logoBase64 && { image: logoBase64, width: 70, alignment: 'center', margin: [0, 0, 0, 10] },
-            { text: 'Câmara Municipal de Teste', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
+            logoBase64 && { image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] },
+            { text: home.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
+            footer.slogan && { text: footer.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
             { text: docType.toUpperCase(), style: 'subheader', alignment: 'center', bold: true, margin: [0, 0, 0, 20] },
             ...processHtmlToPdfMake(generatedContent)
         ];
 
+        const footerText = `📍 ${footer.address || ''} | 📞 ${footer.phone || ''}\n📧 ${footer.email || ''}\n${footer.copyright || ''}`;
+
         if (isSigned) {
             content.push(
-                { text: '\n\n\n____________________________________', alignment: 'center' },
-                { text: 'Assinado Digitalmente', alignment: 'center', color: 'blue', fontSize: 10 }
+                { text: '\n\n\n____________________________________', alignment: 'center', margin: [0, 20, 0, 0] },
+                { text: 'Assinado Digitalmente via Camara AI', alignment: 'center', color: '#126B5E', fontSize: 9, bold: true }
             );
         }
 
         return {
             content: content,
+            footer: (currentPage, pageCount) => ({
+                stack: [
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
+                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
+                ]
+            }),
             styles: {
-                header: { fontSize: 16, bold: true },
-                subheader: { fontSize: 14 }
+                header: { fontSize: 14, bold: true, color: '#333' },
+                slogan: { fontSize: 9, italics: true, color: '#666' },
+                subheader: { fontSize: 13, color: '#126B5E', marginTop: 10 },
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 }
             }
         };
     };
@@ -296,6 +379,7 @@ const AdminAssistant = () => {
             alert("Não há conteúdo para salvar.");
             return;
         }
+        const { camaraId } = camaraConfigs;
 
         const docData = {
             userId: auth.currentUser.uid,
@@ -304,14 +388,13 @@ const AdminAssistant = () => {
             conteudo: generatedContent,
             createdAt: new Date().toISOString(),
             status: isSigned ? 'Assinado' : 'Rascunho',
-            metadata: formData // Salva os dados do formulário para exibição
+            metadata: formData, // Salva os dados do formulário para exibição
+            attachment: attachment // Salva o anexo em base64
         };
 
         try {
-            await push(ref(db, 'camara-teste/documentos_administrativos'), docData);
+            await push(ref(db, `${camaraId}/documentos_administrativos`), docData);
             alert("Documento salvo com sucesso!");
-            // Opcional: Redirecionar para a lista
-            // window.location.href = '/assistente-admin';
         } catch (error) {
             console.error("Erro ao salvar:", error);
             alert("Erro ao salvar documento.");
@@ -348,11 +431,19 @@ const AdminAssistant = () => {
         ));
     };
 
+    if (loadingConfigs) {
+        return (
+            <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}>
+                <FaSpinner className="animate-spin" size={40} color="#126B5E" />
+                <p style={{ marginTop: '20px', fontSize: '1rem', color: '#666' }}>Carregando inteligência da Câmara...</p>
+            </div>
+        );
+    }
+
     return (
         <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
             <MenuDashboard />
             <div className="dashboard-content" style={{ display: 'grid', gridTemplateColumns: 'minmax(400px, 2fr) 3fr', gap: '30px', alignItems: 'flex-start' }}>
-                
                 {/* Painel de Configuração (Esquerda) */}
                 <div>
                     <div className="dashboard-header" style={{ marginBottom: '20px' }}>
@@ -424,6 +515,12 @@ const AdminAssistant = () => {
                         )}
 
                         {renderFormFields()}
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 label-form">Anexar Documento de Referência (Opcional)</label>
+                            <input type="file" className="modal-input" onChange={handleAttachmentChange} style={{ padding: '8px' }} />
+                            {attachment && <p className="mt-1 text-xs text-green-600">📎 Arquivo pronto: {attachment.name}</p>}
+                        </div>
 
                         <button
                             onClick={handleGenerate}

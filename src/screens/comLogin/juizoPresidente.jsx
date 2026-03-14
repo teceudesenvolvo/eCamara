@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaBalanceScale, FaSearch, FaCheckCircle, FaTimesCircle, FaArchive, FaPaperPlane, FaFileAlt, FaGavel, FaMagic, FaInbox } from 'react-icons/fa';
+import { FaBalanceScale, FaSearch, FaCheckCircle, FaTimesCircle, FaArchive, FaPaperPlane, FaFileAlt, FaGavel, FaMagic, FaInbox, FaDownload, FaEye, FaFilePdf, FaInfoCircle, FaParagraph, FaCalendarAlt } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -26,25 +26,25 @@ class JuizoPresidente extends Component {
             passwordInput: '',
             passwordError: '',
             pendingAction: null,
-            comissoesDisponiveis: [
-                'Comissão de Constituição, Justiça e Redação (CCJ)',
-                'Comissão de Finanças e Orçamento',
-                'Comissão de Obras e Serviços Públicos',
-                'Comissão de Educação, Saúde e Assistência'
-            ],
+            comissoesDisponiveis: [],
             materias: [],
             loading: true,
         };
     }
 
     componentDidMount() {
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const camaraId = pathParts.length > 1 ? pathParts[1] : 'camara-teste';
+        
+        this.setState({ camaraId });
         this.loadImages();
-        this.fetchMaterias();
+        this.fetchMaterias(camaraId);
+        this.fetchComissoes(camaraId);
     }
 
-    fetchMaterias = () => {
+    fetchMaterias = (camaraId) => {
         this.setState({ loading: true });
-        const materiasRef = ref(db, 'camara-teste/materias');
+        const materiasRef = ref(db, `${camaraId}/materias`);
         // Usar onValue para atualizações em tempo real
         onValue(materiasRef, (snapshot) => {
             const materias = [];
@@ -57,6 +57,20 @@ class JuizoPresidente extends Component {
         }, (error) => {
             console.error("Erro ao buscar matérias para despacho:", error);
             this.setState({ loading: false });
+        });
+    };
+
+    fetchComissoes = (camaraId) => {
+        const comissoesRef = ref(db, `${camaraId}/comissoes`);
+        onValue(comissoesRef, (snapshot) => {
+            const comissoes = [];
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    const data = child.val();
+                    if (data.nome) comissoes.push(data.nome);
+                });
+            }
+            this.setState({ comissoesDisponiveis: comissoes });
         });
     };
 
@@ -90,6 +104,20 @@ class JuizoPresidente extends Component {
         this.setState({ selectedMateria: materia, despachoText: '', selectedComissao: '', isGeneratingDespacho: false });
     };
 
+    handleDownloadOriginalPDF = () => {
+        const { selectedMateria } = this.state;
+        if (selectedMateria && selectedMateria.pdfBase64) {
+            const link = document.createElement('a');
+            link.href = `data:application/pdf;base64,${selectedMateria.pdfBase64}`;
+            link.download = `Materia_${selectedMateria.numero.replace('/', '-')}_Original.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            alert("PDF original não disponível.");
+        }
+    };
+
     handleCloseDetails = () => {
         this.setState({ selectedMateria: null });
     };
@@ -104,7 +132,7 @@ class JuizoPresidente extends Component {
     };
 
     handleSubmitDespacho = async (novoStatus) => {
-        const { selectedMateria, selectedComissao, despachoText } = this.state;
+        const { selectedMateria, selectedComissao, despachoText, camaraId } = this.state;
         if (!selectedMateria) return;
 
         let statusFinal = novoStatus;
@@ -123,7 +151,7 @@ class JuizoPresidente extends Component {
         };
 
         try {
-            const materiaRef = ref(db, `camara-teste/materias/${selectedMateria.id}`);
+            const materiaRef = ref(db, `${camaraId}/materias/${selectedMateria.id}`);
             await update(materiaRef, despachoData);
 
             this.generateDespachoPDF(selectedMateria, despachoText, statusFinal);
@@ -271,6 +299,32 @@ class JuizoPresidente extends Component {
             );
         }
 
+        // Regra do Parecer Favorável: Arquivar, Comissões ou Plenário
+        if (selectedMateria.status === 'Parecer Favorável') {
+            return (
+                <>
+                    <button 
+                        onClick={() => this.openPasswordModal('Arquivado')}
+                        className="btn-danger"
+                    >
+                        <FaArchive /> Arquivar
+                    </button>
+                    <button 
+                        onClick={() => this.openPasswordModal('Encaminhado às Comissões')}
+                        className="btn-primary"
+                    >
+                        <FaPaperPlane /> Enviar para Comissão
+                    </button>
+                    <button 
+                        onClick={() => this.openPasswordModal('Enviado para Plenário')}
+                        className="btn-success"
+                    >
+                        <FaCheckCircle /> Enviar para Plenário
+                    </button>
+                </>
+            );
+        }
+
         // Regra 2: Requerimento -> Despachar ou Enviar para Plenário
         if (selectedMateria.tipo === 'Requerimento') {
             return (
@@ -330,7 +384,8 @@ class JuizoPresidente extends Component {
                 case 'Pendentes':
                 default:
                     filtered = materias.filter(m => 
-                        m.status === 'Aguardando Despacho da Presidência' || 
+                        m.status === 'Aguardando Despacho da Presidência' ||
+                        m.status === 'Parecer Favorável' || 
                         m.status === 'Aprovado na Comissão'
                     );
                     break;
@@ -425,24 +480,104 @@ class JuizoPresidente extends Component {
                         {selectedMateria ? (
                             <div className="dashboard-card" style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                                 <h2 className="modal-header" style={{ justifyContent: 'flex-start' }}>
-                                    <FaGavel /> Despacho da Matéria
+                                    Despacho da Matéria
                                 </h2>
-                                <div className='detalhes-materia'>
-                                    <p><strong>Matéria:</strong> {selectedMateria.tipo} {selectedMateria.numero}</p>
-                                    <p><strong>Ementa:</strong> {selectedMateria.ementa}</p>
+                                
+                                {/* Resumo e Texto Original */}
+                                <div style={{ marginBottom: '25px', textAlign: 'left' }}>
+                                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                                        <span className="tag tag-primary">{selectedMateria.tipo} {selectedMateria.numero}</span>
+                                        <span className="tag tag-neutral"><FaCalendarAlt size={12} /> {selectedMateria.dataApresenta}</span>
+                                    </div>
+                                    <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '10px', borderLeft: '4px solid #ccc', marginBottom: '15px' }}>
+                                        <p style={{ margin: 0, lineHeight: '1.5', color: '#333', fontStyle: 'italic', fontSize: '0.95rem' }}>"{selectedMateria.ementa}"</p>
+                                    </div>
+                                    
+                                    {/* Grid de Dados Técnicos */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', padding: '15px', background: '#fff', border: '1px solid #eee', borderRadius: '8px', marginBottom: '15px' }}>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Protocolo</label>
+                                            <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{selectedMateria.protocolo || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Objeto</label>
+                                            <p style={{ margin: 0, fontWeight: '600', color: '#333', fontSize: '0.85rem' }}>{selectedMateria.objeto || 'Não informado'}</p>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Matéria Polêmica?</label>
+                                            <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{selectedMateria.materiaPolemica || 'Não'}</p>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Tipo de Lei</label>
+                                            <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{selectedMateria.isComplementar ? 'Lei Complementar' : 'Lei Ordinária'}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Ações do PDF Original */}
+                                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                                        <button className="btn-secondary" onClick={() => window.open(`data:application/pdf;base64,${selectedMateria.pdfBase64}`)} style={{ fontSize: '0.8rem', padding: '8px 12px' }}>
+                                            <FaEye /> Ver PDF Original
+                                        </button>
+                                        <button className="btn-secondary" onClick={this.handleDownloadOriginalPDF} style={{ fontSize: '0.8rem', padding: '8px 12px' }}>
+                                            <FaDownload /> Baixar PDF
+                                        </button>
+                                    </div>
                                 </div>
                                 
+                                {/* Parecer Jurídico */}
                                 <div style={{ textAlign: 'left', background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: `4px solid ${selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}` }}>
-                                    <h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}> Parecer da Procuradoria</h4>
-                                    <p style={{ margin: 0, fontStyle: 'italic', color: '#555' }}>"{selectedMateria.parecer}"</p>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <h4 style={{ margin: 0, color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <FaBalanceScale color={selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'} /> Parecer da Procuradoria
+                                        </h4>
+                                        {selectedMateria.parecerDate && <span style={{ fontSize: '0.75rem', color: '#888' }}>{new Date(selectedMateria.parecerDate).toLocaleDateString()}</span>}
+                                    </div>
+                                    <div style={{ 
+                                        maxHeight: '150px', 
+                                        overflowY: 'auto', 
+                                        fontSize: '0.9rem', 
+                                        color: '#555', 
+                                        lineHeight: '1.4',
+                                        background: '#fff',
+                                        padding: '10px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #eee'
+                                    }}>
+                                        {selectedMateria.parecer}
+                                    </div>
                                 </div>
 
+                                {/* Texto Integral (Collapse style / Scroll) */}
+                                <div style={{ textAlign: 'left', marginBottom: '25px' }}>
+                                    <h4 style={{ fontSize: '1rem', color: '#126B5E', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                        <FaParagraph /> Texto Integral da Proposição
+                                    </h4>
+                                    <div style={{ 
+                                        background: '#fafafa', 
+                                        padding: '15px', 
+                                        borderRadius: '8px', 
+                                        border: '1px solid #eee', 
+                                        maxHeight: '200px', 
+                                        overflowY: 'auto',
+                                        fontSize: '0.95rem',
+                                        lineHeight: '1.6',
+                                        color: '#2c3e50'
+                                    }}
+                                    dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }}
+                                    />
+                                </div>
+
+                                {/* Formulário de Decisão */}
+                                <div style={{ borderTop: '2px solid #f0f2f5', paddingTop: '20px' }}>
                                 <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ textAlign: 'left', display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#555' }}>Destino (Comissão)</label>
+                                    <label style={{ textAlign: 'left', display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#333' }}>
+                                        <FaInbox /> Encaminhar para:
+                                    </label>
                                     <select
                                         className="modal-input"
                                         value={this.state.selectedComissao}
                                         onChange={(e) => this.setState({ selectedComissao: e.target.value })}
+                                        style={{ background: '#fff' }}
                                     >
                                         <option value="">Selecione uma comissão...</option>
                                         {this.state.comissoesDisponiveis.map((comissao, index) => (
@@ -453,7 +588,7 @@ class JuizoPresidente extends Component {
 
                                 <div style={{ marginBottom: '25px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <label style={{ display: 'block', fontWeight: 'bold', color: '#555' }}>Texto do Despacho (Opcional)</label>
+                                        <label style={{ display: 'block', fontWeight: 'bold', color: '#333' }}>Texto do Despacho</label>
                                         <button 
                                             onClick={this.handleGenerateDespachoWithAI}
                                             disabled={this.state.isGeneratingDespacho}
@@ -472,6 +607,7 @@ class JuizoPresidente extends Component {
                                         onChange={(e) => this.setState({ despachoText: e.target.value })}
                                         readOnly={this.state.isGeneratingDespacho}
                                     ></textarea>
+                                </div>
                                 </div>
 
                                 <div className="modal-footer" style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid #eee' }}>

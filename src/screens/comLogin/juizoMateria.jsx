@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
-import { FaGavel, FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye } from 'react-icons/fa';
+import { FaGavel, FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye, FaSpinner, FaHistory } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../assets/logo.png';
 import { sendMessageToAIPrivate } from '../../aiService';
 import { db } from '../../firebaseConfig';
-import { ref, query, orderByChild, equalTo, get, update } from 'firebase/database';
+import { ref, onValue, update, get } from 'firebase/database';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -16,34 +16,44 @@ class JuizoMateria extends Component {
         this.state = {
             searchTerm: '',
             filterStatus: 'Todos',
+            filterType: 'Todos',
             selectedMateria: null,
             parecerText: '',
             logoBase64: null,
             isGeneratingParecer: false,
             materias: [],
-            loading: true
+            loading: true,
+            camaraId: 'camara-teste',
+            viewingMateria: null,
+            showDetailModal: false
         };
     }
 
     componentDidMount() {
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const camaraId = pathParts.length > 1 ? pathParts[1] : 'camara-teste';
+        
+        this.setState({ camaraId });
         this.loadLogo();
-        this.fetchMaterias();
+        this.fetchMaterias(camaraId);
     }
 
-    fetchMaterias = async () => {
+    fetchMaterias = (camaraId) => {
         this.setState({ loading: true });
         try {
-            const materiasRef = ref(db, 'camara-teste/materias');
-            // Busca matérias que precisam de parecer
-            const q = query(materiasRef, orderByChild('status'), equalTo('Aguardando Parecer'));
-            const snapshot = await get(q);
-            const materias = [];
-            if (snapshot.exists()) {
-                snapshot.forEach((childSnapshot) => {
-                    materias.push({ id: childSnapshot.key, ...childSnapshot.val() });
-                });
-            }
-            this.setState({ materias, loading: false });
+            const materiasRef = ref(db, `${camaraId}/materias`);
+            // Usando onValue para escuta em tempo real das matérias
+            onValue(materiasRef, (snapshot) => {
+                const materias = [];
+                if (snapshot.exists()) {
+                    Object.entries(snapshot.val()).forEach(([key, val]) => {
+                        materias.push({ id: key, ...val });
+                    });
+                }
+                // Ordenar por mais recentes
+                materias.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                this.setState({ materias, loading: false });
+            });
         } catch (error) {
             console.error("Erro ao buscar matérias para parecer:", error);
             this.setState({ loading: false });
@@ -72,6 +82,14 @@ class JuizoMateria extends Component {
         this.setState({ selectedMateria: materia, parecerText: '' });
     };
 
+    handleViewDetail = (materia) => {
+        this.setState({ viewingMateria: materia, showDetailModal: true });
+    };
+
+    handleCloseDetail = () => {
+        this.setState({ viewingMateria: null, showDetailModal: false });
+    };
+
     handleCloseParecer = () => {
         this.setState({ selectedMateria: null });
     };
@@ -86,7 +104,7 @@ class JuizoMateria extends Component {
     };
 
     handleSubmitParecer = async (decisao) => {
-        const { selectedMateria, parecerText } = this.state;
+        const { selectedMateria, parecerText, camaraId } = this.state;
         if (!selectedMateria) return;
 
         const pdfBase64 = await this.generateParecerPDFBase64(selectedMateria, parecerText, decisao);
@@ -102,17 +120,12 @@ class JuizoMateria extends Component {
 
         try {
             // Salva o parecer no nó da matéria
-            const materiaRef = ref(db, `camara-teste/materias/${selectedMateria.id}`);
+            const materiaRef = ref(db, `${camaraId}/materias/${selectedMateria.id}`);
             await update(materiaRef, parecerData);
 
             // Abre o PDF para o usuário após salvar
             this.openParecerPDF(selectedMateria, parecerText, decisao);
-
-            // Atualiza a lista local e volta para a listagem
-            this.setState(prevState => ({
-                materias: prevState.materias.filter(m => m.id !== selectedMateria.id),
-                selectedMateria: null
-            }));
+            this.setState({ selectedMateria: null });
         } catch (error) {
             console.error("Erro ao salvar parecer:", error);
             alert("Ocorreu um erro ao salvar o parecer. Tente novamente.");
@@ -217,13 +230,29 @@ class JuizoMateria extends Component {
 
 
     render() {
-        const { searchTerm, filterStatus, materias, selectedMateria, isGeneratingParecer, parecerText } = this.state;
+        const { searchTerm, filterStatus, filterType, materias, selectedMateria, isGeneratingParecer, parecerText, loading, showDetailModal, viewingMateria } = this.state;
 
         // Filtros
-        const filteredMaterias = materias.filter(m => 
-            (filterStatus === 'Todos' || m.status === filterStatus) &&
-            (m.ementa.toLowerCase().includes(searchTerm.toLowerCase()) || m.numero.includes(searchTerm))
-        );
+        const filteredMaterias = materias.filter(m => {
+            const matchesSearch = 
+                (m.titulo && m.titulo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (m.numero && m.numero.includes(searchTerm)) ||
+                (m.autor && m.autor.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            const matchesStatus = filterStatus === 'Todos' || m.status === filterStatus;
+            const matchesType = filterType === 'Todos' || m.tipoMateria === filterType;
+
+            return matchesSearch && matchesStatus && matchesType;
+        });
+
+        // Contadores para os Cards de Stats
+        const countAguardando = materias.filter(m => m.status === 'Aguardando Parecer').length;
+        const countParecerEmitido = materias.filter(m => m.status.includes('Parecer')).length;
+        const countVotadas = materias.filter(m => m.status === 'votada').length;
+
+        if (loading && materias.length === 0) {
+            return <div className='App-header' style={{justifyContent: 'center'}}><FaSpinner className="animate-spin" size={40} color="#126B5E" /></div>;
+        }
 
         return (
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
@@ -236,13 +265,13 @@ class JuizoMateria extends Component {
                         <div className="dashboard-card">
                             <div className="dashboard-header" style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <h2 style={{ margin: 0, color: '#126B5E', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <h2 style={{ margin: 0, color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <FaGavel /> Emitir Parecer Jurídico
                                     </h2>
                                     <p style={{ color: '#666', margin: '5px 0 0 0' }}>Análise de constitucionalidade e legalidade.</p>
                                 </div>
                                 <button onClick={this.handleCloseParecer} className="btn-secondary">
-                                    Voltar
+                                    Voltar para Lista
                                 </button>
                             </div>
 
@@ -251,7 +280,7 @@ class JuizoMateria extends Component {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                     <div>
                                         <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: '#666' }}>Matéria</p>
-                                        <p style={{ margin: 0, fontWeight: 'bold', color: '#333', fontSize: '1.1rem' }}>{selectedMateria.tipo} {selectedMateria.numero}</p>
+                                        <p style={{ margin: 0, fontWeight: 'bold', color: '#333', fontSize: '1.1rem' }}>{selectedMateria.tipoMateria} {selectedMateria.numero}</p>
                                     </div>
                                     <div>
                                         <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: '#666' }}>Autor</p>
@@ -270,6 +299,13 @@ class JuizoMateria extends Component {
                                     <label style={{ display: 'block', fontWeight: 'bold', color: '#333', fontSize: '1.1rem' }}>Fundamentação Jurídica</label>
                                     <div style={{ display: 'flex', gap: '10px' }}>
                                         <button 
+                                            onClick={() => this.handleViewDetail(selectedMateria)} 
+                                            className="btn-secondary"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                                        >
+                                            <FaFileAlt /> Ver Texto Original
+                                        </button>
+                                        <button 
                                             onClick={() => this.openParecerPDF(selectedMateria, parecerText, 'favoravel')} // A decisão aqui é só para preview
                                             className="btn-secondary"
                                         >
@@ -279,7 +315,7 @@ class JuizoMateria extends Component {
                                         <button 
                                             onClick={this.handleGenerateParecerWithAI}
                                             disabled={isGeneratingParecer}
-                                            className="btn-secondary"
+                                            className="btn-primary"
                                             style={{ color: '#126B5E', borderColor: '#126B5E' }}
                                         >
                                             <FaMagic style={{ marginRight: '8px', color: '#126B5E' }} /> 
@@ -329,7 +365,7 @@ class JuizoMateria extends Component {
                             {/* Header */}
                             <div className="dashboard-header">
                                 <h1 className="dashboard-header-title">
-                                    <FaGavel style={{color: '#126B5E'}} /> Triagem e Pareceres
+                                    <FaGavel style={{color: 'var(--primary-color)'}} /> Triagem e Pareceres
                                 </h1>
                                 <p className="dashboard-header-desc">Gestão jurídica e legislativa das matérias em tramitação.</p>
                             </div>
@@ -337,16 +373,16 @@ class JuizoMateria extends Component {
                             {/* Stats Cards */}
                             <div className="dashboard-grid-stats">
                                 <div className="stat-card" style={{ borderLeftColor: '#f57c00' }}>
-                                    <h3 style={{ margin: 0, color: '#f57c00', fontSize: '2rem' }}>12</h3>
+                                    <h3 style={{ margin: 0, color: '#f57c00' }}>{countAguardando}</h3>
                                     <p style={{ margin: 0, color: '#666' }}>Aguardando Parecer</p>
                                 </div>
                                 <div className="stat-card" style={{ borderLeftColor: '#126B5E' }}>
-                                    <h3 style={{ margin: 0, color: '#126B5E', fontSize: '2rem' }}>45</h3>
+                                    <h3 style={{ margin: 0, color: '#126B5E' }}>{countParecerEmitido}</h3>
                                     <p style={{ margin: 0, color: '#666' }}>Pareceres Emitidos</p>
                                 </div>
-                                <div className="stat-card" style={{ borderLeftColor: '#d32f2f' }}>
-                                    <h3 style={{ margin: 0, color: '#d32f2f', fontSize: '2rem' }}>3</h3>
-                                    <p style={{ margin: 0, color: '#666' }}>Urgências Pendentes</p>
+                                <div className="stat-card" style={{ borderLeftColor: '#2e7d32' }}>
+                                    <h3 style={{ margin: 0, color: '#2e7d32' }}>{countVotadas}</h3>
+                                    <p style={{ margin: 0, color: '#666' }}>Matérias Votadas</p>
                                 </div>
                             </div>
 
@@ -363,6 +399,18 @@ class JuizoMateria extends Component {
                                     />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <select 
+                                        value={filterType}
+                                        onChange={(e) => this.setState({ filterType: e.target.value })}
+                                        className="filter-select"
+                                    >
+                                        <option value="Todos">Todos os Tipos</option>
+                                        <option value="requerimento">Requerimento</option>
+                                        <option value="projeto de lei">Projeto de Lei</option>
+                                        <option value="indicacao">Indicação</option>
+                                        <option value="mocao">Moção</option>
+                                    </select>
+
                                     <FaFilter color="#666" />
                                     <select 
                                         value={filterStatus}
@@ -372,7 +420,9 @@ class JuizoMateria extends Component {
                                         <option value="Todos">Todos os Status</option>
                                         <option value="Aguardando Parecer">Aguardando Parecer</option>
                                         <option value="Em Análise">Em Análise</option>
-                                        <option value="Parecer Emitido">Parecer Emitido</option>
+                                        <option value="Parecer Favorável">Parecer Favorável</option>
+                                        <option value="Parecer Contrário">Parecer Contrário</option>
+                                        <option value="votada">Votadas</option>
                                     </select>
                                 </div>
                             </div>
@@ -380,11 +430,11 @@ class JuizoMateria extends Component {
                             {/* Lista de Matérias */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                 {filteredMaterias.map((materia) => (
-                                    <div key={materia.id} className="list-item" style={{ borderLeft: materia.urgencia ? '4px solid #d32f2f' : '4px solid transparent' }}>
+                                    <div key={materia.id} className="list-item" style={{ borderLeft: (materia.decisao === 'contrario') ? '4px solid #d32f2f' : (materia.decisao === 'favoravel' ? '4px solid #2e7d32' : '4px solid #f57c00') }}>
                                         <div className="list-item-content">
                                             <div className="list-item-header">
                                                 <span className="tag tag-primary">
-                                                    {materia.tipo} {materia.numero}
+                                                    {materia.tipoMateria} {materia.numero}
                                                 </span>
                                                 {materia.urgencia && (
                                                     <span className="tag tag-danger">
@@ -392,11 +442,18 @@ class JuizoMateria extends Component {
                                                     </span>
                                                 )}
                                             </div>
-                                            <h3 className="list-item-title">{materia.ementa}</h3>
+                                            <h3 className="list-item-title" style={{fontWeight: '600'}}>{materia.titulo}</h3>
+                                            <button 
+                                                onClick={() => this.handleViewDetail(materia)} 
+                                                style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: 0, fontSize: '0.85rem', fontWeight: '600', marginBottom: '10px' }}
+                                            >
+                                                <FaEye size={12} /> Ver Matéria Completa
+                                            </button>
+
                                             <div className="list-item-meta">
                                                 <span><strong>Autor:</strong> {materia.autor}</span>
                                                 <span style={{ color: '#ccc' }}>|</span>
-                                                <span><strong>Data:</strong> {materia.data}</span>
+                                                <span><strong>Protocolo:</strong> {materia.protocolo}</span>
                                             </div>
                                         </div>
 
@@ -408,13 +465,13 @@ class JuizoMateria extends Component {
                                                     borderRadius: '20px', 
                                                     fontSize: '0.8rem', 
                                                     fontWeight: 'bold',
-                                                    background: materia.status.includes('Aguardando') ? '#fff3e0' : (materia.status.includes('Favorável') ? '#e8f5e9' : '#f5f5f5'),
-                                                    color: materia.status.includes('Aguardando') ? '#ef6c00' : (materia.status.includes('Favorável') ? '#2e7d32' : '#666')
+                                                    background: materia.status === 'Aguardando Parecer' ? '#fff3e0' : (materia.decisao === 'favoravel' ? '#e8f5e9' : (materia.decisao === 'contrario' ? '#ffebee' : '#f5f5f5')),
+                                                    color: materia.status === 'Aguardando Parecer' ? '#ef6c00' : (materia.decisao === 'favoravel' ? '#2e7d32' : (materia.decisao === 'contrario' ? '#d32f2f' : '#666'))
                                                 }}>
                                                     {materia.status}
                                                 </span>
                                             </div>
-                                            {materia.parecer ? (
+                                            {materia.parecerDate ? (
                                                 <button 
                                                     onClick={() => this.openParecerPDF(materia, materia.parecer, materia.decisao)}
                                                     className="btn-primary"
@@ -436,6 +493,39 @@ class JuizoMateria extends Component {
                         </>
                     )}
 
+                    {/* --- POPUP DE VISUALIZAÇÃO DA MATÉRIA --- */}
+                    {showDetailModal && viewingMateria && (
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                                <div className="modal-header">
+                                    <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary-color)' }}>{viewingMateria.titulo}</h2>
+                                    <button onClick={this.handleCloseDetail} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
+                                </div>
+                                <div style={{ overflowY: 'auto', paddingRight: '15px', textAlign: 'left' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px', background: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
+                                        <p style={{ margin: 0 }}><strong>Tipo:</strong> {viewingMateria.tipoMateria}</p>
+                                        <p style={{ margin: 0 }}><strong>Número:</strong> {viewingMateria.numero}</p>
+                                        <p style={{ margin: 0 }}><strong>Autor:</strong> {viewingMateria.autor}</p>
+                                        <p style={{ margin: 0 }}><strong>Protocolo:</strong> {viewingMateria.protocolo}</p>
+                                    </div>
+                                    <div>
+                                        <h4 style={{ color: 'var(--primary-color)', marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>Ementa</h4>
+                                        <p style={{ fontStyle: 'italic', color: '#555', marginBottom: '20px', lineHeight: '1.5' }}>{viewingMateria.ementa}</p>
+                                        
+                                        <h4 style={{ color: 'var(--primary-color)', marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>Texto da Proposição</h4>
+                                        <div 
+                                            className="materia-content-view"
+                                            style={{ lineHeight: '1.6', color: '#333', fontSize: '1rem' }}
+                                            dangerouslySetInnerHTML={{ __html: viewingMateria.textoMateria }} 
+                                        />
+                                    </div>
+                                </div>
+                                <div className="modal-footer" style={{ borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                    <button className="btn-secondary" onClick={this.handleCloseDetail}>Fechar Visualização</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );

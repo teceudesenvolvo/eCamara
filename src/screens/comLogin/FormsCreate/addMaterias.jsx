@@ -1,12 +1,9 @@
 import React, { Component } from 'react';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { FaMagic, FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit } from 'react-icons/fa';
+import { FaMagic, FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-
-// Importando imagem
-import logo from '../../../assets/logo.png';
 
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
 import { sendMessageToAIPrivate } from '../../../aiService';
@@ -54,6 +51,8 @@ class AddProducts extends Component {
             textoMateria: '', // Texto completo da lei gerado pela IA
 
             file: null, // Para upload de arquivo
+            fileBase64: null, // Conteúdo do anexo em Base64
+            fileName: '', // Nome do arquivo anexo
             pdfData: null, // Dados do PDF em Base64
 
             // Para Assinatura Digital
@@ -64,7 +63,7 @@ class AddProducts extends Component {
 
             // Estado da IA
             messages: [
-                { id: 1, sender: 'ai', text: 'Olá! Sou a IA da Câmara. Para começarmos, qual é o tema ou assunto principal da matéria que você deseja criar?' }
+                { id: 1, sender: 'ai', text: 'Olá! Sou a Inteligência Artificial da Câmara. <br/>Para começarmos, qual é o tema ou assunto principal da matéria que você deseja criar?' }
             ],
             currentInput: '',
             isGenerating: false,
@@ -74,8 +73,14 @@ class AddProducts extends Component {
             showPasswordModal: false, // Modal de senha
             passwordInput: '',
             passwordError: '',
-            logoBase64: null, // Estado para armazenar logo convertida
-            signatureBase64: null // Estado para armazenar assinatura convertida
+            logoBase64: null, // Logo da câmara para o PDF
+            signatureBase64: null, // Assinatura para o PDF
+            camaraId: 'camara-teste', // Default, será atualizado
+            baseConhecimento: {}, // Dados do Firebase para a IA
+            homeConfig: {}, // Dados da home para o timbrado
+            footerConfig: {}, // Dados do footer para o timbrado
+            layoutConfig: {}, // Dados de layout para o timbrado (logo)
+            loadingConfig: true,
         };
         this.messagesEndRef = React.createRef();
         this.chatContainerRef = React.createRef();
@@ -99,10 +104,50 @@ class AddProducts extends Component {
     ];
 
     // Gerar PDF na montagem do componente e sempre que o estado do formulário muda
-    componentDidMount() {
-        this.loadImagesAndGeneratePDF(); // Carrega imagens e depois gera o PDF
+    async componentDidMount() {
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const camaraId = pathParts.length > 1 ? pathParts[1] : 'camara-teste';
+        this.setState({ camaraId }, this.fetchInitialData);
         this.scrollToBottom();
     }
+
+    fetchInitialData = async () => {
+        const { camaraId } = this.state;
+        this.setState({ loadingConfig: true });
+    
+        try {
+            const [baseConhecimentoSnapshot, layoutSnapshot, homeSnapshot, footerSnapshot] = await Promise.all([
+                get(ref(db, `${camaraId}/dados-config/base-conhecimento`)),
+                get(ref(db, `${camaraId}/dados-config/layout`)),
+                get(ref(db, `${camaraId}/dados-config/home`)),
+                get(ref(db, `${camaraId}/dados-config/footer`)),
+            ]);
+    
+            const baseConhecimento = baseConhecimentoSnapshot.exists() ? baseConhecimentoSnapshot.val() : {};
+            const layoutConfig = layoutSnapshot.exists() ? layoutSnapshot.val() : {};
+            const homeConfig = homeSnapshot.exists() ? homeSnapshot.val() : {};
+            const footerConfig = footerSnapshot.exists() ? footerSnapshot.val() : {};
+    
+            let logoBase64 = null;
+            if (layoutConfig.logo) {
+                logoBase64 = await this.getBase64(layoutConfig.logo);
+            }
+            // Assinatura ainda não é dinâmica, mantendo o padrão
+            // const signatureBase64 = await this.getBase64(signature);
+    
+            this.setState({
+                baseConhecimento,
+                layoutConfig,
+                homeConfig,
+                footerConfig,
+                logoBase64,
+                loadingConfig: false,
+            }, this.handleGeneratePDF);
+        } catch (error) {
+            console.error("Erro ao buscar configurações iniciais:", error);
+            this.setState({ loadingConfig: false }, this.handleGeneratePDF);
+        }
+    };
 
     // Função auxiliar para converter imagem URL em Base64
     loadImagesAndGeneratePDF = async () => {
@@ -117,12 +162,10 @@ class AddProducts extends Component {
                 });
             };
 
-            const logoBase64 = await getBase64(logo);
-            const signatureBase64 = await getBase64(signature);
-
-            this.setState({ logoBase64, signatureBase64 }, () => {
-                this.handleGeneratePDF();
-            });
+            // Esta função será substituída por fetchInitialData
+            // const logoBase64 = await getBase64(logo);
+            // const signatureBase64 = await getBase64(signature);
+            // this.setState({ logoBase64, signatureBase64 }, this.handleGeneratePDF);
         } catch (error) {
             console.error("Erro ao carregar imagens para o PDF:", error);
             this.handleGeneratePDF(); // Tenta gerar mesmo sem imagens em caso de erro
@@ -186,9 +229,20 @@ class AddProducts extends Component {
     }
 
     handleFileChange = (e) => {
-        this.setState({ file: e.target.files[0] }, () => {
-            this.handleGeneratePDF(); // Gera PDF após o arquivo ser selecionado
-        });
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            this.setState({ 
+                file: file,
+                fileBase64: event.target.result,
+                fileName: file.name
+            }, () => {
+                this.handleGeneratePDF();
+            });
+        };
+        reader.readAsDataURL(file);
     };
 
     // Este método agora simplesmente define isSigned como true e regenera o PDF
@@ -234,7 +288,7 @@ class AddProducts extends Component {
 
     // Função para gerar conteúdo com IA (Real)
     handleSendMessage = async () => {
-        const { currentInput, messages, chatStep, objeto, tipoMateria } = this.state;
+        const { currentInput, messages, chatStep, objeto, tipoMateria, fileName } = this.state;
         if (!currentInput.trim()) return;
 
         if (!auth.currentUser) {
@@ -260,10 +314,10 @@ class AddProducts extends Component {
             let aiResponseText = '';
             let shouldOpenEditor = false;
 
-            // --- CONTEXTO LEGISLATIVO (SIMULAÇÃO DE RAG) ---
-            // Na versão final, isso viria do seu Banco de Dados ou de um arquivo PDF processado
-            const REGIMENTO_INTERNO_RESUMO = `
-            REGRAS FUNDAMENTAIS DA CÂMARA:
+            // --- CONTEXTO LEGISLATIVO (BUSCADO DO FIREBASE) ---
+            const { regimentoText, materiasText, leiOrganicaText, atasText } = this.state.baseConhecimento;
+
+            const REGIMENTO_INTERNO_RESUMO = regimentoText || `REGRAS FUNDAMENTAIS DA CÂMARA:
             1. É vedado ao Vereador apresentar projetos que gerem despesa direta ao Executivo (Vício de Iniciativa), exceto se indicar a fonte de custeio.
             2. Matérias sobre trânsito e transporte são de competência privativa da União, cabendo ao município apenas legislar sobre circulação local.
             3. Denominação de ruas deve vir acompanhada de abaixo-assinado dos moradores e certidão de óbito do homenageado.
@@ -271,14 +325,14 @@ class AddProducts extends Component {
             5. A criação de datas comemorativas deve ter relevância social comprovada.
             `;
 
-            const MATERIAS_ANTERIORES = `
-            LISTA DE MATÉRIAS JÁ APROVADAS (PARA VERIFICAR DUPLICIDADE):
+            const MATERIAS_ANTERIORES = materiasText || `LISTA DE MATÉRIAS JÁ APROVADAS (PARA VERIFICAR DUPLICIDADE):
             - Lei nº 1.234/2023: Institui a Semana da Saúde Mental nas escolas.
             - Lei nº 1.235/2023: Obriga a instalação de câmeras em creches municipais.
             - Lei nº 1.236/2024: Dispõe sobre a proibição de fogos de artifício com estampido.
             - Indicação 45/2024: Solicita pavimentação da Rua XV de Novembro.
             - Projeto de Lei 10/2024: Cria o programa "Adote uma Praça".
             `;
+            // Outros contextos como Lei Orgânica e Atas podem ser adicionados ao prompt conforme necessário
             // -------------------------------------------------
 
             if (chatStep === 0) {
@@ -304,6 +358,8 @@ class AddProducts extends Component {
                 SUA TAREFA:
                 Analise o pedido de um(a) ${tipoMateria} sobre o tema "${objeto}".
                 Detalhes fornecidos: "${currentInput}".
+
+                ${fileName ? `OBSERVAÇÃO: O usuário forneceu um documento de referência anexado: ${fileName}. Considere que você tem acesso aos metadados deste documento para fundamentação.` : ''}
 
                 PASSO 1 - VALIDAÇÃO:
                 - Verifique se este tema já existe na lista de matérias anteriores. Se for duplicado, inicie sua resposta OBRIGATORIAMENTE com a palavra "BLOQUEIO:" seguida da explicação.
@@ -375,7 +431,7 @@ class AddProducts extends Component {
 
     handleProtocolar = async () => {
         // Simula a geração de protocolo e envio para o presidente
-        const newProtocol = `${new Date().getFullYear()}/${Math.floor(Math.random() * 100000)}`;
+        const newProtocol = `${new Date().getFullYear()}/${Math.floor(Math.random() * 100000)}`; 
         
         // Prepara os dados para salvar no Firestore
         const materiaData = {
@@ -415,6 +471,8 @@ class AddProducts extends Component {
             chatHistory: this.state.messages
         };
         materiaData.pdfBase64 = this.state.pdfData;
+        materiaData.anexoBase64 = this.state.fileBase64;
+        materiaData.anexoNome = this.state.fileName;
 
         try {
             if (auth.currentUser) {
@@ -440,7 +498,7 @@ class AddProducts extends Component {
     handleGeneratePDF = () => {
         // Desestruturar todos os dados do estado
         const {
-            tipoMateria, ano, numero, dataApresenta, protocolo, tipoApresentacao, tipoAutor, autor, apelido,
+            tipoMateria, ano, numero, dataApresenta, protocolo, tipoApresentacao, tipoAutor, autor, apelido, camaraId,
             prazo, materiaPolemica, objeto, regTramita, status, dataPrazo, publicacao, isComplementar, tipoMateriaExt,
             numeroMateriaExt, anoMateriaExt, dataMateriaExt, titulo, ementa, indexacao, observacao, textoMateria, isSigned,
             logoBase64, signatureBase64
@@ -454,7 +512,7 @@ class AddProducts extends Component {
                 alignment: 'center'
             },
             {
-                text: 'Câmara Municipal de Teste',
+                text: this.state.homeConfig.titulo || `Câmara Municipal de ${camaraId}`,
                 alignment: 'center',
                 style: 'timbrado'
             },
@@ -568,8 +626,8 @@ class AddProducts extends Component {
             footer: (currentPage, pageCount) => {
                 return {
                     text: `Página ${currentPage} de ${pageCount}`,
-                    alignment: 'right',
-                    margin: [0, 0, 40, 0], // Margem direita alinhada com o texto
+                    alignment: 'center',
+                    margin: [0, 0, 0, 0],
                     fontSize: 8
                 };
             },
@@ -643,10 +701,18 @@ class AddProducts extends Component {
     };
 
     render() {
-        const { pdfData, isSigned, showPdfPopup, showPasswordModal, passwordInput, passwordError } = this.state;
+        const { pdfData, isSigned, showPdfPopup, showPasswordModal, passwordInput, passwordError, loadingConfig } = this.state;
 
         // Renderização Condicional: Chat ou Editor
-        if (!this.state.showEditor) {
+        if (loadingConfig) {
+            return (
+                <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}>
+                    <FaSpinner className="animate-spin" size={40} color="#126B5E" />
+                </div>
+            );
+        }
+
+        if (!this.state.showEditor) { // Se não estiver no editor, mostra o chat
             return (
                 <div className='App-header'>
                     <MenuDashboard />
@@ -675,8 +741,26 @@ class AddProducts extends Component {
                                     <div ref={this.messagesEndRef} />
                                 </div>
                                 
-                                <div className="chat-input-area" style={{ borderTop: '1px solid #eee', padding: '15px', backgroundColor: 'white' }}>
+                                <div className="chat-input-area" style={{ borderTop: '1px solid #eee', padding: '15px', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}>
+                                    {this.state.fileName && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 15px', backgroundColor: '#e0f2f1', borderRadius: '10px', marginBottom: '10px', fontSize: '0.85rem', color: '#126B5E', alignSelf: 'flex-start' }}>
+                                            <span>📎 {this.state.fileName}</span>
+                                            <FaTrash 
+                                                style={{ cursor: 'pointer', color: '#d32f2f' }} 
+                                                onClick={() => this.setState({ file: null, fileBase64: null, fileName: '' })}
+                                            />
+                                        </div>
+                                    )}
                                     <div className="search-box-wrapper-chat">
+                                        <input 
+                                            type="file" 
+                                            id="file-attachment" 
+                                            style={{ display: 'none' }} 
+                                            onChange={this.handleFileChange} 
+                                        />
+                                        <label htmlFor="file-attachment" className="smart-search-btn-chat" style={{ position: 'static', transform: 'none', marginRight: '10px', display: 'flex', backgroundColor: '#f0f2f5', color: '#555' }}>
+                                            <FaPaperclip />
+                                        </label>
                                         <input 
                                             type="text"
                                             className="smart-search-input-chat"

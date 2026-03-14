@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaArrowLeft, FaFilePdf, FaHistory, FaCheckCircle, FaClock, FaUserTie, FaCalendarAlt, FaPrint, FaExchangeAlt, FaDownload, FaShareAlt, FaGavel } from 'react-icons/fa';
+import { FaArrowLeft, FaFilePdf, FaHistory, FaCheckCircle, FaClock, FaUserTie, FaCalendarAlt, FaPrint, FaExchangeAlt, FaDownload, FaShareAlt, FaGavel, FaInfoCircle, FaParagraph, FaBalanceScale } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuAdmin.jsx';
 import { db } from '../../firebaseConfig';
 import { ref, get } from 'firebase/database';
@@ -74,7 +74,18 @@ class MateriaDetails extends Component {
                     ementa: data.ementa || '',
                     textoCompleto: data.textoMateria || '',
                     pdfBase64: data.pdfBase64,
-                    historico: historico
+                    historico: historico,
+                    // Novos campos técnicos
+                    protocolo: data.protocolo,
+                    objeto: data.objeto,
+                    indexacao: data.indexacao,
+                    observacao: data.observacao,
+                    prazo: data.prazo,
+                    materiaPolemica: data.materiaPolemica,
+                    parecer: data.parecer,
+                    parecerDate: data.parecerDate,
+                    publicacao: data.publicacao,
+                    isComplementar: data.isComplementar
                 };
 
                 this.setState({ materia, loading: false });
@@ -196,19 +207,108 @@ class MateriaDetails extends Component {
                                     Resumo da Matéria
                                 </h3>
                                 <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '10px', borderLeft: '4px solid #ccc' }}>
-                                    <p style={{ margin: 0, lineHeight: '1.6', color: '#444', fontSize: '1.05rem', fontStyle: 'italic' }}>"{materia.ementa}"</p>
+                                    <p style={{ margin: 0, lineHeight: '1.6', color: '#333', fontSize: '1.05rem', fontStyle: 'italic', textAlign: 'left' }}>"{materia.ementa}"</p>
                                 </div>
-                                
-                                <div style={{ marginTop: '25px' }}>
-                                    <h4 style={{ fontSize: '1rem', color: '#333', marginBottom: '15px' }}>Texto Inicial</h4>
-                                    <p style={{ color: '#666', lineHeight: '1.6' }}>
-                                        {this.stripHtml(materia.textoCompleto).substring(0, 400)}...
-                                        <span style={{ color: '#126B5E', cursor: 'pointer', fontWeight: '600', marginLeft: '5px' }}>Ler completo</span>
-                                    </p>
-                                </div>
+
+                                {materia.objeto && (
+                                    <div style={{ marginTop: '20px', textAlign: 'left' }}>
+                                        <h4 style={{ fontSize: '0.9rem', color: '#888', textTransform: 'uppercase', marginBottom: '5px' }}>Objeto da Proposição</h4>
+                                        <p style={{ color: '#555', margin: 0 }}>{materia.objeto}</p>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Card de Documentos */}
+                            {/* Card de Informações Técnicas */}
+                            <div className="dashboard-card">
+                                <h3 style={{ margin: '0 0 20px 0', color: '#126B5E', fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <FaInfoCircle /> Dados Técnicos
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+                                    <div style={{ textAlign: 'left' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#888' }}>Protocolo</label>
+                                        <p style={{ margin: 0, fontWeight: '600' }}>{materia.protocolo || 'Não gerado'}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'left' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#888' }}>Matéria Polêmica?</label>
+                                        <p style={{ margin: 0, fontWeight: '600' }}>{materia.materiaPolemica || 'Não'}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'left' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#888' }}>Prazo Regimental</label>
+                                        <p style={{ margin: 0, fontWeight: '600' }}>{materia.prazo ? `${materia.prazo} dias` : 'N/A'}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'left' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#888' }}>Tipo de Lei</label>
+                                        <p style={{ margin: 0, fontWeight: '600' }}>{materia.isComplementar ? 'Lei Complementar' : 'Lei Ordinária'}</p>
+                                    </div>
+                                    {materia.publicacao && (
+                                        <div style={{ textAlign: 'left' }}>
+                                            <label style={{ fontSize: '0.8rem', color: '#888' }}>Publicação</label>
+                                            <p style={{ margin: 0, fontWeight: '600' }}>{materia.publicacao}</p>
+                                        </div>
+                                    )}
+                                </div>
+                                {materia.indexacao && (
+                                    <div style={{ marginTop: '20px', textAlign: 'left', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#888' }}>Tags / Indexação</label>
+                                        <p style={{ color: '#666', fontSize: '0.9rem', marginTop: '5px' }}>{materia.indexacao}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Card de Parecer Jurídico (Se houver) */}
+                            {materia.parecer && (
+                                <div className="dashboard-card" style={{ borderTop: '4px solid #126B5E' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                        <h3 style={{ margin: 0, color: '#126B5E', fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <FaBalanceScale /> Parecer da Procuradoria
+                                        </h3>
+                                        <span style={{ 
+                                            padding: '4px 12px', 
+                                            borderRadius: '15px', 
+                                            fontSize: '0.8rem', 
+                                            fontWeight: 'bold',
+                                            background: '#e0f2f1',
+                                            color: '#126B5E'
+                                        }}>
+                                            Emitido em {new Date(materia.parecerDate).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div style={{ 
+                                        background: '#fff', 
+                                        padding: '25px', 
+                                        borderRadius: '8px', 
+                                        border: '1px solid #eee', 
+                                        maxHeight: '400px', 
+                                        overflowY: 'auto',
+                                        textAlign: 'left',
+                                        whiteSpace: 'pre-wrap',
+                                        lineHeight: '1.6',
+                                        color: '#333',
+                                        fontSize: '0.95rem'
+                                    }}>
+                                        {materia.parecer}
+                                    </div>
+                                </div>
+                            )}
+                                
+                            {/* Card de Texto Integral da Matéria */}
+                            <div className="dashboard-card">
+                                <h3 style={{ margin: '0 0 20px 0', color: '#126B5E', fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <FaParagraph /> Texto Integral da Proposição
+                                </h3>
+                                <div 
+                                    style={{ 
+                                        textAlign: 'left', 
+                                        padding: '20px', 
+                                        background: '#fafafa', 
+                                        borderRadius: '10px',
+                                        lineHeight: '1.8',
+                                        color: '#2c3e50',
+                                        fontSize: '1.1rem'
+                                    }}
+                                    dangerouslySetInnerHTML={{ __html: materia.textoCompleto }}
+                                />
+                            </div>
                             <div className="dashboard-card">
                                 <h3 style={{ margin: '0 0 20px 0', color: '#126B5E', fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <span style={{ width: '4px', height: '20px', background: '#126B5E', borderRadius: '2px', display: 'block' }}></span>
@@ -249,7 +349,7 @@ class MateriaDetails extends Component {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </div> {/* Fim da Coluna Esquerda */}
 
                         {/* Coluna Direita: Tramitação */}
                         <div>
