@@ -1,7 +1,9 @@
 import './App.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Switch, Route, useLocation } from 'react-router-dom'
+import { db } from './firebaseConfig';
+import { ref, get } from 'firebase/database';
 
 //Screen Navigate
 import HomeDashboard from './screens/semLogin/HomePage.jsx';
@@ -39,6 +41,9 @@ import Login from './screens/semLogin/login.jsx';
 import Mais from './screens/semLogin/Mais.jsx';
 import Materias from './screens/semLogin/Materias.jsx';
 
+// Paginas Configurações e Gerenciamento
+import LayoutManager from './screens/comLogin/LayoutManager.jsx';
+import CamaraSelector from './screens/semLogin/CamaraSelector.jsx';
 
 // Navigate Components
 import ChatAI from './screens/semLogin/ChatAI.jsx';
@@ -58,36 +63,78 @@ function App() {
   };
 
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [layoutConfig, setLayoutConfig] = useState({
+    corPrimaria: '#126B5E', // Default primary color
+    corDestaque: '#FF740F', // Default highlight color
+  });
 
   const openChat = () => setIsChatOpen(true);
   const closeChat = () => setIsChatOpen(false);
 
   const location = useLocation();
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin', '/assistente-admin/novo', '/assistente-admin/detalhes'].includes(location.pathname);
+  const hideMenuDesktop = ['/', '/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin', '/assistente-admin/novo', '/assistente-admin/detalhes'].includes(location.pathname);
+
+  useEffect(() => {
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const camaraId = pathParts.length > 1 ? pathParts[1] : 'pacatuba'; // Extract camaraId from URL
+
+    const fetchLayoutConfig = async () => {
+      if (camaraId) {
+        const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
+        try {
+          const snapshot = await get(layoutRef);
+          if (snapshot.exists()) {
+            setLayoutConfig(snapshot.val());
+          } else {
+            // Reset to default if no config found
+            setLayoutConfig({ corPrimaria: '#126B5E', corDestaque: '#FF740F' });
+          }
+        } catch (error) {
+          console.error("Error fetching layout config:", error);
+        }
+      }
+    };
+
+    fetchLayoutConfig();
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--primary-color', layoutConfig.corPrimaria);
+    root.style.setProperty('--secondary-color', layoutConfig.corDestaque);
+  }, [layoutConfig]);
 
   return (
     <div className="App">
-      {!hideMenuDesktop && <MenuDesktop onOpenChat={openChat} />}
+      {!hideMenuDesktop && (
+        <Route 
+          path="/:page?/:camaraId?"
+          render={({ match }) => (
+            <MenuDesktop onOpenChat={openChat} camaraId={match.params.camaraId || 'pacatuba'} />
+          )} />
+      )}
       
       <div className="main-content-wrapper">
         <TopBar />
         <Switch>
           {/* Página Principal */}
-          <Route exact path="/" component={HomeDashboard} />
+          <Route exact path="/" component={CamaraSelector} />
+
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
+          
+          {/* Dynamic routes for each city council */}
+          <Route path="/home/:camaraId" component={HomeDashboard} />
+          <Route path="/sessoes/:camaraId" component={Sessoes} />
+          <Route path="/relatorios/:camaraId" component={Relatorios} />
+          <Route path="/sessao-virtual/:camaraId" component={SessaoVirtual} />
+          <Route path="/normas/:camaraId" component={NormasJuridicas} />
+          <Route path="/comissoes/:camaraId" component={Comissoes} />
+          <Route path="/materias/:camaraId" component={Materias} />
 
           {/* Perfis de Acesso */}
           <Route path="/perfil" component={Perfil} />
-
-          {/*Menu Publico*/}
-          <Route path="/Sessoes" component={Sessoes} />
-          <Route path="/Relatorios" component={Relatorios} />
-          <Route path="/Sessao-Virtual" component={SessaoVirtual} />
-          <Route path="/Normas" component={NormasJuridicas} />
-          <Route path="/Comissoes" component={Comissoes} />
-          <Route path="/Materias" component={Materias} />
 
           {/* Páginas Mobile */}
           <Route path="/Mais" component={Mais} />
@@ -107,6 +154,9 @@ function App() {
           <Route exact path="/assistente-admin" component={AdminDocumentsDash} />
           <Route path="/assistente-admin/novo" component={AdminAssistant} />
           <Route path="/assistente-admin/detalhes" component={AdminDocumentDetails} />
+
+          {/* Paginas de Gerenciamento */}
+          <Route path="/layout-manager" component={LayoutManager} />
         </Switch>
 
         {!hideMenuDesktop && (
@@ -126,18 +176,18 @@ function App() {
             <div className='footer-section footer-links-section'>
               <h4>Legislativo</h4>
               <ul>
-                <li><a href="/Sessoes">Sessões</a></li>
-                <li><a href="/Materias">Matérias</a></li>
-                <li><a href="/Normas">Normas Jurídicas</a></li>
-                <li><a href="/Comissoes">Comissões</a></li>
+                <li><a href="/sessoes/pacatuba">Sessões</a></li>
+                <li><a href="/materias/pacatuba">Matérias</a></li>
+                <li><a href="/normas/pacatuba">Normas Jurídicas</a></li>
+                <li><a href="/comissoes/pacatuba">Comissões</a></li>
               </ul>
             </div>
             
             <div className='footer-section footer-links-section'>
               <h4>Transparência</h4>
               <ul>
-                <li><a href="/Relatorios">Relatórios</a></li>
-                <li><a href="/Sessao-Virtual">Sessão Virtual</a></li>
+                <li><a href="/relatorios/pacatuba">Relatórios</a></li>
+                <li><a href="/sessao-virtual/pacatuba">Sessão Virtual</a></li>
                 <li><a href="/novidades">Novidades</a></li>
                 <li><a href="/acessibilidade">Acessibilidade</a></li>
               </ul>

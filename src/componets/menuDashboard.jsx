@@ -10,8 +10,10 @@ import {
     FaBalanceScale,
     FaList,
     FaCog,
-    FaRobot
+    FaRobot,
+    FaPalette
 } from "react-icons/fa";
+import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
 import '../App.css';
 
 const MenuDashboard = () => {
@@ -23,7 +25,7 @@ const MenuDashboard = () => {
     return (
         <div className="menuDesktop"> {/* Reutilizando a classe do menu da home */}
             <div className="logoDesktop">
-                <h1 className="h1-logo">Camara AI</h1>
+                <img src={logoCamaraAI} alt="Camara AI Logo" className="logo-sidebar" />
             </div>
 
             <nav className="nav-desktop">
@@ -67,6 +69,11 @@ const MenuDashboard = () => {
                 <Link to="/assistente-admin" className={`aDesktop ${isActive('/assistente-admin')}`}>
                     <FaRobot className="icon-desktop" />
                     <span className="text-desktop">Assistente</span>
+                </Link>
+
+                <Link to="/layout-manager" className={`aDesktop ${isActive('/layout-manager')}`}>
+                    <FaPalette className="icon-desktop" />
+                    <span className="text-desktop">Layouts</span>
                 </Link>
 
                 <div className="divider-desktop">Conta</div>

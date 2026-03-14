@@ -1,4 +1,4 @@
-import { fileManager, model } from "./gemini";
+import { getFileManager, getModel } from "./gemini";
 import { FileState } from "@google/generative-ai/server";
 
 export const transcriptionService = {
@@ -11,7 +11,7 @@ export const transcriptionService = {
     console.log(`[Transcription] Iniciando upload para Gemini: ${filePath}`);
 
     // 1. Upload do arquivo para o Google AI File Manager
-    const uploadResponse = await fileManager.uploadFile(filePath, {
+    const uploadResponse = await getFileManager().uploadFile(filePath, {
       mimeType: "audio/mp3",
       displayName: "Audio Sessão Legislativa Chunk",
     });
@@ -20,11 +20,11 @@ export const transcriptionService = {
     console.log(`[Transcription] Upload concluído. URI: ${fileUri}`);
 
     // 2. Aguardar processamento do arquivo pelo Google
-    let file = await fileManager.getFile(uploadResponse.file.name);
+    let file = await getFileManager().getFile(uploadResponse.file.name);
     while (file.state === FileState.PROCESSING) {
       console.log("[Transcription] Processando arquivo de áudio...");
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      file = await fileManager.getFile(uploadResponse.file.name);
+      file = await getFileManager().getFile(uploadResponse.file.name);
     }
 
     if (file.state === FileState.FAILED) {
@@ -34,7 +34,7 @@ export const transcriptionService = {
     console.log("[Transcription] Arquivo pronto. Solicitando transcrição...");
 
     // 3. Solicitar transcrição
-    const result = await model.generateContent([
+    const result = await getModel().generateContent([
       {
         fileData: {
           mimeType: uploadResponse.file.mimeType,

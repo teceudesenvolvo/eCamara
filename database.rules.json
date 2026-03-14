@@ -1,10 +1,16 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null",
-    "camara-teste": {
+    // Permite leitura pública para que a lista de câmaras possa ser carregada.
+    ".read": "true",
+    // Regra genérica para todas as câmaras usando uma variável wildcard
+    "$camaraId": {
+      // Apenas usuários autenticados podem escrever.
+      ".write": "auth != null",
       "materias": {
-        ".indexOn": ["userId", "status"]
+        ".indexOn": ["userId", "status", "createdAt"]
+      },
+      "users": {
+        ".indexOn": "tipo"
       }
     }
   }

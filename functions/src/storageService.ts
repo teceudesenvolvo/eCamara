@@ -1,4 +1,4 @@
-import { bucket } from "./firebase";
+import { getBucket } from "./firebase";
 
 export const storageService = {
   /**
@@ -8,7 +8,7 @@ export const storageService = {
    */
   async downloadFile(storagePath: string, destination: string): Promise<void> {
     console.log(`[Storage] Baixando arquivo: ${storagePath} para ${destination}`);
-    await bucket.file(storagePath).download({
+    await getBucket().file(storagePath).download({
       destination,
     });
     console.log("[Storage] Download concluído.");
@@ -20,6 +20,6 @@ export const storageService = {
    */
   async deleteFile(storagePath: string): Promise<void> {
     console.log(`[Storage] Deletando arquivo: ${storagePath}`);
-    await bucket.file(storagePath).delete();
+    await getBucket().file(storagePath).delete();
   },
 };

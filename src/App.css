@@ -110,7 +110,7 @@
   width: 100%;
   flex-direction: column;
   justify-content: left;
-  background-color: #126B5E;
+  background-color: var(--primary-color, #126B5E);
   border-radius: 0px 0px 10px 10px;
   padding-bottom: 16px;
   z-index: 10;
@@ -828,7 +828,7 @@ h1 {
   border: none;
   padding: 0;
   margin: 20px 0 10px 0;
-  background: linear-gradient(90deg, #126B5E 0%, #0e5248 100%);
+  background: var(--primary-color, #126B5E);
   color: #fff;
   cursor: pointer;
   font-size: 1rem;
@@ -978,7 +978,7 @@ video {
   width: 100%;
   height: 50px;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-  background-color: #126B5E;
+  background-color: var(--primary-color, #126B5E);
   overflow-x: auto;
   display: flex;
   z-index: 6;
@@ -1022,12 +1022,12 @@ video {
 }
 
 .splide__arrow svg {
-  fill: #FF7A00 !important;
+  fill: var(--secondary-color, #FF7A00) !important;
 
 }
 
 .splide__pagination__page.is-active {
-  background: #FF7A00 !important;
+  background: var(--secondary-color, #FF7A00) !important;
 }
 
 
@@ -2789,7 +2789,7 @@ video {
 .balanco-metric-card h2 {
   margin: 5px 0 0;
   font-size: 1.8em;
-  color: #FF7B00;
+  color: var(--secondary-color, #FF7B00);
   /* Cor laranja para os números, conforme a imagem */
 }
 
@@ -2978,7 +2978,7 @@ video {
   margin-top: 12px;
   color: white;
   border-radius: 7px;
-  background-color: #ff7b00;
+  background-color: var(--secondary-color, #ff7b00);
 
 }
 
@@ -3442,7 +3442,7 @@ video {
   height: 40px;
   border: 0;
   color: white;
-  background-color: #ff7b00;
+  background-color: var(--secondary-color, #ff7b00);
 }
 
 /* PDF Preview */
@@ -3905,7 +3905,6 @@ footer>p {
 
 .link-desktop-active>svg {
   color: white;
-  background: #ff7006;
   border-radius: 5px;
 }
 
@@ -3960,7 +3959,7 @@ footer>p {
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  border-left: 5px solid #FF740F;
+  border-left: 5px solid var(--secondary-color, #FF740F);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -4041,6 +4040,21 @@ footer>p {
   transform: translateX(0);
 }
 
+/* Estilo para o logo na sidebar */
+.logo-sidebar {
+  width: 170px;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.2s 0.1s ease-in-out, transform 0.2s ease-in-out;
+  transform: scale(0.95) translateX(10px);
+  box-sizing: border-box;
+}
+
+.menuDesktop:hover .logo-sidebar {
+  opacity: 1;
+  transform: scale(1) translateX(0);
+}
+
 /* Container de Navegação */
 .nav-desktop {
   display: flex;
@@ -4072,7 +4086,7 @@ footer>p {
 }
 
 .link-desktop-active {
-  background-color: #FF740F !important;
+  background-color: var(--secondary-color, #FF740F) !important;
   color: white !important;
   box-shadow: 0 4px 12px rgba(255, 116, 15, 0.3);
 }
@@ -4122,7 +4136,7 @@ footer>p {
 .hero-section-new {
   text-align: center;
   padding: 60px 20px;
-  background: linear-gradient(135deg, #126B5E 0%, #003f36 100%);
+  background: var(--primary-color, #126B5E);
   border-radius: 12px;
   color: white;
   margin: 40px auto;
@@ -4174,7 +4188,7 @@ footer>p {
 }
 
 .btn-citizen {
-  background-color: #FF740F;
+  background-color: var(--secondary-color, #FF740F);
   color: white;
 }
 
@@ -4233,7 +4247,7 @@ footer>p {
 .latest-law {
   align-items: flex-start;
   text-align: left;
-  border-left: 5px solid #FF740F;
+  border-left: 5px solid var(--secondary-color, #FF740F);
 }
 
 .latest-law-header {
@@ -4466,7 +4480,7 @@ footer>p {
 }
 
 .agenda-time {
-  font-size: 0.85rem;
+  font-size: 0.85rem; 
   color: #FF740F;
   font-weight: 700;
   display: flex;
@@ -4670,7 +4684,7 @@ footer>p {
 }
 
 .message-user .message-bubble {
-  background-color: #FF740F;
+  background-color: var(--secondary-color, #FF740F);
   color: white;
   border-top-right-radius: 0;
 }
@@ -4873,7 +4887,7 @@ footer>p {
 .stat-value {
   display: block;
   font-size: 1.3rem;
-  font-weight: 700;
+  font-weight: 700; 
   color: #FF740F;
 }
 
@@ -5040,7 +5054,7 @@ footer>p {
 }
 
 .btn-openai.btn-primary {
-  background-color: #ff7410;
+  background-color: var(--secondary-color, #ff7410);
   color: #fff;
 }
 
@@ -5319,7 +5333,7 @@ footer>p {
 
 /* Buttons */
 .btn-primary {
-  background: #126B5E;
+  background: var(--primary-color, #126B5E);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -5571,4 +5585,235 @@ footer>p {
   flex-direction: column;
   gap: 20px;
   text-align: left;
+}
+
+/* --- Seletor de Câmaras (Modern UI) --- */
+
+.selector-page-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #126B5E 0%, #003f36 100%);
+  padding: 40px 20px;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.selector-logo {
+  width: 420px;
+  margin-bottom: 40px;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
+  transition: transform 0.5s ease;
+}
+
+.selector-logo:hover {
+  transform: scale(1.05);
+}
+
+.selector-header {
+  text-align: center;
+  margin-bottom: 50px;
+  max-width: 700px;
+}
+
+.selector-title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 15px;
+  letter-spacing: -0.02em;
+}
+
+.selector-subtitle {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.camera-slider-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: -10%;
+}
+
+.camera-grid {
+  /* Fallback or removed if using Splide exclusively */
+  display: flex;
+  justify-content: center;
+}
+
+.camera-card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.camera-card {
+  background: #fff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 40px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+  height: 150px;
+  min-height: 300px;
+  justify-content: space-between;
+}
+
+.camera-card:hover {
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+.camera-icon-wrapper {
+  width: 100px;
+  height: 100px;
+  background: #f5f5f7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+  color: #126B5E;
+  font-size: 2.5rem;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+}
+
+.camera-custom-logo {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+}
+
+.camera-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1d1d1f;
+  margin: 0 0 15px 0;
+}
+
+.camera-action {
+  font-size: 1rem;
+  color: #126B5E;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+  background: rgba(18, 107, 94, 0.1);
+  padding: 10px 20px;
+  border-radius: 30px;
+}
+
+.camera-card:hover .camera-action {
+  opacity: 1;
+  background: #126B5E;
+  color: white;
+}
+
+/* Splide Customizations for Camera Selector */
+.selector-page-container .splide__arrow {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  opacity: 1;
+}
+
+.selector-page-container .splide__arrow svg {
+  fill: white !important;
+}
+
+.selector-page-container .splide__pagination {
+  bottom: -40px;
+}
+
+.selector-page-container .splide__pagination__page {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.selector-page-container .splide__pagination__page.is-active {
+  background: white !important;
+  transform: scale(1.4);
+}
+
+/* --- Loader Moderno --- */
+.loader-dots {
+  display: flex;
+  gap: 15px;
+}
+
+.loader-dots span {
+  width: 16px;
+  height: 16px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loader-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loader-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1.0);
+  }
+}
+
+/* --- Mobile Optimizations --- */
+@media (max-width: 768px) {
+  /* Remove margin intended for desktop sidebar from admin pages */
+  .dashboard-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  /* Adjust hero section on HomePage */
+  .hero-section-new {
+    width: 95%;
+    padding: 40px 15px;
+    margin: 20px auto;
+  }
+
+  .hero-section-new h1 {
+    font-size: 2rem;
+  }
+
+  .hero-section-new p {
+    font-size: 1rem;
+  }
+
+  /* Adjust CamaraSelector layout */
+  .selector-logo {
+    width: 280px;
+  }
+  .selector-title {
+    font-size: 2.2rem;
+  }
+  .camera-slider-wrapper {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Fix two-column layouts (like in JuizoPresidente) to stack vertically */
+  .dashboard-content[style*="display: flex"] {
+    flex-direction: column;
+  }
 }

@@ -2,8 +2,7 @@ import React, { Component } from 'react';
 import '../App.css'
 
 //Imagens
-
-// import Logo from '../assets/e-camara-16.png'
+import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
 
 // Icones
 
@@ -44,8 +43,8 @@ class topBar extends Component {
         return (
             <>
             <nav className={this.state.headerHome}>
-                <div className='header-home'>
-                    <p className='titleHeader' style={{ color: 'white', fontSize: '20px', fontWeight: 'bold' }} onClick={() => { window.location.href = "/" }}>Camara AI</p>
+                <div className='header-home' onClick={() => { window.location.href = "/" }} style={{ cursor: 'pointer' }}>
+                    <img src={logoCamaraAI} alt="Camara AI Logo" style={{ height: '40px' }} />
                     {/* <input type="text" placeholder={`Pesquisar`} className='inputPesquisar' /> */}
                     {/* <FaSistrix className='PesquisarLogo' /> */}
                 </div>

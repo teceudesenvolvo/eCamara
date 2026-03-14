@@ -1,14 +1,31 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const getApiKey = () => process.env.GEMINI_API_KEY;
 
-if (!apiKey) {
-  console.warn("GEMINI_API_KEY não configurada no ambiente global. Certifique-se de que ela esteja disponível na execução da função.");
-}
+// Variáveis para armazenar as instâncias (Singleton Pattern)
+let genAIInstance: GoogleGenerativeAI | null = null;
+let fileManagerInstance: GoogleAIFileManager | null = null;
 
-export const genAI = new GoogleGenerativeAI(apiKey || "");
-export const fileManager = new GoogleAIFileManager(apiKey || "");
+export const getGenAI = () => {
+  if (!genAIInstance) {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("GEMINI_API_KEY não configurada no ambiente.");
+    genAIInstance = new GoogleGenerativeAI(apiKey);
+  }
+  return genAIInstance;
+};
 
-// Modelo padrão para geração de texto
-export const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+export const getFileManager = () => {
+  if (!fileManagerInstance) {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("GEMINI_API_KEY não configurada no ambiente.");
+    fileManagerInstance = new GoogleAIFileManager(apiKey);
+  }
+  return fileManagerInstance;
+};
+
+// Helper para obter o modelo padrão
+export const getModel = () => { // Alterado para gemini-2.5-flash
+  return getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+};

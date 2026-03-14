@@ -4,16 +4,26 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
 import { ataJobService } from "./ataJobService";
 import { workerService } from "./workerService";
-import { genAI } from "./gemini";
+import { getModel } from "./gemini";
 
-setGlobalOptions({ maxInstances: 10, region: "southamerica-east1" });
+setGlobalOptions({
+  maxInstances: 10,
+  region: "southamerica-east1",
+  // Aumenta o tempo limite padrão para 2 minutos para chamadas de API externas.
+  timeoutSeconds: 120,
+});
 
 /**
  * Função PRIVADA para interagir com a IA. Exige autenticação.
  * Usada nas áreas logadas do sistema.
  */
 export const falarComCamaraAIPrivado = onCall(
-  { secrets: ["GEMINI_API_KEY"] },
+  {
+    secrets: ["GEMINI_API_KEY"],
+    // Permite chamadas do seu app local. Em produção, restrinja para o seu domínio.
+    // ex: cors: ["https://seu-app.web.app"]
+    cors: true,
+  },
   async (request) => {
     // 1. Validação de autenticação do usuário
     if (!request.auth) {
@@ -35,13 +45,11 @@ export const falarComCamaraAIPrivado = onCall(
     try {
       const logMessage = `[PRIVADO] Iniciando chamada para a IA com a mensagem: "${userMessage.substring(0, 30)}..."`;
       logger.info(logMessage);
-      // Usa o cliente importado do gemini.ts. A chave é gerenciada lá.
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Ajustado para modelo válido
 
+      const model = getModel();
       const result = await model.generateContent(userMessage);
       const response = await result.response;
       const text = response.text();
-
       return { response: text };
     } catch (error) {
       logger.error("Erro na chamada da API do Gemini:", error);
@@ -54,7 +62,12 @@ export const falarComCamaraAIPrivado = onCall(
  * Usada no chat da Home Page.
  */
 export const falarComCamaraAIPublico = onCall(
-  { secrets: ["GEMINI_API_KEY"] },
+  {
+    secrets: ["GEMINI_API_KEY"],
+    // Permite chamadas do seu app local. Em produção, restrinja para o seu domínio.
+    // ex: cors: ["https://seu-app.web.app"]
+    cors: true,
+  },
   async (request) => {
     // 1. Validação da mensagem enviada pelo cliente
     const userMessage = request.data.message;
@@ -75,15 +88,10 @@ export const falarComCamaraAIPublico = onCall(
         "o trabalho dos vereadores. Use uma linguagem clara, objetiva e " +
         "neutra.";
 
-      const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash", // Ajustado para modelo válido (2.5 ainda não é publico padrão)
-        systemInstruction: systemInstruction,
-      });
-
-      const result = await model.generateContent(userMessage);
-      const response = await result.response;
-      const text = response.text();
-
+      const model = getModel();
+      const prompt = `${systemInstruction}\n\nUsuário: ${userMessage}`;
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
       return { response: text };
     } catch (error) {
       logger.error("[PÚBLICO] Erro na chamada da API do Gemini:", error);
@@ -101,6 +109,7 @@ export const gerarAtaViaArquivo = onCall(
   {
     region: "southamerica-east1",
     maxInstances: 10,
+    cors: true,
   },
   async (request) => {
     // 1. Validação de autenticação

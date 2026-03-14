@@ -1,12 +1,35 @@
 import * as admin from "firebase-admin";
+import type { Bucket } from "@google-cloud/storage";
 
-// Inicializa o Firebase Admin SDK
-// Certifique-se de que as credenciais (GOOGLE_APPLICATION_CREDENTIALS) estejam configuradas no ambiente
-if (!admin.apps.length) {
-  admin.initializeApp({
-    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://camara-ai-default-rtdb.firebaseio.com",
-  });
-}
+// Variáveis para armazenar as instâncias (Singleton Pattern)
+let storageBucketInstance: Bucket | null = null;
+let dbInstance: admin.database.Database | null = null;
 
-export const db = admin.database();
-export const bucket = admin.storage().bucket();
+const initApp = () => {
+  // This is the most robust way to initialize in a complex environment.
+  // It tries to get the default app, and if it fails (throws), it initializes it.
+  try {
+    admin.app();
+  } catch (e) {
+    admin.initializeApp({
+      databaseURL: process.env.FIREBASE_DATABASE_URL || "https://camara-ai-default-rtdb.firebaseio.com",
+      storageBucket: "camara-ai.appspot.com",
+    });
+  }
+};
+
+export const getDb = () => {
+  if (!dbInstance) {
+    initApp();
+    dbInstance = admin.database();
+  }
+  return dbInstance;
+};
+
+export const getBucket = () => {
+  if (!storageBucketInstance) {
+    initApp();
+    storageBucketInstance = admin.storage().bucket() as unknown as Bucket;
+  }
+  return storageBucketInstance;
+};

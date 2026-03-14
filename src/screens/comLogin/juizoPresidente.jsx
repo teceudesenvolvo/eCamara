@@ -4,7 +4,6 @@ import MenuDashboard from '../../componets/menuDashboard.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../assets/logo.png';
-import signature from '../../assets/assinatura-teste-1.png'; // Assinatura do Presidente
 import { sendMessageToAIPrivate } from '../../aiService';
 import { db } from '../../firebaseConfig';
 import { ref, query, get, update, onValue } from 'firebase/database';
@@ -23,7 +22,6 @@ class JuizoPresidente extends Component {
             selectedComissao: '',
             // PDF and Signature state
             logoBase64: null,
-            signatureBase64: null,
             showPasswordModal: false,
             passwordInput: '',
             passwordError: '',
@@ -74,8 +72,7 @@ class JuizoPresidente extends Component {
                 });
             };
             const logoBase64 = await getBase64(logo);
-            const signatureBase64 = await getBase64(signature);
-            this.setState({ logoBase64, signatureBase64 });
+            this.setState({ logoBase64 });
         } catch (error) {
             console.error("Erro ao carregar imagens para o PDF:", error);
         }

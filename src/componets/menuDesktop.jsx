@@ -4,9 +4,10 @@ import {
     FaHome, FaGavel, FaFileAlt, FaVideo, FaBook, 
     FaRobot 
 } from 'react-icons/fa';
+import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
 import '../App.css';
 
-const MenuDesktop = ({ onOpenChat }) => {
+const MenuDesktop = ({ onOpenChat, camaraId }) => {
     const location = useLocation();
 
     // Função auxiliar para verificar se a rota está ativa
@@ -15,33 +16,31 @@ const MenuDesktop = ({ onOpenChat }) => {
     return (
         <div className="menuDesktop">
             <div className="logoDesktop">
-                {/* Você pode descomentar a imagem se tiver o logo importado */}
-                {/* <img src={logo} alt="Logo" /> */}
-                <h1 className="h1-logo">Camara AI</h1> 
+                <img src={logoCamaraAI} alt="Camara AI Logo" className="logo-sidebar" />
             </div>
 
             <nav className="nav-desktop">
-                <Link to="/" className={`aDesktop ${isActive('/')}`}>
-                    <FaHome className="icon-desktop" />
+                <Link to={`/home/${camaraId}`} className={`aDesktop ${isActive(`/home/${camaraId}`)}`}>
+                    <FaHome className="icon-desktop" /> 
                     <span className="text-desktop">Início</span>
                 </Link>
 
                 <div className="divider-desktop">Legislativo</div>
 
-                <Link to="/Sessoes" className={`aDesktop ${isActive('/Sessoes')}`}>
+                <Link to={`/sessoes/${camaraId}`} className={`aDesktop ${isActive(`/sessoes/${camaraId}`)}`}>
                     <FaGavel className="icon-desktop" />
                     <span className="text-desktop">Sessões</span>
                 </Link>
-                <Link to="/Materias" className={`aDesktop ${isActive('/Materias')}`}>
+                <Link to={`/materias/${camaraId}`} className={`aDesktop ${isActive(`/materias/${camaraId}`)}`}>
                     <FaFileAlt className="icon-desktop" />
                     <span className="text-desktop">Matérias</span>
                 </Link>
                 
-                 <Link to="/Normas" className={`aDesktop ${isActive('/Normas')}`}>
+                 <Link to={`/normas/${camaraId}`} className={`aDesktop ${isActive(`/normas/${camaraId}`)}`}>
                     <FaBook className="icon-desktop" />
                     <span className="text-desktop">Normas</span>
                 </Link>
-                <Link to="/Sessao-Virtual" className={`aDesktop ${isActive('/Sessao-Virtual')}`}>
+                <Link to={`/sessao-virtual/${camaraId}`} className={`aDesktop ${isActive(`/sessao-virtual/${camaraId}`)}`}>
                     <FaVideo className="icon-desktop" />
                     <span className="text-desktop">Sessão Virtual</span>
                 </Link>

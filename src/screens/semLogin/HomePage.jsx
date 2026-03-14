@@ -4,29 +4,85 @@ import { FaSearch, FaArrowRight } from 'react-icons/fa';
 import SlideFeacures from '../../componets/slideFeactures.jsx';
 import '../../App.css';
 import ChatAI from './ChatAI.jsx';
+import { db } from '../../firebaseConfig';
+import { ref, get, query, orderByChild, equalTo, limitToLast } from 'firebase/database';
 
 class HomePage extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            // Configuração dinâmica da Câmara (simulando API/Config)
-            city: 'Nossa Cidade',
-            uf: 'SC',
-            stats: {
-                aiLaws: 127,
-                votes: 842
-            },
-            latestLaw: {
-                number: 'Lei nº 4.521/2026',
-                summary: 'Institui o programa de incentivo à inovação tecnológica nas escolas municipais, prevendo verba para robótica e IA.'
-            },
-            agenda: [
-                { id: 1, day: '14', month: 'JUN', time: '14:00', title: 'Sessão Ordinária', location: 'Plenário Virtual', imagem: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60' },
-                { id: 2, day: '15', month: 'JUN', time: '09:00', title: 'Comissão de Finanças', location: 'Sala das Comissões', imagem: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=500&q=60' },
-                { id: 3, day: '16', month: 'JUN', time: '19:00', title: 'Audiência Pública: Saúde', location: 'Auditório Principal', imagem: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=500&q=60' }
-            ],
+            homeConfig: {},
+            vereadores: [],
+            agenda: [],
             isChatOpen: false,
+            loading: true,
+            camaraId: this.props.match.params.camaraId || 'camara-teste',
         };
+    }
+
+    componentDidMount() {
+        this.fetchData();
+    }
+
+    fetchData = async () => {
+        const { camaraId } = this.state;
+        this.setState({ loading: true });
+
+        try {
+            // 1. Fetch home page configuration
+            const configRef = ref(db, `${camaraId}/dados-config/home`);
+            const configSnapshot = await get(configRef);
+            const homeConfig = configSnapshot.exists() ? configSnapshot.val() : {};
+
+            // 2. Fetch representatives (vereadores)
+            const usersRef = ref(db, `${camaraId}/users`);
+            // Client-side filtering to avoid needing a Firebase index for now.
+            // This is less performant on large datasets but resolves the immediate error.
+            const usersSnapshot = await get(usersRef);
+            const vereadores = [];
+            if (usersSnapshot.exists()) {
+                usersSnapshot.forEach(child => {
+                    const user = child.val();
+                    if (user.tipo === 'vereador') {
+                        vereadores.push({ id: child.key, ...user });
+                    }
+                });
+            }
+
+            // 3. Fetch recent matters for "Acontece na Câmara"
+            const materiasRef = ref(db, `${camaraId}/materias`);
+            // Fetches the last 3 created matters
+            const materiasQuery = query(materiasRef, orderByChild('createdAt'), limitToLast(3));
+            const materiasSnapshot = await get(materiasQuery);
+            const agenda = [];
+            if (materiasSnapshot.exists()) {
+                materiasSnapshot.forEach(child => {
+                    const materia = child.val();
+                    // Use dataApresenta if available, otherwise fallback to createdAt
+                    const data = new Date(materia.dataApresenta || materia.createdAt);
+                    agenda.push({
+                        id: child.key,
+                        day: data.getDate(),
+                        month: data.toLocaleString('pt-BR', { month: 'short' }).toUpperCase().replace('.', ''),
+                        time: '19:00', // Placeholder time
+                        title: materia.titulo || 'Matéria sem título',
+                        location: 'Plenário Virtual', // Placeholder location
+                        imagem: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60' // Placeholder image
+                    });
+                });
+            }
+
+            this.setState({
+                homeConfig,
+                vereadores,
+                agenda: agenda.reverse(), // Reverse to show newest first
+                loading: false,
+            });
+
+        } catch (error) {
+            console.error("Erro ao buscar dados da câmara:", error);
+            this.setState({ loading: false });
+        }
     }
 
     openChat = () => {
@@ -38,19 +94,27 @@ class HomePage extends Component {
     }
 
     render() {
-        const { city, agenda, isChatOpen } = this.state;
+        const { homeConfig, agenda, vereadores, isChatOpen, loading, camaraId } = this.state;
+
+        if (loading) {
+            return (
+                <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}>
+                    <p>Carregando dados da câmara...</p>
+                </div>
+            );
+        }
 
         return (
             <div className='App-header'>
                 <div className='Home-Dach'>
-                    
+
                     {/* 1. Hero Section (Gradient Style) */}
                     <div className="hero-section-new">
                         <div className="hero-content-openai">
-                            <h1>Camara AI</h1>
-                            <p>Inteligência Artificial para uma legislação mais transparente e acessível em {city}.</p>
+                            <h1>{homeConfig.titulo || 'Camara AI'}</h1>
+                            <p>{homeConfig.slogan || `Inteligência Artificial para uma legislação mais transparente e acessível em ${camaraId}.`}</p>
                             <div className="hero-buttons-openai">
-                                <Link to="/Materias" className="btn-openai btn-primary">Explorar Projetos</Link>
+                                <Link to={`/materias/${camaraId}`} className="btn-openai btn-primary">Explorar Projetos</Link>
                                 <Link to="/login" className="btn-openai btn-secondary">Acesso Restrito</Link>
                             </div>
                         </div>
@@ -73,10 +137,10 @@ class HomePage extends Component {
                     <div className="openai-section">
                         <div className="section-header-openai">
                             <h2>Acontece na Câmara</h2>
-                            <Link to="/sessoes" className="view-all-link">Ver tudo <FaArrowRight /></Link>
+                            <Link to={`/materias/${camaraId}`} className="view-all-link">Ver tudo <FaArrowRight /></Link>
                         </div>
                         <div className="openai-grid">
-                            {agenda.map(item => (
+                            {agenda.length > 0 ? agenda.map(item => (
                                 <div className="openai-card" key={item.id}>
                                     <img src={item.imagem} alt={item.title} className="card-image" />
                                     <div className="card-content-openai">
@@ -85,7 +149,7 @@ class HomePage extends Component {
                                         <p>{item.location}</p>
                                     </div>
                                 </div>
-                            ))}
+                            )) : <p>Nenhuma matéria votada recentemente.</p>}
                         </div>
                     </div>
 
@@ -95,7 +159,7 @@ class HomePage extends Component {
                             <h2>Nossos Representantes</h2>
                         </div>
                         <div className='HomeDesktopCarrosel'>
-                            <SlideFeacures />
+                            <SlideFeacures vereadores={vereadores} />
                         </div>
                     </div>
                     
@@ -103,7 +167,7 @@ class HomePage extends Component {
 
                 {/* Popup do Chat AI */}
                 {isChatOpen && (
-                    <ChatAI onClose={this.closeChat} city={city} />
+                    <ChatAI onClose={this.closeChat} city={homeConfig.cidade || camaraId} />
                 )}
             </div>
         );

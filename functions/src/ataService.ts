@@ -1,4 +1,4 @@
-import { model } from "./gemini";
+import { getModel } from "./gemini";
 
 export const ataService = {
   /**
@@ -37,7 +37,7 @@ export const ataService = {
       ${transcription}
     `;
 
-    const result = await model.generateContent(prompt);
+    const result = await getModel().generateContent(prompt);
     let text = result.response.text();
     // Limpeza para garantir JSON válido caso o modelo envolva em markdown
     text = text.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/```$/, "").trim();

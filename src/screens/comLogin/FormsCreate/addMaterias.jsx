@@ -6,9 +6,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
 // Importando imagem
-import camera from '../../../assets/Camera.png';
 import logo from '../../../assets/logo.png';
-import signature from '../../../assets/assinatura-teste-1.png'; // Imagem da assinatura
 
 import MenuDashboard from '../../../componets/menuDashboard.jsx'; // Certifique-se de que este caminho está correto
 import { sendMessageToAIPrivate } from '../../../aiService';
@@ -260,6 +258,7 @@ class AddProducts extends Component {
             let nextStep = chatStep;
             let nextStateUpdates = {};
             let aiResponseText = '';
+            let shouldOpenEditor = false;
 
             // --- CONTEXTO LEGISLATIVO (SIMULAÇÃO DE RAG) ---
             // Na versão final, isso viria do seu Banco de Dados ou de um arquivo PDF processado
@@ -330,49 +329,40 @@ class AddProducts extends Component {
             const response = await sendMessageToAIPrivate(prompt);
 
             if (chatStep === 2) {
-                // Verifica se a IA recusou a geração (procurando a tag de bloqueio solicitada no prompt)
                 const isRefusal = response.includes("BLOQUEIO:");
 
                 if (isRefusal) {
-                    // Se a IA recusou, mostramos a explicação no chat e NÃO abrimos o editor
                     aiResponseText = response;
-                    nextStep = 2; // Mantém no passo 2 para o usuário tentar outro detalhe ou tema
+                    nextStep = 2; // Mantém no passo 2 para o usuário tentar novamente
                 } else {
-                    // Se a IA gerou a minuta, abrimos o editor
                     aiResponseText = `Perfeito! Validei o regimento e a base de dados. Estou gerando a minuta da matéria. Abrindo o editor...`;
-                    
-                    const generatedData = {
-                        tipoMateria: this.state.tipoMateria || 'Projeto de Lei',
-                        ano: new Date().getFullYear().toString(),
-                        numero: Math.floor(Math.random() * 1000) + '/2026',
-                        dataApresenta: new Date().toISOString().split('T')[0],
-                        protocolo: '', 
-                        tipoApresentacao: 'Escrita',
-                        tipoAutor: 'Parlamentar',
-                        autor: 'Vereador Usuário',
-                        regTramita: 'Ordinária',
-                        status: 'Em Elaboração',
+                    shouldOpenEditor = true;
+                    // Prepara os dados para o editor, mas não atualiza o estado ainda
+                    nextStateUpdates = {
+                        ...nextStateUpdates,
                         titulo: (`${this.state.tipoMateria || 'Matéria'} sobre ${this.state.objeto}`).toUpperCase(),
                         ementa: `Dispõe sobre ${this.state.objeto} e dá outras providências.`,
-                        textoMateria: response, // Texto gerado pela IA
-                        showEditor: true,
-                        isGenerating: false
+                        textoMateria: response,
                     };
-
-                    setTimeout(() => {
-                        this.setState(generatedData);
-                    }, 1500);
                 }
             } else {
                 aiResponseText = response;
             }
 
+            // Atualiza o estado do chat com a resposta da IA e para o indicador de "digitando"
             this.setState(prevState => ({
                 messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: aiResponseText }],
-                isGenerating: chatStep === 2 ? true : false, 
+                isGenerating: false, // Resposta recebida, para de gerar
                 chatStep: nextStep,
                 ...nextStateUpdates
             }));
+
+            // Se a geração da minuta foi um sucesso, abre o editor após um breve delay
+            if (shouldOpenEditor) {
+                setTimeout(() => {
+                    this.setState({ showEditor: true });
+                }, 1500); // Delay para o usuário ler a mensagem "Abrindo o editor..."
+            }
 
         } catch (error) {
             console.error("Erro ao processar IA:", error);

@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import { Splide, SplideSlide } from '@splidejs/react-splide';
-import axios from 'axios';
 
 // use Redux
 import { connect } from 'react-redux';
@@ -21,71 +20,39 @@ import '@splidejs/react-splide/css/core';
 // import './SlideFeactures.css';
 
 class slideFeactures extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            posts: []
-        };
-    }
-
-    loadNoticias = async () => {
-        await axios.get(`https://sapl.saogoncalodoamarante.ce.leg.br/api/parlamentares/legislatura/20/parlamentares/?get_all=true`)
-            .catch(err => console.log(`o erro foi esse aqui: ${err}`))
-            .then(
-                res => {
-                    const postsAll = res.data;
-                    let posts = [];
-                    for (let key in postsAll) {
-                        // Adicionando dados fictícios para 'sessoes' e 'materias'
-                        posts.push({
-                            ...postsAll[key],
-                            id: key,
-                            sessoes: Math.floor(Math.random() * 5) + 1, // 1 a 5 sessões
-                            materias: Math.floor(Math.random() * 50) + 5, // 5 a 54 matérias
-                        });
-                    }
-                    this.setState({ posts: posts });
-                    console.log(res.data);
-                }
-            );
-    };
-
-    componentDidMount() {
-        const loadPage = () => this.loadNoticias();
-        loadPage();
-    }
-
     render() {
-        const posts = this.state.posts;
+        const { vereadores } = this.props;
 
-        const listPosts = posts.map((post) =>
-            <SplideSlide key={post.id} className="representative-card-slide"
+        if (!vereadores || vereadores.length === 0) {
+            return <p>Nenhum representante para exibir.</p>;
+        }
+
+        const listVereadores = vereadores.map((vereador) =>
+            <SplideSlide key={vereador.id} className="representative-card-slide"
                 onClick={
                     () => {
-                        this.setState({ id: post.id }, () => {
-                            (this.props.clickButton(this.state));
-                            console.log(this.state);
-                            // (window.location.href = "/produto"); // Descomente se precisar redirecionar
-                        });
+                        // Simplificando a chamada da action, passando apenas o necessário.
+                        this.props.clickButton({ id: vereador.id });
+                        console.log(`Vereador selecionado: ${vereador.nome}`);
                     }
                 }
             >
                 <div className="representative-card">
                     <div className="representative-header">
                         <div className="representative-image-wrapper">
-                            <img className="representative-image" src={post.fotografia} alt={post.nome_parlamentar} />
+                            <img className="representative-image" src={vereador.foto} alt={vereador.nome} />
                         </div>
                         <div className="representative-info">
-                            <h5 className="representative-name">{post.nome_parlamentar} </h5>
+                            <h5 className="representative-name">{vereador.nome} </h5>
                             <p className="representative-role">Vereador(a)</p> {/* Assumindo o cargo como Vereador(a) */}
                         </div>
                     </div>
                     <div className="representative-stats">
                         <p className="stat-item">
-                            <span className="stat-value">{post.sessoes}</span> Sessões
+                            <span className="stat-value">{vereador.sessoes || Math.floor(Math.random() * 5) + 1}</span> Sessões
                         </p>
                         <p className="stat-item">
-                            <span className="stat-value">{post.materias}</span> Matérias
+                            <span className="stat-value">{vereador.materias || Math.floor(Math.random() * 50) + 5}</span> Matérias
                         </p>
                     </div>
                 </div>
@@ -111,7 +78,7 @@ class slideFeactures extends Component {
                     aria-label="Nossos Representantes"
                     className='representatives-carousel'
                 >
-                    {listPosts}
+                    {listVereadores}
                 </Splide>
             </div>
         );

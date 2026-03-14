@@ -1,13 +1,5 @@
-import * as admin from "firebase-admin";
+import { getDb } from "./firebase";
 import { AtaJob } from "./ataJob";
-
-// Inicializa o Firebase Admin SDK se ainda não estiver inicializado
-// Isso é necessário para acessar o Realtime Database com privilégios de admin
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-const db = admin.database();
 
 export const ataJobService = {
   /**
@@ -25,7 +17,7 @@ export const ataJobService = {
       createdAt: Date.now(),
     };
 
-    const ref = db.ref("camara-teste/ataJobs").push();
+    const ref = getDb().ref("camara-teste/ataJobs").push();
     await ref.set(jobData);
     return ref.key as string;
   },

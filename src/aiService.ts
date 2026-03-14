@@ -4,10 +4,10 @@ import { ref, onValue, off } from "firebase/database";
 import { ref as storageRef, uploadBytes } from "firebase/storage";
 
 // Referência para a função PÚBLICA (usada na Home)
-const falarComIAPublico = httpsCallable(functions, "falarComCamaraAIPublico");
+const falarComIAPublico = httpsCallable(functions, "falarComCamaraAIPublico", { timeout: 120000 });
 
 // Referência para a função PRIVADA (usada nas áreas logadas)
-const falarComIAPrivado = httpsCallable(functions, "falarComCamaraAIPrivado");
+const falarComIAPrivado = httpsCallable(functions, "falarComCamaraAIPrivado", { timeout: 120000 });
 
 // Referência para a função de Geração de Ata via Arquivo
 const gerarAtaViaArquivoFunc = httpsCallable(functions, "gerarAtaViaArquivo");
