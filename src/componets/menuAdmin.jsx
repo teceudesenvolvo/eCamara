@@ -11,25 +11,60 @@ import {
     FaList,
     FaCog,
     FaRobot,
-    FaPalette
+    FaPalette,
+    FaBars,
+    FaTimes
 } from "react-icons/fa";
 import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
 import '../App.css';
+import { useState, useEffect } from 'react';
+import { db } from '../firebaseConfig';
+import { ref, get } from 'firebase/database';
 
-const MenuDashboard = () => {
+const MenuDashboard = ({ logo: propLogo }) => {
     const location = useLocation();
+    const [logo, setLogo] = useState(logoCamaraAI);
 
     // Função auxiliar para verificar se a rota está ativa
     const isActive = (path) => location.pathname === path ? 'link-desktop-active' : '';
 
+    useEffect(() => {
+        if (propLogo) {
+            setLogo(propLogo);
+            return;
+        }
+
+        const fetchLogo = async () => {
+            const pathParts = location.pathname.split('/').filter(Boolean);
+            const camaraId = pathParts.length > 1 ? pathParts[1] : 'pacatuba';
+            
+            try {
+                const snapshot = await get(ref(db, `${camaraId}/dados-config/layout/logo`));
+                if (snapshot.exists()) setLogo(snapshot.val());
+            } catch (e) {
+                console.error("Erro ao carregar logo do dashboard", e);
+            }
+        };
+        fetchLogo();
+    }, [location.pathname, propLogo]);
+
     return (
-        <div className="menuDesktop"> {/* Reutilizando a classe do menu da home */}
+        <>
+            {/* Checkbox e labels para controlar o menu mobile sem JavaScript */}
+            <input type="checkbox" id="mobile-menu-toggle-checkbox" className="mobile-menu-toggle-checkbox" />
+            <label htmlFor="mobile-menu-toggle-checkbox" className="mobile-menu-toggle">
+                <FaBars className="hamburger-icon" />
+                <FaTimes className="close-icon" />
+            </label>
+            <label htmlFor="mobile-menu-toggle-checkbox" className="mobile-menu-overlay"></label>
+
+            <div className="menuDesktop"> {/* Reutilizando a classe do menu da home */}
             <div className="logoDesktop">
-                <img src={logoCamaraAI} alt="Camara AI Logo" className="logo-sidebar" />
+                <img src={logo} alt="Logo" className="logo-sidebar" />
             </div>
 
             <nav className="nav-desktop">
-                <div className="divider-desktop">Gestão</div>
+                
 
                 <Link to="/materias-dash" className={`aDesktop ${isActive('/materias-dash')}`}>
                     <FaAddressBook className="icon-desktop" />
@@ -58,7 +93,7 @@ const MenuDashboard = () => {
 
                 <Link to="/pautas-sessao" className={`aDesktop ${isActive('/pautas-sessao')}`}>
                     <FaList className="icon-desktop" />
-                    <span className="text-desktop">Pautas</span>
+                    <span className="text-desktop">Sessões</span>
                 </Link>
 
                 <Link to="/configuracoes" className={`aDesktop ${isActive('/configuracoes')}`}>
@@ -76,21 +111,19 @@ const MenuDashboard = () => {
                     <span className="text-desktop">Layouts</span>
                 </Link>
 
-                <div className="divider-desktop">Conta</div>
-
                 <Link to="/perfil" className={`aDesktop ${isActive('/perfil')}`}>
                     <FaRegUser className="icon-desktop" />
                     <span className="text-desktop">Minha Conta</span>
                 </Link>
                 
-                <div className="divider-desktop">Sair</div>
                 
                 <Link to="/" className={`aDesktop`}>
                     <FaHome className="icon-desktop" />
-                    <span className="text-desktop">Voltar ao Início</span>
+                    <span className="text-desktop">Sair da Conta</span>
                 </Link>
             </nav>
         </div>
+        </>
     );
 };
 

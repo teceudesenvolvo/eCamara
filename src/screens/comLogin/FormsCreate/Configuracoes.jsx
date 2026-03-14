@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel } from 'react-icons/fa';
-import MenuDashboard from '../../../componets/menuDashboard.jsx';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 
 class Configuracoes extends Component {
     constructor(props) {

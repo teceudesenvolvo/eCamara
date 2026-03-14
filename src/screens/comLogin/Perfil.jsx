@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 // Imagens
 import ProfileImage from '../../assets/vereador.jpg'; // Imagem do perfil do vereador
-import MenuDashboard from '../../componets/menuDashboard.jsx'; // Certifique-se de que este caminho está correto
+import MenuDashboard from '../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
 
 // Ícones (se necessário, pode adicionar do Material-UI ou Font Awesome)
 // import EditIcon from '@mui/icons-material/Edit';

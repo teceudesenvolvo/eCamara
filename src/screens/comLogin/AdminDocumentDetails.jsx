@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FaArrowLeft, FaDownload, FaCopy, FaEye } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuDashboard.jsx';
+import MenuDashboard from '../../componets/menuAdmin.jsx';
 import { db } from '../../firebaseConfig';
 import { ref, get } from 'firebase/database';
 import pdfMake from 'pdfmake/build/pdfmake';

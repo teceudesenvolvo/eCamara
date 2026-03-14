@@ -22,40 +22,78 @@ import PageHeader from '../../componets/PageHeader.jsx';
 // Components
 import HistoricoSessao from '../../componets/HistoricoSessao.jsx';
 
-// Dados da tabela
-function createData(numero, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data ) {
-  return { numero, materia, situacao, votoSim, votoNao, semVoto, autor, apresentacao, tramitacao, exercicio, data};
-}
-
-const rows = [
-  createData('4', 'IND 4/2024', 'Em Votação', 1, 10, 5, 'Teste', 'Escrita', 'Ordinária', 2024, '10/01/2024'),
-  createData('4', 'IND 4/2024', 'Em Votação', 1, 10, 5, 'Teste', 'Escrita', 'Ordinária', 2024, '10/01/2024'),
-  createData('4', 'IND 4/2024', 'Em Votação', 1, 10, 5, 'Teste', 'Escrita', 'Ordinária', 2024, '10/01/2024'),
-  createData('4', 'IND 4/2024', 'Em Votação', 1, 10, 5, 'Teste', 'Escrita', 'Ordinária', 2024, '10/01/2024'),
-  createData('4', 'IND 4/2024', 'Em Votação', 1, 10, 5, 'Teste', 'Escrita', 'Ordinária', 2024, '10/01/2024'),
-  createData('4', 'IND 4/2024', 'Em Votação', 1, 10, 5, 'Teste', 'Escrita', 'Ordinária', 2024, '10/01/2024'),
-  createData('4', 'IND 4/2024', 'Em Votação', 1, 10, 5, 'Teste', 'Escrita', 'Ordinária', 2024, '10/01/2024'),
-];
-
-
-
+// Firebase
+import { db } from '../../firebaseConfig';
+import { ref, get } from 'firebase/database';
 
 class SessaoVirtual extends Component {
-  state = {
-    showFilters: false,
-  };
+  constructor(props) {
+    super(props);
+    this.state = {
+      showFilters: false,
+      sessao: null,
+      loading: true,
+      camaraId: this.props.match.params.camaraId || 'camara-teste',
+      selectedMateria: null,
+      showMateriaModal: false,
+    };
+  }
+
+  componentDidMount() {
+    this.fetchSessaoData();
+  }
+
+  fetchSessaoData = async () => {
+    const { camaraId } = this.state;
+    const { state } = this.props.location;
+    const sessaoId = state ? state.sessaoId : null;
+
+    if (!sessaoId) {
+      this.setState({ loading: false });
+      return;
+    }
+
+    const sessaoRef = ref(db, `${camaraId}/sessoes/${sessaoId}`);
+    const snapshot = await get(sessaoRef);
+
+    if (snapshot.exists()) {
+      this.setState({ sessao: { id: snapshot.key, ...snapshot.val() }, loading: false });
+    } else {
+      this.setState({ loading: false });
+    }
+  }
 
   toggleFilters = () => {
     this.setState(prevState => ({ showFilters: !prevState.showFilters }));
   };
 
+  handleOpenMateriaModal = (materia) => {
+    this.setState({ selectedMateria: materia, showMateriaModal: true });
+  };
+
+  handleCloseMateriaModal = () => {
+    this.setState({ showMateriaModal: false, selectedMateria: null });
+  };
+
   render() {
+    const { sessao, loading, showMateriaModal, selectedMateria } = this.state;
+
+    if (loading) {
+      return <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Carregando sessão...</p></div>;
+    }
+
+    if (!sessao) {
+      return <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Sessão não encontrada.</p></div>;
+    }
+
+    const materias = sessao.itens || [];
+
     return (
 
       <div className='App-header' >
         <div className='sessao-virtual-container'>
-          <Typography variant="h4" component="p" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
-            Sessão Virtual ao Vivo
+          <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
+            {sessao.tipo} nº {sessao.numero}
           </Typography>
 
           <div className='sessao-virtual-main-content'>
@@ -65,39 +103,39 @@ class SessaoVirtual extends Component {
               </div>
             </div>
             <div className='sessao-virtual-historico-wrapper'>
-              <HistoricoSessao />
+              <HistoricoSessao sessao={sessao} />
             </div>
           </div>
 
           <div className='sessao-virtual-materias-wrapper'>
             <PageHeader 
-                title="Matérias em Votação" 
+                title="Sessão Virtual" 
                 onToggleFilters={this.toggleFilters} 
             />
             
             <Grid container spacing={2} justifyContent="flex-start">
-              {rows.map((row, index) => (
-                <Grid item xs={12} key={index}>
-                  <Card elevation={2} sx={{ borderRadius: '12px', transition: '0.3s', '&:hover': { boxShadow: 4 } }}>
+              {materias.map((materia, index) => (
+                <Grid item xs={12} key={materia.id || index}>
+                  <Card elevation={2} sx={{ borderRadius: '12px', transition: '0.3s', '&:hover': { boxShadow: 4 }, cursor: 'pointer' }} onClick={() => this.handleOpenMateriaModal(materia)}>
                     <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <FaFileAlt color="#126B5E" />
                           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#333' }}>
-                            {row.materia}
+                            {materia.tipoMateria} {materia.numero}
                           </Typography>
                         </Box>
-                        <Chip label={row.situacao} size="small" color={row.situacao === 'Em Votação' ? 'warning' : 'default'} />
+                        <Chip label={materia.status || 'Em Votação'} size="small" color={materia.status === 'Em Votação' ? 'warning' : 'default'} />
                       </Box>
                       
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2, ml: 3 }}>
-                        Protocolo: {row.numero} | Autor: {row.autor} | Tramitação: {row.tramitacao}
+                        Autor: {materia.autor} | Tramitação: {materia.regTramita}
                       </Typography>
 
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, ml: 3 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-sim-circle">{row.votoSim}</span> <Typography variant="caption">Sim</Typography></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-nao-circle">{row.votoNao}</span> <Typography variant="caption">Não</Typography></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-abs-circle">{row.semVoto}</span> <Typography variant="caption">Abstenção</Typography></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-sim-circle">{materia.votos?.sim || 0}</span> <Typography variant="caption">Sim</Typography></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-nao-circle">{materia.votos?.nao || 0}</span> <Typography variant="caption">Não</Typography></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-abs-circle">{materia.votos?.abs || 0}</span> <Typography variant="caption">Abstenção</Typography></div>
                       </Box>
                     </CardContent>
                   </Card>
@@ -105,6 +143,27 @@ class SessaoVirtual extends Component {
               ))}
             </Grid>
           </div>
+
+          {showMateriaModal && selectedMateria && (
+            <div className="modal-overlay">
+              <div className="modal-content" style={{ maxWidth: '700px' }}>
+                <div className="modal-header">
+                  <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{selectedMateria.titulo}</h2>
+                  <button onClick={this.handleCloseMateriaModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
+                </div>
+                <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '15px' }}>
+                  <p><strong>Autor:</strong> {selectedMateria.autor}</p>
+                  <p><strong>Tipo:</strong> {selectedMateria.tipoMateria}</p>
+                  <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                    <h4 style={{ marginTop: 0, color: '#126B5E' }}>Ementa</h4>
+                    <p style={{ fontStyle: 'italic' }}>"{selectedMateria.ementa}"</p>
+                    <h4 style={{ marginTop: '20px', color: '#126B5E' }}>Texto da Matéria</h4>
+                    <div dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

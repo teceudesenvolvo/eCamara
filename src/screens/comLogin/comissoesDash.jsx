@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FaUsers, FaPlus, FaTimes, FaUserPlus } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuDashboard.jsx';
+import MenuDashboard from '../../componets/menuAdmin.jsx';
 import ProfileImage from '../../assets/vereador.jpg'; // Reusing for member avatar
 import { db } from '../../firebaseConfig';
 import { ref, push, onValue } from 'firebase/database';

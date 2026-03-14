@@ -12,46 +12,43 @@ import Box from '@mui/material/Box';
 import SearchIcon from '@mui/icons-material/Search';
 import PageHeader from '../../componets/PageHeader';
 
+// Firebase
+import { db } from '../../firebaseConfig';
+import { ref, get, query, orderByChild } from 'firebase/database';
+
 class Sessoes extends Component {
-    state = {
-        sessoes: [
-            {
-                sessao: '1ª Sessão Ordinária do 2º Semestre de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
-                abertura: '23/03/2025',
-                tipo: 'Ordinária',
-                exercicio: '2025',
-                imagem: 'https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?auto=format&fit=crop&w=500&q=60'
+    constructor(props) {
+        super(props);
+        this.state = {
+            sessoes: [],
+            loading: true,
+            filterText: {
+                sessao: '',
+                abertura: '',
+                tipo: '',
+                exercicio: '',
             },
-            {
-                sessao: '13ª Sessão Ordinária do 2º Semestre de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
-                abertura: '14/12/2023',
-                tipo: 'Ordinária',
-                exercicio: '2023',
-                imagem: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&w=500&q=60'
-            },
-            {
-                sessao: '3ª Sessão Extraordinária do 1º Semestre de 2024 da 4ª Sessão Legislativa da 19ª Legislatura',
-                abertura: '05/07/2024',
-                tipo: 'Extraordinária',
-                exercicio: '2024',
-                imagem: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=500&q=60'
-            },
-            {
-                sessao: '2ª Sessão Solene de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
-                abertura: '01/09/2023',
-                tipo: 'Solene',
-                exercicio: '2023',
-                imagem: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=500&q=60'
-            },
-        ],
-        filterText: {
-            sessao: '',
-            abertura: '',
-            tipo: '',
-            exercicio: '',
-        },
-        showFilters: false,
-    };
+            showFilters: false,
+            camaraId: this.props.match.params.camaraId || 'camara-teste',
+        };
+    }
+
+    componentDidMount() {
+        this.fetchSessoes();
+    }
+
+    fetchSessoes = async () => {
+        const { camaraId } = this.state;
+        const sessoesRef = ref(db, `${camaraId}/sessoes`);
+        const sessoesQuery = query(sessoesRef, orderByChild('createdAt'));
+
+        const snapshot = await get(sessoesQuery);
+        const sessoes = [];
+        if (snapshot.exists()) {
+            snapshot.forEach(child => sessoes.push({ id: child.key, ...child.val() }));
+        }
+        this.setState({ sessoes: sessoes.reverse(), loading: false }); // reverse to show newest first
+    }
 
     handleFilterChange = (event) => {
         const { name, value } = event.target;
@@ -68,11 +65,11 @@ class Sessoes extends Component {
     };
 
     render() {
-        const { sessoes, filterText, showFilters } = this.state;
+        const { sessoes, filterText, showFilters, loading, camaraId } = this.state;
 
         const filteredSessoes = sessoes.filter((sessao) => {
             return Object.keys(filterText).every((key) => {
-                const sessaoValue = String(sessao[key]).toLowerCase();
+                const sessaoValue = String(sessao[key] || '').toLowerCase();
                 const filterValue = filterText[key].toLowerCase();
                 return sessaoValue.includes(filterValue);
             });
@@ -83,7 +80,7 @@ class Sessoes extends Component {
             return [...new Set(sessoes.map(item => item[key]))].filter(Boolean).sort();
         };
 
-        const selectFields = ['abertura', 'tipo', 'exercicio'];
+        const selectFields = ['data', 'tipo', 'exercicio'];
 
         return (
             <div className='App-header'>
@@ -95,14 +92,20 @@ class Sessoes extends Component {
                         showPrintButton={false}
                     />
 
+                    {loading && (
+                        <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
+                            Carregando sessões...
+                        </Typography>
+                    )}
+
                     {showFilters && (
                         <Box sx={{ mb: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
                             <Grid container spacing={2}>
-                                {['sessao', 'abertura', 'tipo', 'exercicio'].map((column) => (
+                                {['sessao', 'data', 'tipo', 'exercicio'].map((column) => (
                                     <Grid item xs={12} sm={6} md={3} key={column}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                             <Typography variant="caption" style={{ fontWeight: 'bold', color: '#555' }}>
-                                                {column.charAt(0).toUpperCase() + column.slice(1)}
+                                                {column === 'sessao' ? 'Descrição' : column.charAt(0).toUpperCase() + column.slice(1)}
                                             </Typography>
                                             {selectFields.includes(column) ? (
                                                 <TextField
@@ -148,12 +151,12 @@ class Sessoes extends Component {
                     
                     <div className="openai-grid">
                         {filteredSessoes.map((sessao) => (
-                            <div className="openai-card" key={sessao.sessao} onClick={() => window.location.href = '/sessao-virtual'}>
-                                <img src={sessao.imagem} alt={sessao.sessao} className="card-image" />
+                            <div className="openai-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })}>
+                                <img src={sessao.imagem || 'https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?auto=format&fit=crop&w=500&q=60'} alt={sessao.tipo} className="card-image" />
                                 <div className="card-content-openai">
-                                    <span className="card-date">{sessao.abertura} • {sessao.exercicio}</span>
-                                    <h3>{sessao.sessao}</h3>
-                                    <p>{sessao.tipo}</p>
+                                    <span className="card-date">{sessao.data} • {new Date(sessao.createdAt).getFullYear()}</span>
+                                    <h3>{sessao.tipo} nº {sessao.numero}</h3>
+                                    <p>Clique para ver os detalhes</p>
                                 </div>
                             </div>
                         ))}

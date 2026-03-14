@@ -4,7 +4,7 @@ import { ref, query, orderByChild, equalTo, get } from 'firebase/database';
 import { auth, db } from '../../firebaseConfig';
 
 // Components
-import MenuDashboard from '../../componets/menuDashboard.jsx';
+import MenuDashboard from '../../componets/menuAdmin.jsx';
 
 class loginDashboard extends Component {
     constructor(props) {

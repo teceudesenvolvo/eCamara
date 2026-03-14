@@ -8,7 +8,7 @@ import 'react-quill/dist/quill.snow.css';
 // Importando imagem
 import logo from '../../../assets/logo.png';
 
-import MenuDashboard from '../../../componets/menuDashboard.jsx'; // Certifique-se de que este caminho está correto
+import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
 import { sendMessageToAIPrivate } from '../../../aiService';
 import { auth, db } from '../../../firebaseConfig';
 import { ref, push } from 'firebase/database';

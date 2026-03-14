@@ -48,7 +48,6 @@ import CamaraSelector from './screens/semLogin/CamaraSelector.jsx';
 // Navigate Components
 import ChatAI from './screens/semLogin/ChatAI.jsx';
 import TopBar from './componets/topBarSearch.jsx';
-import Menu from './componets/menu.jsx';
 import MenuDesktop from './componets/menuDesktop.jsx'; // Verifique se este arquivo existe ou se deveria ser menuDashboard.jsx
 import { FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
 
@@ -61,11 +60,18 @@ function App() {
     phone: "(47) 3322-0000",
     address: "Rua XV de Novembro, 55 - Centro"
   };
+  const [footerConfig, setFooterConfig] = useState({
+    slogan: "Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.",
+    address: "Endereço não informado",
+    phone: "Telefone não informado",
+    email: "Email não informado",
+  });
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState({
     corPrimaria: '#126B5E', // Default primary color
     corDestaque: '#FF740F', // Default highlight color
+    logo: '', // Logo dynamic
   });
 
   const openChat = () => setIsChatOpen(true);
@@ -73,7 +79,7 @@ function App() {
 
   const location = useLocation();
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/', '/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin', '/assistente-admin/novo', '/assistente-admin/detalhes'].includes(location.pathname);
+  const hideMenuDesktop = ['/', '/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin', '/assistente-admin/novo', '/assistente-admin/detalhes', '/layout-manager'].includes(location.pathname);
 
   useEffect(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
@@ -82,13 +88,20 @@ function App() {
     const fetchLayoutConfig = async () => {
       if (camaraId) {
         const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
+        const footerRef = ref(db, `${camaraId}/dados-config/footer`);
         try {
           const snapshot = await get(layoutRef);
+          const footerSnapshot = await get(footerRef);
+
           if (snapshot.exists()) {
             setLayoutConfig(snapshot.val());
           } else {
             // Reset to default if no config found
             setLayoutConfig({ corPrimaria: '#126B5E', corDestaque: '#FF740F' });
+          }
+
+          if (footerSnapshot.exists()) {
+            setFooterConfig(footerSnapshot.val());
           }
         } catch (error) {
           console.error("Error fetching layout config:", error);
@@ -111,7 +124,7 @@ function App() {
         <Route 
           path="/:page?/:camaraId?"
           render={({ match }) => (
-            <MenuDesktop onOpenChat={openChat} camaraId={match.params.camaraId || 'pacatuba'} />
+            <MenuDesktop onOpenChat={openChat} camaraId={match.params.camaraId || 'pacatuba'} logo={layoutConfig.logo} />
           )} />
       )}
       
@@ -164,7 +177,7 @@ function App() {
           <div className='footer-content'>
             <div className='footer-section footer-about'>
               <h4 className='footer-logo-text'>Camara AI</h4>
-              <p>Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.</p>
+              <p>{footerConfig.slogan}</p>
               <div className='social-icons'>
                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"><FaTwitter /></a>
                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
@@ -195,9 +208,9 @@ function App() {
             
             <div className='footer-section footer-contact'>
               <h4>Contato</h4>
-              <p>📍 {tenant.address}</p>
-              <p>📞 {tenant.phone}</p>
-              <p>📧 {tenant.email}</p>
+              <p>📍 {footerConfig.address}</p>
+              <p>📞 {footerConfig.phone}</p>
+              <p>📧 {footerConfig.email}</p>
             </div>
           </div>
           
@@ -214,7 +227,7 @@ function App() {
         )}
       </div>
 
-      <Menu />
+      
       {isChatOpen && <ChatAI onClose={closeChat} />}
     </div>
   );

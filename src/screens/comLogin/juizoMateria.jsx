@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FaGavel, FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuDashboard.jsx';
+import MenuDashboard from '../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../assets/logo.png';

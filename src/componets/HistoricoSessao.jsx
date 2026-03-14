@@ -9,90 +9,64 @@ import React, { Component } from 'react';
 
 //mudança de páginas
 
-class HistoricoSessao extends Component {
-    state = {
-        historico: [
-            {
-                id: '1',
-                sessao: '11ª Sessão Ordinária do 2º Semestre de 2023 da 3ª Sessão Legislativa da 19ª Legislatura',
-                votadas: `34`,
-                sobrestadas: '21',
-                retiradas: '1',
-                destacadas: '5',
-                impedidas: '2',
-                suspeitas: '0',
-                vista: '10',
-
-            },
-        ]
+const HistoricoSessao = ({ sessao }) => {
+    if (!sessao) {
+        return null;
     }
 
+    // Calculate stats from the materias in the session
+    const getStatusCount = (status) => {
+        if (!sessao.itens) return 0;
+        return sessao.itens.filter(item => item.status === status).length;
+    }
 
+    const stats = {
+        votadas: getStatusCount('Aprovado') + getStatusCount('Rejeitado'),
+        sobrestadas: getStatusCount('Sobrestado'),
+        retiradas: getStatusCount('Retirado de Pauta'),
+        destacadas: getStatusCount('Destaque'),
+        impedidas: getStatusCount('Impedido'),
+        suspeitas: getStatusCount('Suspeição'),
+        vista: getStatusCount('Vista'),
+    };
 
-
-    render() {
-        const historicos = this.state.historico
-        if(historicos.length>4){
-            historicos.length = 4
-        }
-
-        const listCategories = historicos.map((historico) =>
-            <li key={(historico.id)} className="historicoItem"
-                onClick={
-                    () => {
-                        // window.location.href = "/produto"
-                        // this.setState({id: aviso.id}, () => {
-                        // (this.props.clickButton(this.state))
-                        //   }
-                    }
-                }
-            >
-                <div className='vacinaItem ' >
-                    <p className='titleHistorico' >{historico.sessao}</p>
-                    <p className='descricaoHistorico' >
+    return (
+        <ul className='vistosHome historico-sessao-virtual'>
+            <li className="historicoItem">
+                <div className='vacinaItem'>
+                    <p className='titleHistorico'>Resumo da Sessão</p>
+                    <p className='descricaoHistorico'>
                         <span>Matérias Votadas:</span>
-                        <b className='historico-numero'>{historico.votadas}</b>
+                        <b className='historico-numero'>{stats.votadas}</b>
                     </p>
-                    <p className='descricaoHistorico' >
+                    <p className='descricaoHistorico'>
                         <span>Matérias Sobrestadas:</span>
-                        <b className='historico-numero'>{historico.sobrestadas}</b>
+                        <b className='historico-numero'>{stats.sobrestadas}</b>
                     </p>
-                    <p className='descricaoHistorico' >
-                        <span>Matérias Retiras de Pauta:</span>
-                        <b className='historico-numero'>{historico.retiradas}</b>
+                    <p className='descricaoHistorico'>
+                        <span>Matérias Retiradas de Pauta:</span>
+                        <b className='historico-numero'>{stats.retiradas}</b>
                     </p>
-                    <p className='descricaoHistorico' >
+                    <p className='descricaoHistorico'>
                         <span>Matérias Destacadas:</span>
-                        <b className='historico-numero'>{historico.destacadas}</b>
+                        <b className='historico-numero'>{stats.destacadas}</b>
                     </p>
-                    <p className='descricaoHistorico' >
+                    <p className='descricaoHistorico'>
                         <span>Matérias com Impedimento:</span>
-                        <b className='historico-numero'>{historico.impedidas}</b>
+                        <b className='historico-numero'>{stats.impedidas}</b>
                     </p>
-                    <p className='descricaoHistorico' >
-                        <span>Matérias com suspeição:</span>
-                        <b className='historico-numero'>{historico.suspeitas}</b>
+                    <p className='descricaoHistorico'>
+                        <span>Matérias com Suspeição:</span>
+                        <b className='historico-numero'>{stats.suspeitas}</b>
                     </p>
-                    <p className='descricaoHistorico' >
-                        <span>Matérias em vista:</span>
-                        <b className='historico-numero'>{historico.vista}</b>
+                    <p className='descricaoHistorico'>
+                        <span>Matérias em Vista:</span>
+                        <b className='historico-numero'>{stats.vista}</b>
                     </p>
                 </div>
             </li>
-        )
-
-
-
-        return (
-            <>
-                <ul className='vistosHome historico-sessao-virtual'>
-                    
-                    {listCategories}
-                </ul>
-            </>
-
-        );
-    }
+        </ul>
+    );
 }
 
 export default HistoricoSessao;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone, FaCheck, FaUpload, FaEye, FaArrowLeft } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import MenuDashboard from '../../../componets/menuDashboard.jsx';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import { sendMessageToAIPrivate, startAtaGenerationJob, listenToAtaJob } from '../../../aiService.js';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';

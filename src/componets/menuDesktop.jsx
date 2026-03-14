@@ -1,22 +1,31 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-    FaHome, FaGavel, FaFileAlt, FaVideo, FaBook, 
+    FaHome, FaGavel, FaFileAlt, FaVideo, FaBook, FaBars, FaTimes, 
     FaRobot 
 } from 'react-icons/fa';
 import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
 import '../App.css';
 
-const MenuDesktop = ({ onOpenChat, camaraId }) => {
+const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
     const location = useLocation();
 
     // Função auxiliar para verificar se a rota está ativa
     const isActive = (path) => location.pathname === path ? 'link-desktop-active' : '';
 
     return (
-        <div className="menuDesktop">
+        <>
+            {/* Checkbox e labels para controlar o menu mobile sem JavaScript */}
+            <input type="checkbox" id="mobile-menu-toggle-checkbox" className="mobile-menu-toggle-checkbox" />
+            <label htmlFor="mobile-menu-toggle-checkbox" className="mobile-menu-toggle">
+                <FaBars className="hamburger-icon" />
+                <FaTimes className="close-icon" />
+            </label>
+            <label htmlFor="mobile-menu-toggle-checkbox" className="mobile-menu-overlay"></label>
+
+            <div className="menuDesktop">
             <div className="logoDesktop">
-                <img src={logoCamaraAI} alt="Camara AI Logo" className="logo-sidebar" />
+                <img src={logo || logoCamaraAI} alt="Camara AI Logo" className="logo-sidebar" />
             </div>
 
             <nav className="nav-desktop">
@@ -53,6 +62,7 @@ const MenuDesktop = ({ onOpenChat, camaraId }) => {
                 </div>
             </nav>
         </div>
+        </>
     );
 };
 

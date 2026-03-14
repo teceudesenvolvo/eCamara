@@ -11,6 +11,9 @@
       },
       "users": {
         ".indexOn": "tipo"
+      },
+      "sessoes": {
+        ".indexOn": "createdAt"
       }
     }
   }
