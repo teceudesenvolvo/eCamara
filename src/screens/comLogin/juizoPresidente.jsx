@@ -39,7 +39,7 @@ class JuizoPresidente extends Component {
             if (user) {
                 const userIndexRef = ref(db, `users_index/${user.uid}`);
                 const snapshot = await get(userIndexRef);
-                const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
                 this.setState({ camaraId });
                 this.loadImages();
                 this.fetchMaterias(camaraId);
@@ -68,6 +68,7 @@ class JuizoPresidente extends Component {
 
     fetchComissoes = (camaraId) => {
         const comissoesRef = ref(db, `${camaraId}/comissoes`);
+        console.log("Buscando comissões para camaraId:", camaraId);
         onValue(comissoesRef, (snapshot) => {
             const comissoes = [];
             if (snapshot.exists()) {

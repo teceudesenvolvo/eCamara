@@ -3694,9 +3694,9 @@ h3 {
 /* Estilos do Rodapé Melhorado */
 .footer {
   /* Cor de fundo de fallback */
-  background-color: #003f36;
+  background: var(--primary-color, #126B5E);
   /* Gradiente diagonal mais vivo com uma textura sutil */
-  background: linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png');
+  background: var(--primary-color, linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png')) ;
   color: white;
   margin-top: auto;
   width: 100%;
@@ -5891,6 +5891,10 @@ footer>p {
 
 .page-title{
     margin-left: 70px !important;
+}
+
+.color-navMenu-public{
+  background: var(--primary-color, #126B5E);
 }
 
 
