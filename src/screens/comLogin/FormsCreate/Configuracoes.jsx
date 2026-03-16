@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
-import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel, FaSpinner } from 'react-icons/fa';
+import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel, FaSpinner, FaUsers, FaUserShield, FaPlus, FaPencilAlt, FaTimes, FaUserPlus, FaCopy } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import { db } from '../../../firebaseConfig';
-import { ref, get, update } from 'firebase/database';
+import { query, orderByChild, equalTo, ref, get, update, push, set, remove } from 'firebase/database';
+
+import { auth } from '../../../firebaseConfig';
 
 class Configuracoes extends Component {
     constructor(props) {
@@ -15,43 +17,120 @@ class Configuracoes extends Component {
             atasText: '',
             isSaving: false,
             loading: true,
-            camaraId: 'camara-teste'
+            camaraId: this.props.match.params.camaraId,
+            // State for new tabs
+            users: [],
+            comissoes: [],
+            // State for commission management modals
+            showComissaoModal: false,
+            editingComissao: null,
+            comissaoFormData: { nome: '', descricao: '' },
+            showAddMemberModal: false,
+            commissionToUpdateMembers: null,
+            // State for User Invite
+            showInviteModal: false,
+            inviteType: 'vereador',
         };
     }
 
     componentDidMount() {
-        // Extrai o camaraId da URL ou usa o padrão
-        const pathParts = window.location.pathname.split('/').filter(Boolean);
-        const camaraId = pathParts.length > 1 ? pathParts[1] : 'camara-teste';
-        
-        this.setState({ camaraId }, () => {
-            this.fetchConfig();
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                if (!this.state.camaraId || this.state.camaraId === 'camara-teste') {
+                    const userIndexRef = ref(db, `users_index/${user.uid}`);
+                    const snapshot = await get(userIndexRef);
+                    const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                    this.setState({ camaraId }, () => this.fetchConfig());
+                } else {
+                    this.fetchConfig();
+                }
+            }
         });
     }
 
+    // --- Modal Handlers ---
+    handleOpenInviteModal = () => {
+        this.setState({ showInviteModal: true });
+    }
+
+    handleCloseInviteModal = () => {
+        this.setState({ showInviteModal: false });
+    }
+
     fetchConfig = async () => {
+
         const { camaraId } = this.state;
-        const configRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
+
         try {
-            const snapshot = await get(configRef);
-            if (snapshot.exists()) {
-                this.setState({ ...snapshot.val(), loading: false });
-            } else {
-                this.setState({ loading: false });
+
+            const baseRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
+            const usersRef = ref(db, `${camaraId}/users`);
+            const comissoesRef = ref(db, `${camaraId}/comissoes`);
+
+            const [baseSnapshot, usersSnapshot, comissoesSnapshot] = await Promise.all([
+                get(baseRef),
+                get(usersRef),
+                get(comissoesRef)
+            ]);
+
+            let baseData = {};
+            let usersList = [];
+            let comissoesList = [];
+
+            if (baseSnapshot.exists()) {
+                baseData = baseSnapshot.val();
             }
+
+            if (usersSnapshot.exists()) {
+                usersSnapshot.forEach(child => {
+                    usersList.push({
+                        id: child.key,
+                        ...child.val()
+                    });
+                });
+            }
+
+            if (comissoesSnapshot.exists()) {
+                comissoesSnapshot.forEach(child => {
+                    comissoesList.push({
+                        id: child.key,
+                        ...child.val()
+                    });
+                });
+            }
+
+            this.setState({
+                regimentoText: baseData.regimentoText || '',
+                leiOrganicaText: baseData.leiOrganicaText || '',
+                materiasText: baseData.materiasText || '',
+                atasText: baseData.atasText || '',
+                users: usersList,
+                comissoes: comissoesList,
+                loading: false
+            });
+
         } catch (error) {
-            console.error("Erro ao buscar configurações da base:", error);
-            this.setState({ loading: false });
+
+            console.error("Erro ao buscar configurações:", error);
+
+            this.setState({
+                loading: false
+            });
+
         }
+
     };
 
     handleSave = async () => {
         const { camaraId, regimentoText, leiOrganicaText, materiasText, atasText } = this.state;
         this.setState({ isSaving: true });
-        
-        const configRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
-        const config = { regimentoText, leiOrganicaText, materiasText, atasText };
-        
+        const { camaraId: camaraIdUrl } = this.props.match.params.camaraId;
+        const camaraIdParaSalvar = this.props.match.params.camaraId;// Prioriza o camaraId da URL, mas cai para o estado se não tiver
+
+        const configRef = ref(db, `${camaraIdParaSalvar}/dados-config/base-conhecimento`);
+
+        const config = { regimentoText, leiOrganicaText, materiasText, atasText, camaraId };
+
         try {
             await update(configRef, config);
             alert('Base de Conhecimento atualizada com sucesso! A IA agora utilizará estas informações para gerar documentos mais precisos.');
@@ -61,6 +140,198 @@ class Configuracoes extends Component {
         } finally {
             this.setState({ isSaving: false });
         }
+    };
+
+    // --- User and Commission Handlers (Moved from LayoutManager) ---
+
+    handleUpdateUserType = async (userId, newType) => {
+        const { camaraId } = this.state;
+        try {
+            const userRef = ref(db, `${camaraId}/users/${userId}`);
+            await update(userRef, { tipo: newType });
+            this.fetchConfig(); // Refetch to update UI
+        } catch (error) {
+            console.error("Erro ao atualizar tipo de usuário:", error);
+        }
+    };
+
+    handleGenerateAndCopyInviteLink = () => {
+        const { camaraId, inviteType } = this.state; // Removido inviteEmail pois não é mais usado no estado
+
+        // Criar registro de convite no banco
+        const convitesRef = ref(db, `${camaraId}/convites`);
+        const newInviteRef = push(convitesRef);
+        const inviteId = newInviteRef.key;
+
+        const inviteData = {
+            tipo: inviteType,
+            createdAt: new Date().toISOString(),
+            used: false
+        };
+
+        set(newInviteRef, inviteData).then(() => {
+            const inviteLink = `${window.location.origin}/register?invite=${inviteId}&camara=${camaraId}`;
+            navigator.clipboard.writeText(inviteLink)
+                .then(() => alert(`Link de convite criado e copiado!\n\nEnvie este link para o novo usuário.`))
+                .catch(err => console.error('Erro ao copiar link: ', err));
+        });
+
+        this.handleCloseInviteModal();
+    };
+
+    handleOpenComissaoModal = (comissao = null) => {
+        if (comissao) {
+            this.setState({
+                showComissaoModal: true,
+                editingComissao: comissao,
+                comissaoFormData: { nome: comissao.nome, descricao: comissao.descricao }
+            });
+        } else {
+            this.setState({
+                showComissaoModal: true,
+                editingComissao: null,
+                comissaoFormData: { nome: '', descricao: '' }
+            });
+        }
+    };
+
+    handleCloseComissaoModal = () => {
+        this.setState({ showComissaoModal: false, editingComissao: null });
+    };
+
+    handleComissaoFormChange = (e) => {
+        const { name, value } = e.target;
+        this.setState(prevState => ({
+            comissaoFormData: { ...prevState.comissaoFormData, [name]: value }
+        }));
+    };
+
+    handleSaveComissao = async () => {
+        const { camaraId, editingComissao, comissaoFormData } = this.state;
+        if (!comissaoFormData.nome) {
+            alert("O nome da comissão é obrigatório.");
+            return;
+        }
+        try {
+            if (editingComissao) {
+                await update(ref(db, `${camaraId}/comissoes/${editingComissao.id}`), comissaoFormData);
+            } else {
+                await push(ref(db, `${camaraId}/comissoes`), comissaoFormData);
+            }
+            alert('Comissão salva com sucesso!');
+            this.handleCloseComissaoModal();
+            this.fetchConfig();
+        } catch (error) {
+            console.error("Erro ao salvar comissão:", error);
+            alert("Erro ao salvar comissão.");
+        }
+    };
+
+    handleOpenAddMemberModal = (comissao) => this.setState({ showAddMemberModal: true, commissionToUpdateMembers: comissao });
+    handleCloseAddMemberModal = () => this.setState({ showAddMemberModal: false, commissionToUpdateMembers: null });
+
+    handleAddMemberToCommission = async (user) => {
+        const { camaraId, commissionToUpdateMembers } = this.state;
+        const memberData = { id: user.id, nome: user.nome, foto: user.foto || '', cargo: 'Membro' };
+        const memberRef = ref(db, `${camaraId}/comissoes/${commissionToUpdateMembers.id}/membros/${user.id}`);
+        await set(memberRef, memberData);
+        this.fetchConfig();
+    };
+
+    handleRemoveMember = async (comissaoId, memberId) => {
+        const { camaraId } = this.state;
+        await remove(ref(db, `${camaraId}/comissoes/${comissaoId}/membros/${memberId}`));
+        this.fetchConfig();
+    };
+
+    // --- Render Methods for New Tabs ---
+
+    renderUserManagement = () => {
+        const { camaraId, users } = this.state;
+        return (
+            <div className="dashboard-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ color: 'var(--primary-color, #126B5E)', margin: 0 }}>Gestão de Usuários - {camaraId}</h3>
+                    <button className="btn-primary" style={{ width: 'auto' }} onClick={this.handleOpenInviteModal}><FaUserPlus /> Convidar Membro</button>
+                </div>
+                <div className="matters-list-container" style={{ width: '100%', boxShadow: 'none', border: '1px solid #eee' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', padding: '10px 20px', background: '#f8f9fa', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                        <span>Nome / Email</span>
+                        <span>Tipo de Acesso</span>
+                        <span style={{ textAlign: 'right' }}>Ações</span>
+                    </div>
+                    {users && users.length > 0 ? users.map(user => (
+                        <div key={user.id} className="matter-item" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', alignItems: 'center' }}>
+                            <div style={{ textAlign: 'left' }}>
+                                <p style={{ margin: 0, fontWeight: 'bold', color: '#333' }}>{user.nome || 'Usuário sem nome'}</p>
+                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>{user.email}</p>
+                            </div>
+                            <div>
+                                <select className="modal-input" style={{ padding: '5px', fontSize: '0.85rem' }} value={user.tipo || 'cidadao'} onChange={(e) => this.handleUpdateUserType(user.id, e.target.value)}>
+                                    <option value="cidadao">Cidadão</option>
+                                    <option value="vereador">Vereador</option>
+                                    <option value="procurador">Procuradoria</option>
+                                    <option value="presidente">Presidente</option>
+                                    <option value="admin">Administrador</option>
+                                </select>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontSize: '0.8rem', color: '#666' }}>Ativo</span>
+                            </div>
+                        </div>
+                    )) : <p style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Nenhum usuário encontrado nesta câmara.</p>}
+                </div>
+            </div>
+        );
+    };
+
+    renderComissoesManager = () => {
+        const { comissoes } = this.state;
+        return (
+            <div className="dashboard-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ color: 'var(--primary-color, #126B5E)', margin: 0 }}>Gerenciar Comissões</h3>
+                    <button className="btn-primary" style={{ width: 'auto' }} onClick={() => this.handleOpenComissaoModal()}><FaPlus /> Nova Comissão</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {comissoes.map(comissao => (
+                        <div key={comissao.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h4 style={{ margin: 0, color: '#333' }}>{comissao.nome}</h4>
+                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.9rem', color: '#666' }}>{comissao.descricao}</p>
+                                </div>
+                                <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: '0.8rem' }} onClick={() => this.handleOpenComissaoModal(comissao)}><FaPencilAlt /> Editar</button>
+                            </div>
+                            <div style={{ width: '100%', borderTop: '1px solid #eee', marginTop: '15px', paddingTop: '15px' }}>
+                                <h5 style={{ margin: '0 0 10px 0', color: '#555' }}>Membros</h5>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+                                    {comissao.membros && Object.values(comissao.membros).length > 0 ? Object.values(comissao.membros).map(membro => (
+                                        <div key={membro.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f5', padding: '5px 10px', borderRadius: '8px' }}>
+                                            <img src={membro.foto} alt={membro.nome} style={{ width: '25px', height: '25px', borderRadius: '50%' }} />
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{membro.nome}</span>
+                                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }} onClick={() => this.handleRemoveMember(comissao.id, membro.id)}><FaTimes size={12} /></button>
+                                        </div>
+                                    )) : (
+                                        <p style={{ fontSize: '0.85rem', color: '#999', fontStyle: 'italic' }}>Nenhum membro.</p>
+                                    )}
+                                    <button
+                                        onClick={() => this.handleOpenAddMemberModal(comissao)}
+                                        style={{
+                                            width: '35px', height: '35px', borderRadius: '50%', border: '2px dashed #ccc',
+                                            background: 'none', cursor: 'pointer', color: '#aaa', display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center'
+                                        }}
+                                    >
+                                        <FaUserPlus />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     };
 
     renderContent = () => {
@@ -93,6 +364,12 @@ class Configuracoes extends Component {
                 value = atasText;
                 onChangeKey = 'atasText';
                 break;
+            case 'usuarios':
+                return this.renderUserManagement();
+            case 'comissoes':
+                // This will call the full render method for commissions
+                return this.renderComissoesManager();
+                break;
             default:
                 return null;
         }
@@ -110,15 +387,15 @@ class Configuracoes extends Component {
                         </h2>
                         <p style={{ color: '#666', margin: '8px 0 0 0', fontSize: '0.95rem' }}>{description}</p>
                     </div>
-                    <button className="btn-primary" onClick={this.handleSave} disabled={this.state.isSaving} style={{ height: '45px' }}>
-                        {this.state.isSaving ? <FaSpinner className="animate-spin" /> : <FaSave />} {this.state.isSaving ? 'Salvando...' : 'Salvar Dados'}
+                    <button className="btn-primary" onClick={this.handleSave} disabled={this.state.isSaving} style={{ height: '45px', alignSelf: 'center' }}>
+                        {this.state.isSaving ? <FaSpinner className="animate-spin" /> : <FaSave />} {this.state.isSaving ? 'Salvando...' : 'Salvar'}
                     </button>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
                     <label style={{ display: 'block', marginBottom: '10px', fontWeight: '700', color: '#333', fontSize: '0.9rem' }}>CONTEÚDO E REGRAS (PARA A IA)</label>
-                    <textarea 
-                        className="modal-textarea" 
+                    <textarea
+                        className="modal-textarea"
                         rows="20"
                         placeholder={`Cole o conteúdo do ${title} aqui...`}
                         value={value}
@@ -130,8 +407,8 @@ class Configuracoes extends Component {
                 <div style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
                     <label style={{ display: 'block', marginBottom: '10px', fontWeight: '700', color: '#333', fontSize: '0.9rem' }}>UPLOAD DE DOCUMENTOS COMPLEMENTARES</label>
                     <div style={{ border: '2px dashed #ccc', borderRadius: '12px', padding: '40px', textAlign: 'center', color: '#888', cursor: 'pointer', backgroundColor: '#fcfcfc', transition: 'all 0.2s' }}
-                         onMouseOver={(e) => e.currentTarget.style.borderColor = '#126B5E'}
-                         onMouseOut={(e) => e.currentTarget.style.borderColor = '#ccc'}>
+                        onMouseOver={(e) => e.currentTarget.style.borderColor = '#126B5E'}
+                        onMouseOut={(e) => e.currentTarget.style.borderColor = '#ccc'}>
                         <FaUpload size={30} style={{ marginBottom: '10px', color: '#126B5E' }} />
                         <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>Arraste arquivos aqui ou clique para selecionar</p>
                         <p style={{ fontSize: '0.8rem', margin: '8px 0 0 0' }}>(PDF, DOCX ou TXT)</p>
@@ -142,7 +419,7 @@ class Configuracoes extends Component {
     };
 
     render() {
-        const { activeTab, loading } = this.state;
+        const { activeTab, loading, users, showInviteModal, showComissaoModal, showAddMemberModal } = this.state;
 
         if (loading) {
             return (
@@ -156,13 +433,13 @@ class Configuracoes extends Component {
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
                 <div className="dashboard-content" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
-                    
+
                     {/* Sidebar de Navegação */}
                     <div style={{ flex: 1, maxWidth: '300px' }}>
                         <div className="dashboard-header" style={{ marginBottom: '20px' }}>
                             <div>
                                 <h1 className="dashboard-header-title">
-                                    <FaCog className="icon-primary" /> Configurações
+                                    <FaCog className="icon-primary" /> Configurações Gerais
                                 </h1>
                                 <p className="dashboard-header-desc">Base de Conhecimento da IA.</p>
                             </div>
@@ -173,18 +450,21 @@ class Configuracoes extends Component {
                                 { id: 'regimento', label: 'Regimento Interno', icon: <FaBook /> },
                                 { id: 'lei_organica', label: 'Lei Orgânica', icon: <FaGavel /> },
                                 { id: 'materias', label: 'Matérias Antigas', icon: <FaHistory /> },
-                                { id: 'atas', label: 'Atas e Sessões', icon: <FaFileAlt /> }
+                                { id: 'atas', label: 'Atas e Sessões', icon: <FaFileAlt /> },
+                                { id: 'usuarios', label: 'Gestão de Usuários', icon: <FaUserShield /> },
+                                { id: 'comissoes', label: 'Gestão de Comissões', icon: <FaUsers /> },
                             ].map(item => (
-                                <div 
+                                <div
                                     key={item.id}
-                                    className="list-item" 
-                                    style={{ 
-                                        margin: 0, 
-                                        borderRadius: 0, 
-                                        borderBottom: '1px solid #eee', 
-                                        cursor: 'pointer', 
+                                    className="list-item"
+                                    style={{
+                                        margin: 0,
+                                        borderRadius: 0,
+                                        borderBottom: '1px solid #eee',
+                                        cursor: 'pointer',
                                         background: activeTab === item.id ? '#e0f2f1' : 'white',
-                                        borderLeft: activeTab === item.id ? '4px solid #126B5E' : '4px solid transparent'
+                                        borderLeft: activeTab === item.id ? '4px solid #126B5E' : '4px solid transparent',
+                                        height: '20px',
                                     }}
                                     onClick={() => this.setState({ activeTab: item.id })}
                                 >
@@ -204,6 +484,93 @@ class Configuracoes extends Component {
                         {this.renderContent()}
                     </div>
                 </div>
+
+                {/* Modals placed outside dashboard-content to avoid overflow/z-index issues */}
+
+                {/* Modal de Convite */}
+                {showInviteModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content" style={{ width: '400px' }}>
+                            <div className="modal-header">
+                                <h2 style={{ margin: 0 }}>Convidar Novo Membro</h2>
+                                <button onClick={this.handleCloseInviteModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}><FaTimes /></button>
+                            </div>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Tipo de Acesso</label>
+                                <select className="modal-input" value={this.state.inviteType} onChange={(e) => this.setState({ inviteType: e.target.value })}>
+                                    <option value="admin">Administrador</option>
+                                    <option value="vereador">Vereador</option>
+                                    <option value="presidente">Presidente</option>
+                                    <option value="presidente_comissao">Presidente Comissão</option>
+                                    <option value="relator">Relator</option>
+                                    <option value="juridico">Jurídico</option>
+                                    <option value="secretario">Secretário</option>
+                                </select>
+                            </div>
+                            <div className="modal-footer">
+                                <button onClick={this.handleCloseInviteModal} className="btn-secondary">Cancelar</button>
+                                <button onClick={this.handleGenerateAndCopyInviteLink} className="btn-primary">Gerar e Copiar Link</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal para Criar/Editar Comissão */}
+                {showComissaoModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content" style={{ width: '500px' }}>
+                            <div className="modal-header">
+                                <h2 style={{ margin: 0 }}>{this.state.editingComissao ? 'Editar Comissão' : 'Criar Nova Comissão'}</h2>
+                                <button onClick={this.handleCloseComissaoModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}><FaTimes /></button>
+                            </div>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' }}>Nome da Comissão</label>
+                                <input type="text" name="nome" value={this.state.comissaoFormData.nome} onChange={this.handleComissaoFormChange} className="modal-input" placeholder="Ex: Comissão de Educação e Cultura" />
+                            </div>
+                            <div style={{ marginBottom: '25px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' }}>Descrição</label>
+                                <textarea rows="4" name="descricao" value={this.state.comissaoFormData.descricao} onChange={this.handleComissaoFormChange} className="modal-textarea" placeholder="Descreva brevemente a finalidade da comissão..."></textarea>
+                            </div>
+                            <div className="modal-footer">
+                                <button onClick={this.handleCloseComissaoModal} className="btn-secondary">Cancelar</button>
+                                <button onClick={this.handleSaveComissao} className="btn-primary">Salvar</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal para Adicionar Membros */}
+                {showAddMemberModal && this.state.commissionToUpdateMembers && (
+                    <div className="modal-overlay">
+                        <div className="modal-content" style={{ width: '500px' }}>
+                            <div className="modal-header">
+                                <h2 style={{ margin: 0 }}>Adicionar Membro a "{this.state.commissionToUpdateMembers.nome}"</h2>
+                                <button onClick={this.handleCloseAddMemberModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}><FaTimes /></button>
+                            </div>
+                            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                {/* Lista todos os usuários da câmara para serem adicionados, não apenas vereadores, caso queira adicionar assessores etc */}
+                                {users.map(user => {
+                                    const isMember = this.state.commissionToUpdateMembers.membros && Object.values(this.state.commissionToUpdateMembers.membros).some(m => m.id === user.id);
+                                    return (
+                                        <div key={user.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
+                                            <span>{user.nome}</span>
+                                            <button
+                                                className={isMember ? "btn-secondary" : "btn-primary"}
+                                                disabled={isMember}
+                                                onClick={() => !isMember && this.handleAddMemberToCommission(user)}
+                                            >
+                                                {isMember ? 'Já é Membro' : 'Adicionar'}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="modal-footer">
+                                <button onClick={this.handleCloseAddMemberModal} className="btn-secondary">Fechar</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }

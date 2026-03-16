@@ -10,19 +10,27 @@ class AdminDocumentsDash extends Component {
         this.state = {
             documentos: [],
             loading: true,
-            searchTerm: ''
+            searchTerm: '',
+            camaraId: null
         };
     }
 
     componentDidMount() {
-        this.fetchDocumentos();
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const userIndexRef = ref(db, `users_index/${user.uid}`);
+                const snapshot = await get(userIndexRef);
+                const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                this.setState({ camaraId }, () => this.fetchDocumentos(user));
+            }
+        });
     }
 
-    fetchDocumentos = async () => {
-        const user = auth.currentUser;
+    fetchDocumentos = async (user) => {
+        const { camaraId } = this.state;
         if (user) {
             try {
-                const docsRef = ref(db, 'camara-teste/documentos_administrativos');
+                const docsRef = ref(db, `${camaraId}/documentos_administrativos`);
                 const q = query(docsRef, orderByChild('userId'), equalTo(user.uid));
                 const snapshot = await get(q);
                 const documentos = [];
@@ -38,11 +46,6 @@ class AdminDocumentsDash extends Component {
                 console.error("Erro ao buscar documentos:", error);
                 this.setState({ loading: false });
             }
-        } else {
-            setTimeout(() => {
-                if (auth.currentUser) this.fetchDocumentos();
-                else this.setState({ loading: false });
-            }, 1000);
         }
     };
 

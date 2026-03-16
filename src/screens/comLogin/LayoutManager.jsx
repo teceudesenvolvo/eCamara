@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
 import MenuDashboard from '../../componets/menuAdmin.jsx';
-import { FaPalette, FaHome, FaUsers, FaCog, FaUserShield, FaSave, FaUserPlus } from 'react-icons/fa';
+import { FaPalette, FaHome, FaCog, FaSave } from 'react-icons/fa';
 import { db } from '../../firebaseConfig';
 import { ref, get, update } from 'firebase/database';
+import { auth } from '../../firebaseConfig';
 
 class LayoutManager extends Component {
     constructor(props) {
@@ -30,31 +31,23 @@ class LayoutManager extends Component {
     fetchLayoutData = async (camaraId) => {
         if (!camaraId) return;
         this.setState({ loading: true });
-        const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
-        const homeRef = ref(db, `${camaraId}/dados-config/home`);
-        const footerRef = ref(db, `${camaraId}/dados-config/footer`);
-        const usersRef = ref(db, `${camaraId}/users`);
+        const layoutRef = ref(db, `${this.props.match.params.camaraId}/dados-config/layout`);
+        const homeRef = ref(db, `${this.props.match.params.camaraId}/dados-config/home`);
+        const footerRef = ref(db, `${this.props.match.params.camaraId}/dados-config/footer`);
 
-        console.log("Buscando dados para câmara:", camaraId);
+        console.log("Buscando dados para câmara:", this.props.match.params.camaraId);
      
         try {
             // Busca todos os dados em paralelo para melhor performance
-            const [layoutSnapshot, homeSnapshot, footerSnapshot, usersSnapshot] = await Promise.all([
+            const [layoutSnapshot, homeSnapshot, footerSnapshot] = await Promise.all([
                 get(layoutRef),
                 get(homeRef),
                 get(footerRef),
-                get(usersRef)
             ]);
 
             const layoutData = layoutSnapshot.exists() ? layoutSnapshot.val() : {};
             const homeData = homeSnapshot.exists() ? homeSnapshot.val() : {};
             const footerData = footerSnapshot.exists() ? footerSnapshot.val() : {};
-            const usersList = [];
-            if (usersSnapshot.exists()) {
-                Object.entries(usersSnapshot.val()).forEach(([key, val]) => {
-                    usersList.push({ id: key, ...val });
-                });
-            }
 
             this.setState({
                 layoutConfig: {
@@ -70,7 +63,6 @@ class LayoutManager extends Component {
                     footerEmail: footerData.email || '',
                     footerCopyright: footerData.copyright || footerData.footerCopyright || '',
                 },
-                users: usersList,
                 loading: false
             });
         } catch (error) {
@@ -165,79 +157,29 @@ class LayoutManager extends Component {
         );
     };
 
-    renderUserManagement = () => {
-        const { selectedCamara, users } = this.state;
-        return (
-            <div className="dashboard-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ color: 'var(--primary-color, #126B5E)', margin: 0 }}>Gestão de Usuários - {selectedCamara}</h3>
-                    <button className="btn-primary" style={{ width: 'auto' }}><FaUserShield /> Convidar Membro</button>
-                </div>
-                <div className="matters-list-container" style={{ width: '100%', boxShadow: 'none', border: '1px solid #eee' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', padding: '10px 20px', background: '#f8f9fa', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                        <span>Nome / Email</span>
-                        <span>Tipo de Acesso</span>
-                        <span style={{ textAlign: 'right' }}>Ações</span>
-                    </div>
-                    {users && users.length > 0 ? users.map(user => (
-                        <div key={user.id} className="matter-item" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', alignItems: 'center' }}>
-                            <div style={{ textAlign: 'left' }}>
-                                <p style={{ margin: 0, fontWeight: 'bold', color: '#333' }}>{user.nome || 'Usuário sem nome'}</p>
-                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>{user.email}</p>
-                            </div>
-                            <div>
-                                <select className="modal-input" style={{ padding: '5px', fontSize: '0.85rem' }} value={user.tipo || 'cidadao'} onChange={(e) => this.handleUpdateUserType(user.id, e.target.value)}>
-                                    <option value="cidadao">Cidadão</option>
-                                    <option value="vereador">Vereador</option>
-                                    <option value="procurador">Procuradoria</option>
-                                    <option value="presidente">Presidente</option>
-                                    <option value="admin">Administrador</option>
-                                </select>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: '0.7rem' }}>Resetar Senha</button>
-                            </div>
-                        </div>
-                    )) : <p style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Nenhum usuário encontrado nesta câmara.</p>}
-                </div>
-            </div>
-        );
-    };
-
     componentDidMount() {
-        console.log(this.state);
-        this.fetchCamaras();
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const camaraIdFromUrl = this.props.match?.params?.camaraId;
+
+                if (camaraIdFromUrl) {
+                    this.setState({ selectedCamara: camaraIdFromUrl }, () => this.fetchLayoutData(camaraIdFromUrl));
+                } else {
+                    const userIndexRef = ref(db, `users_index/${user.uid}`);
+                    const snapshot = await get(userIndexRef);
+                    // Se o usuário não for admin geral, força a seleção apenas da câmara dele
+                    const userCamaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                    
+                    // Aqui assumimos que LayoutManager deve gerenciar apenas a câmara do usuário logado
+                    this.setState({ selectedCamara: userCamaraId }, () => this.fetchLayoutData(userCamaraId));
+                }
+            }
+        });
     }
 
     componentDidUpdate(prevProps, prevState) {
         if (prevState.selectedCamara !== this.state.selectedCamara) {
             this.fetchLayoutData(this.state.selectedCamara);
-        }
-    }
-
-    fetchCamaras = async () => {
-        const rootRef = ref(db, '/');
-        try {
-            const snapshot = await get(rootRef);
-            if (snapshot.exists()) {
-                const camaraIds = Object.keys(snapshot.val());
-                const camaras = camaraIds.map(id => ({ id: id, name: id.replace(/-/g, ' ').replace(/(^\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase()) }));
-                this.setState({ 
-                    camaras, 
-                    selectedCamara: camaras.length > 0 ? camaras[0].id : '' 
-                }, () => {
-                    if (this.state.selectedCamara) {
-                        this.fetchLayoutData(this.state.selectedCamara);
-                    } else {
-                        this.setState({ loading: false });
-                    }
-                });
-            } else {
-                this.setState({ loading: false });
-            }
-        } catch (error) {
-            console.error("Erro ao buscar lista de câmaras:", error);
-            this.setState({ loading: false });
         }
     }
 
@@ -253,26 +195,15 @@ class LayoutManager extends Component {
         }));
     };
 
-    handleUpdateUserType = async (userId, newType) => {
-        const { selectedCamara } = this.state;
-        try {
-            const userRef = ref(db, `${selectedCamara}/users/${userId}`);
-            await update(userRef, { tipo: newType });
-            this.fetchLayoutData(selectedCamara);
-        } catch (error) {
-            console.error("Erro ao atualizar tipo de usuário:", error);
-        }
-    };
-
     handleSaveLayout = async () => {
         const { selectedCamara, layoutConfig } = this.state;
         if (!selectedCamara) {
             alert("Nenhuma câmara selecionada.");
             return;
         }
-        const layoutRef = ref(db, `${selectedCamara}/dados-config/layout`);
-        const homeRef = ref(db, `${selectedCamara}/dados-config/home`);
-        const footerRef = ref(db, `${selectedCamara}/dados-config/footer`);
+        const layoutRef = ref(db, `${this.props.match.params.camaraId}/dados-config/layout`);
+        const homeRef = ref(db, `${this.props.match.params.camaraId}/dados-config/home`);
+        const footerRef = ref(db, `${this.props.match.params.camaraId}/dados-config/footer`);
 
         try {
             // Save colors to layout node
@@ -302,13 +233,12 @@ class LayoutManager extends Component {
     };
 
     render() {
-        const { activeTab, selectedCamara, camaras, layoutConfig, loading, users } = this.state;
+        const { activeTab, selectedCamara, camaras, layoutConfig, loading } = this.state;
 
         const tabs = [
             { name: 'Home', icon: <FaHome /> },
             { name: 'Rodapé', icon: <FaPalette /> },
             { name: 'Geral', icon: <FaCog /> },
-            { name: 'Usuários', icon: <FaUserShield /> },
         ];
 
         return (
@@ -320,16 +250,7 @@ class LayoutManager extends Component {
                             <h1 className="dashboard-header-title"><FaPalette /> Gerenciador de Layouts</h1>
                             <p className="dashboard-header-desc">Configure a aparência e o conteúdo de cada câmara.</p>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <label style={{ fontWeight: '600', color: '#555' }}>Editando:</label>
-                            <select 
-                                className="filter-select" 
-                                value={selectedCamara} 
-                                onChange={(e) => this.setState({ selectedCamara: e.target.value })}
-                            >
-                                {camaras.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
+                        {/* Removido seletor de câmaras, agora gerencia apenas a câmara do usuário */}
                     </div>
 
                     {/* Abas de Navegação */}
@@ -360,7 +281,6 @@ class LayoutManager extends Component {
                             {activeTab === 'Home' && this.renderHomeLayoutEditor()}
                             {activeTab === 'Rodapé' && this.renderFooterLayoutEditor()}
                             {activeTab === 'Geral' && this.renderGeneralSettingsEditor()}
-                            {activeTab === 'Usuários' && this.renderUserManagement()}
                         </>
                     )}
                 </div>

@@ -3503,7 +3503,7 @@ video {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 5000;
   /* Ensure it's on top of other content */
 }
 
@@ -4979,13 +4979,14 @@ footer>p {
   border: none;
   cursor: pointer;
   color: #555;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 8px;
   border-radius: 50%;
   transition: background-color 0.2s ease;
   margin-right: 15px;
+
 }
 
 .menu-toggle-btn:hover {
@@ -5284,12 +5285,13 @@ footer>p {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 12px;
 }
 
 .dashboard-header-title {
   color: #126B5E;
   margin: 0;
-  font-size: 2rem;
+  font-size: 20px;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -5463,7 +5465,7 @@ footer>p {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999 !important;
 }
 
 .modal-content {
@@ -5473,6 +5475,23 @@ footer>p {
   width: 600px;
   max-width: 90%;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  text-align: left;
+}
+
+.modal-content > h2 {
+  margin-top: 0;
+  color: #126B5E;
+  font-size: 18px;
+}
+
+.modal-content > div > label{
+  font-size: 12px !important;
+  color: #333;
+}
+
+.modal-content > div > div > svg {
+  color: #126B5E;
+  font-size: 14px;
 }
 
 .modal-header {
@@ -5484,6 +5503,7 @@ footer>p {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 10px;
 }
 
 .detalhes-materia>p {
@@ -5508,6 +5528,7 @@ footer>p {
   box-sizing: border-box;
   color: #000 !important;
   background-color: #f9f9f9 !important;
+  height: 200px;
 }
 
 .label-form {
@@ -5587,6 +5608,7 @@ footer>p {
   flex: 1;
   margin-right: 20px;
   text-align: left;
+  font-size: 14px;
 }
 
 .list-item-header {
@@ -5867,14 +5889,23 @@ footer>p {
   cursor: pointer;
 }
 
+.page-title{
+    margin-left: 70px !important;
+}
+
+
 @media (max-width: 768px) {
+
+  .page-title{
+    margin-left: 0px !important;
+  }
 
   /* Mostra o botão hamburger no mobile */
   .mobile-menu-toggle {
     display: flex;
     position: fixed;
-    top: 90%;
-    left: 85%;
+    top: 1%;
+    left: 90%;
     z-index: 1001;
     /* Acima de tudo */
     background: var(--primary-color, #126B5E);

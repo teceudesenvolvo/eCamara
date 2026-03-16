@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
-import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaSearch, FaTrash, FaFileAlt, FaMagic } from 'react-icons/fa';
+import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaSearch, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { sendMessageToAIPrivate } from '../../aiService';
 import { db } from '../../firebaseConfig';
 import { ref, onValue, push, update, get } from 'firebase/database';
+import { auth } from '../../firebaseConfig';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -18,6 +19,7 @@ class PautasSessao extends Component {
             selectedSessao: null,
             novaData: '',
             novoTipo: 'Sessão Ordinária',
+            novaTransmissaoUrl: '',
             materiasDisponiveis: [],
             selectedMateriaToAdd: '',
             isGeneratingEdital: false,
@@ -25,16 +27,29 @@ class PautasSessao extends Component {
             isFinalizing: false,
             selectedMonth: '',
             roteiroPdfUrl: null, // Novo estado para armazenar a URL do PDF gerado
+            isEditingUrl: false,
+            editedTransmissaoUrl: '',
+            camaraId: this.props.match.params.camaraId
         };
     }
 
     componentDidMount() {
-        this.fetchSessoes();
-        this.fetchMateriasDisponiveis();
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const userIndexRef = ref(db, `users_index/${user.uid}`);
+                const snapshot = await get(userIndexRef);
+                const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
+                this.setState({ camaraId }, () => {
+                    this.fetchSessoes();
+                    this.fetchMateriasDisponiveis();
+                });
+            }
+        });
     }
 
     fetchSessoes = () => {
-        const sessoesRef = ref(db, 'camara-teste/sessoes');
+        const { camaraId } = this.state;
+        const sessoesRef = ref(db, `${this.props.match.params.camaraId}/sessoes`);
         onValue(sessoesRef, (snapshot) => {
             const sessoes = [];
             if (snapshot.exists()) {
@@ -47,7 +62,8 @@ class PautasSessao extends Component {
     };
 
     fetchMateriasDisponiveis = async () => {
-        const materiasRef = ref(db, 'camara-teste/materias');
+        const { camaraId } = this.state;
+        const materiasRef = ref(db, `${this.props.match.params.camaraId}/materias`);
         try {
             const snapshot = await get(materiasRef);
             const materiasDisponiveis = [];
@@ -55,7 +71,7 @@ class PautasSessao extends Component {
                 snapshot.forEach((childSnapshot) => {
                     const materia = childSnapshot.val();
                     // Condição para matéria estar apta para pauta (ex: status favorável ou aguardando plenário)
-                    if (['Parecer Favorável', 'Aguardando Despacho da Presidência', 'Enviado para Plenário'].includes(materia.status)) {
+                    if (materia.status === 'Enviado para Plenário') {
                         materiasDisponiveis.push({ id: childSnapshot.key, ...materia });
                     }
                 });
@@ -67,7 +83,7 @@ class PautasSessao extends Component {
     };
 
     handleOpenModal = () => {
-        this.setState({ showModal: true, selectedSessao: null, novaData: '', novoTipo: 'Sessão Ordinária' });
+        this.setState({ showModal: true, selectedSessao: null, novaData: '', novoTipo: 'Sessão Ordinária', novaTransmissaoUrl: '' });
     };
 
     handleCloseModal = () => {
@@ -75,7 +91,7 @@ class PautasSessao extends Component {
     };
 
     handleCreateSessao = async () => {
-        const { novaData, novoTipo, sessoes } = this.state;
+        const { novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId } = this.state;
         if (!novaData) {
             alert("Por favor, selecione uma data.");
             return;
@@ -87,13 +103,14 @@ class PautasSessao extends Component {
             data: novaData.split('-').reverse().join('/'), // Formata para DD/MM/AAAA
             tipo: novoTipo,
             numero: `${sessoesDoAno + 1}/${year}`,
+            transmissaoUrl: novaTransmissaoUrl || '',
             status: 'Em Elaboração',
             itens: [],
             edital: '',
             createdAt: Date.now()
         };
         try {
-            const sessoesRef = ref(db, 'camara-teste/sessoes');
+            const sessoesRef = ref(db, `${this.props.match.params.camaraId}/sessoes`);
             await push(sessoesRef, newSessao);
             this.setState({ showModal: false }); // O listener onValue atualizará a lista
         } catch (error) {
@@ -103,25 +120,42 @@ class PautasSessao extends Component {
     };
 
     handleSelectSessao = (sessao) => {
-        this.setState({ selectedSessao: sessao, editalText: sessao.edital || '', roteiroPdfUrl: null }); // Reseta o PDF ao selecionar nova sessão
+        this.setState({ 
+            selectedSessao: sessao, 
+            editalText: sessao.edital || '', 
+            roteiroPdfUrl: null, // Reseta o PDF ao selecionar nova sessão
+            isEditingUrl: false, // Reseta o modo de edição da URL
+            editedTransmissaoUrl: sessao.transmissaoUrl || '', // Define a URL atual para edição
+        });
     };
 
     handleAddItem = async () => {
-        const { selectedSessao, selectedMateriaToAdd, materiasDisponiveis } = this.state;
+        const { selectedSessao, selectedMateriaToAdd, materiasDisponiveis, camaraId } = this.state;
         if (!selectedMateriaToAdd || !selectedSessao) return;
 
         const materia = materiasDisponiveis.find(m => m.id.toString() === selectedMateriaToAdd);
         if (materia) {
+            // Verifica se a matéria já está nesta pauta
             const currentItens = selectedSessao.itens || [];
+            if (currentItens.some(item => item.id === materia.id)) {
+                alert("Esta matéria já foi adicionada a esta sessão.");
+                return;
+            }
+
             const updatedItens = [...currentItens, materia];
             
-            const sessaoRef = ref(db, `camara-teste/sessoes/${selectedSessao.id}`);
+            const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessao.id}`);
+            const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${materia.id}`);
+
             try {
+                // Atualiza a sessão com a nova lista de itens
                 await update(sessaoRef, { itens: updatedItens });
+                // Atualiza o status da matéria para "Em Pauta"
+                await update(materiaRef, { status: 'Em Pauta' });
+
                 // O listener onValue atualizará o estado, mas podemos atualizar localmente para feedback imediato
                 this.setState(prevState => ({
-                    selectedSessao: { ...prevState.selectedSessao, itens: updatedItens },
-                    selectedMateriaToAdd: ''
+                    selectedMateriaToAdd: '' // Limpa a seleção
                 }));
             } catch (error) {
                 console.error("Erro ao adicionar item:", error);
@@ -131,11 +165,20 @@ class PautasSessao extends Component {
     };
 
     handleRemoveItem = async (itemId) => {
-        const { selectedSessao } = this.state;
-        const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId);
-        const sessaoRef = ref(db, `camara-teste/sessoes/${selectedSessao.id}`);
+        const { selectedSessao, camaraId } = this.state;
+        // Encontra o item a ser removido para ter referência dele
+        const itemToRemove = (selectedSessao.itens || []).find(i => i.id === itemId);
+        const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId); // Remove da lista local
+
+        const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessao.id}`);
+        const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${itemId}`);
+
         try {
             await update(sessaoRef, { itens: updatedItens });
+            // Restaura o status da matéria para que ela possa ser adicionada novamente se necessário
+            if (itemToRemove) {
+                await update(materiaRef, { status: 'Enviado para Plenário' });
+            }
         } catch (error) {
             console.error("Erro ao remover item:", error);
             alert("Erro ao remover item da sessão.");
@@ -238,8 +281,28 @@ class PautasSessao extends Component {
         }
     };
 
+    handleUrlInputChange = (e) => {
+        this.setState({ editedTransmissaoUrl: e.target.value });
+    };
+
+    handleSaveUrl = async () => {
+        const { selectedSessao, editedTransmissaoUrl, camaraId } = this.state;
+        if (!selectedSessao) return;
+
+        const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessao.id}`);
+        try {
+            await update(sessaoRef, { transmissaoUrl: editedTransmissaoUrl });
+            this.setState({ isEditingUrl: false });
+            // O listener onValue cuidará da atualização da UI.
+            alert('URL da transmissão atualizada com sucesso!');
+        } catch (error) {
+            console.error("Erro ao atualizar URL:", error);
+            alert("Erro ao atualizar a URL da transmissão.");
+        }
+    };
+
     render() {
-        const { sessoes, showModal, selectedSessao, novaData, novoTipo, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl } = this.state;
+        const { sessoes, showModal, selectedSessao, novaData, novoTipo, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl } = this.state;
 
         // Ordenar sessoes por data (mais recente primeiro)
         const sortedSessoes = [...sessoes].sort((a, b) => {
@@ -320,11 +383,11 @@ class PautasSessao extends Component {
                                             <div className="list-item-content">
                                                 <div className="list-item-header">
                                                     <span className="tag tag-primary">{sessao.numero}</span>
-                                                    <span className={`tag ${sessao.status === 'Publicada' ? 'tag-success' : 'tag-warning'}`}>{sessao.status}</span>
+                                                    <span className={`tag ${sessao.status === 'Publicada' ? 'tag-success' : 'tag-warning'}`} style={{fontSize: '0.7rem'}}>{sessao.status}</span>
                                                 </div>
-                                                <h3 className="list-item-title">{sessao.tipo}</h3>
+                                                <h3 className="list-item-title" style={{fontSize: '1rem', fontWeight: '600', marginBottom: '5px'}}>{sessao.tipo}</h3>
                                                 <div className="list-item-meta">
-                                                    <FaCalendarAlt size={12} className="icon-primary" /> {sessao.data}
+                                                    <FaCalendarAlt size={12} style={{color: 'var(--primary-color)'}} /> <span style={{fontSize: '0.85rem', color: '#666'}}>{sessao.data}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -348,14 +411,52 @@ class PautasSessao extends Component {
                                     </button>
                                 </div>
 
-                                <div style={{ marginBottom: '20px', display: 'flex', gap: '20px' }}>
-                                    <div><strong>Data:</strong> {selectedSessao.data}</div>
-                                    <div><strong>Tipo:</strong> {selectedSessao.tipo}</div>
-                                    <div><strong>Status:</strong> {selectedSessao.status}</div>
+                                <div style={{ marginBottom: '25px', display: 'flex', gap: '30px', flexWrap: 'wrap', background: '#f8f9fa', padding: '15px', borderRadius: '8px', borderLeft: '4px solid var(--primary-color)' }}>
+                                    <div>
+                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Data</label>
+                                        <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.data}</span>
+                                    </div>
+                                    <div>
+                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Tipo</label>
+                                        <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.tipo}</span>
+                                    </div>
+                                    <div>
+                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Status</label>
+                                        <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.status}</span>
+                                    </div>
+                                    <div style={{ width: '100%', marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Link da Transmissão</label>
+                                        {isEditingUrl ? (
+                                            <div style={{display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px'}}>
+                                                <input 
+                                                    type="text" 
+                                                    className="modal-input" 
+                                                    value={editedTransmissaoUrl} 
+                                                    onChange={this.handleUrlInputChange}
+                                                    placeholder="https://youtube.com/..."
+                                                />
+                                                <button className="btn-primary" onClick={this.handleSaveUrl} style={{padding: '8px 12px', fontSize: '0.8rem'}}>Salvar</button>
+                                                <button className="btn-secondary" onClick={() => this.setState({ isEditingUrl: false })} style={{padding: '8px 12px', fontSize: '0.8rem'}}>Cancelar</button>
+                                            </div>
+                                        ) : (
+                                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px'}}>
+                                                {selectedSessao.transmissaoUrl ? (
+                                                    <a href={selectedSessao.transmissaoUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', textDecoration: 'none', fontWeight: '500' }}>
+                                                        <FaVideo size={14} /> {selectedSessao.transmissaoUrl}
+                                                    </a>
+                                                ) : (
+                                                    <p style={{margin: 0, color: '#999', fontStyle: 'italic', fontSize: '0.9rem'}}>Nenhum link cadastrado.</p>
+                                                )}
+                                                <button className="btn-secondary" onClick={() => this.setState({ isEditingUrl: true, editedTransmissaoUrl: selectedSessao.transmissaoUrl || '' })} style={{padding: '5px 10px', fontSize: '0.8rem'}}>
+                                                    <FaPencilAlt size={12} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div style={{ background: '#f9f9f9', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-                                    <h4 style={{ marginTop: 0, color: '#555' }}>Adicionar Matéria à Ordem do Dia</h4>
+                                    <h4 style={{ marginTop: 0, color: '#555', fontSize: '0.9rem', fontWeight: '600',}}>Adicionar Matéria à Ordem do Dia</h4>
                                     <div style={{ display: 'flex', gap: '10px' }}>
                                         <select 
                                             className="modal-input" 
@@ -374,7 +475,7 @@ class PautasSessao extends Component {
                                 </div>
 
                                 <div>
-                                    <h4 style={{ color: '#126B5E', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>Ordem do Dia</h4>
+                                    <h4 style={{ color: '#126B5E', borderBottom: '1px solid #eee', paddingBottom: '10px', fontSize: '0.9rem', marginTop: '20px'}}>Ordem do Dia</h4>
                                     {selectedSessao.itens && selectedSessao.itens.length > 0 ? (
                                         <ul style={{ listStyle: 'none', padding: 0 }}>
                                             {(selectedSessao.itens || []).map((item, index) => (
@@ -382,7 +483,7 @@ class PautasSessao extends Component {
                                                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                                                         <span style={{ fontWeight: 'bold', color: '#126B5E' }}>{index + 1}º</span>
                                                         <div>
-                                                            <div style={{ textAlign: 'left', fontWeight: 'bold', color: '#333' }}>{item.titulo}</div>
+                                                            <div style={{ textAlign: 'left', fontWeight: 'bold', color: '#333', fontSize: '0.9rem'}}>{item.titulo}</div>
                                                             <div style={{  textAlign: 'left', fontSize: '0.85rem', color: '#666' }}>{item.autor}</div>
                                                         </div>
                                                     </div>
@@ -400,7 +501,7 @@ class PautasSessao extends Component {
                                 {/* Seção de Edital com IA */}
                                 <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                        <h4 style={{ margin: 0, color: '#126B5E' }}>Edital de Convocação</h4>
+                                        <h4 style={{ margin: 0, color: '#126B5E', fontSize: '0.9rem', fontWeight: '600'}}>Edital de Convocação</h4>
                                         <button 
                                             onClick={this.handleGenerateEditalWithAI}
                                             disabled={isGeneratingEdital}
@@ -460,6 +561,20 @@ class PautasSessao extends Component {
                                         <option>Sessão Solene</option>
                                         <option>Audiência Pública</option>
                                     </select>
+                                </div>
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>URL da Transmissão (YouTube/Facebook)</label>
+                                    <div style={{position: 'relative'}}>
+                                        <FaLink style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#aaa'}} />
+                                        <input 
+                                            type="text" 
+                                            className="modal-input" 
+                                            style={{paddingLeft: '35px'}}
+                                            placeholder="https://www.youtube.com/watch?v=..." 
+                                            value={novaTransmissaoUrl} 
+                                            onChange={(e) => this.setState({ novaTransmissaoUrl: e.target.value })} 
+                                        />
+                                    </div>
                                 </div>
                                 <div className="modal-footer">
                                     <button className="btn-secondary" onClick={this.handleCloseModal}>Cancelar</button>

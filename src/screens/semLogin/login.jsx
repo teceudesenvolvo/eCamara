@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebaseConfig";
+import { ref, get } from "firebase/database";
+import { auth, db } from "../../firebaseConfig";
 
 //Imagens
 
@@ -34,8 +35,20 @@ class loginClient extends Component {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            // Login bem-sucedido, redireciona para o perfil
-            window.location.pathname = '/perfil';
+            
+            // Buscar a câmara do usuário para redirecionar corretamente
+            const user = auth.currentUser;
+            if (user) {
+                const userIndexRef = ref(db, `users_index/${user.uid}`);
+                const snapshot = await get(userIndexRef);
+                
+                if (snapshot.exists()) {
+                    const camaraId = snapshot.val().camaraId;
+                    window.location.href = `/admin/materias-dash/${camaraId}`;
+                } else {
+                    window.location.href = '/perfil';
+                }
+            }
         } catch (error) {
             console.error("Erro no login:", error);
             let errorMessage = "Ocorreu um erro ao tentar fazer login.";

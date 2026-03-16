@@ -8,7 +8,7 @@ import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
 import { sendMessageToAIPrivate } from '../../../aiService';
 import { auth, db } from '../../../firebaseConfig';
-import { ref, push } from 'firebase/database';
+import { ref, get, push } from "firebase/database";
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -75,7 +75,7 @@ class AddProducts extends Component {
             passwordError: '',
             logoBase64: null, // Logo da câmara para o PDF
             signatureBase64: null, // Assinatura para o PDF
-            camaraId: 'camara-teste', // Default, será atualizado
+            camaraId: this.props.match.params.camaraId, // Default, será atualizado
             baseConhecimento: {}, // Dados do Firebase para a IA
             homeConfig: {}, // Dados da home para o timbrado
             footerConfig: {}, // Dados do footer para o timbrado
@@ -103,50 +103,48 @@ class AddProducts extends Component {
         'align'
     ];
 
-    // Gerar PDF na montagem do componente e sempre que o estado do formulário muda
-    async componentDidMount() {
-        const pathParts = window.location.pathname.split('/').filter(Boolean);
-        const camaraId = pathParts.length > 1 ? pathParts[1] : 'camara-teste';
-        this.setState({ camaraId }, this.fetchInitialData);
-        this.scrollToBottom();
-    }
+
 
     fetchInitialData = async () => {
+
         const { camaraId } = this.state;
+
         this.setState({ loadingConfig: true });
-    
+
         try {
-            const [baseConhecimentoSnapshot, layoutSnapshot, homeSnapshot, footerSnapshot] = await Promise.all([
-                get(ref(db, `${camaraId}/dados-config/base-conhecimento`)),
-                get(ref(db, `${camaraId}/dados-config/layout`)),
-                get(ref(db, `${camaraId}/dados-config/home`)),
-                get(ref(db, `${camaraId}/dados-config/footer`)),
-            ]);
-    
-            const baseConhecimento = baseConhecimentoSnapshot.exists() ? baseConhecimentoSnapshot.val() : {};
-            const layoutConfig = layoutSnapshot.exists() ? layoutSnapshot.val() : {};
-            const homeConfig = homeSnapshot.exists() ? homeSnapshot.val() : {};
-            const footerConfig = footerSnapshot.exists() ? footerSnapshot.val() : {};
-    
-            let logoBase64 = null;
-            if (layoutConfig.logo) {
-                logoBase64 = await this.getBase64(layoutConfig.logo);
-            }
-            // Assinatura ainda não é dinâmica, mantendo o padrão
-            // const signatureBase64 = await this.getBase64(signature);
-    
-            this.setState({
-                baseConhecimento,
-                layoutConfig,
-                homeConfig,
-                footerConfig,
-                logoBase64,
-                loadingConfig: false,
-            }, this.handleGeneratePDF);
+
+            const snapshot = await get(
+                ref(db, `${camaraId}/dados-config`)
+            );
+
+            const dados = snapshot.exists() ? snapshot.val() : {};
+
+            const baseConhecimento = dados["base-conhecimento"] || {};
+            const layoutConfig = dados.layout || {};
+            const homeConfig = dados.home || {};
+            const footerConfig = dados.footer || {};
+
+            this.setState(
+                {
+                    baseConhecimento,
+                    layoutConfig,
+                    homeConfig,
+                    footerConfig,
+                    loadingConfig: false
+                },
+                this.handleGeneratePDF
+            );
+
         } catch (error) {
-            console.error("Erro ao buscar configurações iniciais:", error);
-            this.setState({ loadingConfig: false }, this.handleGeneratePDF);
+
+            console.error("Erro ao buscar configurações:", error);
+
+            this.setState({
+                loadingConfig: false
+            });
+
         }
+
     };
 
     // Função auxiliar para converter imagem URL em Base64
@@ -171,6 +169,25 @@ class AddProducts extends Component {
             this.handleGeneratePDF(); // Tenta gerar mesmo sem imagens em caso de erro
         }
     };
+    async componentDidMount() {
+        try {
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    const userIndexRef = ref(db, `users_index/${user.uid}`);
+                    const snapshot = await get(userIndexRef);
+                    const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+
+                    this.setState({ camaraId }, () => {
+                        this.fetchInitialData();
+                        this.scrollToBottom();
+                    });
+                }
+            });
+        } catch (error) {
+            console.error("Erro no componentDidMount:", error);
+        }
+    }
+
 
     handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -201,12 +218,12 @@ class AddProducts extends Component {
         if (!html) return [];
         // Divide por parágrafos para aplicar formatação individual
         const paragraphs = html.split(/<\/p>/gi);
-        
+
         return paragraphs.map(p => {
             let text = p.replace(/<br\s*\/?>/gi, '\n');
             // Remove tags HTML restantes e decodifica entidades
             text = text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
-            
+
             if (!text) return null;
 
             return {
@@ -234,7 +251,7 @@ class AddProducts extends Component {
 
         const reader = new FileReader();
         reader.onload = (event) => {
-            this.setState({ 
+            this.setState({
                 file: file,
                 fileBase64: event.target.result,
                 fileName: file.name
@@ -300,7 +317,7 @@ class AddProducts extends Component {
         }
 
         const userMessage = { id: Date.now(), sender: 'user', text: currentInput };
-        
+
         this.setState({
             messages: [...messages, userMessage],
             currentInput: '',
@@ -431,8 +448,8 @@ class AddProducts extends Component {
 
     handleProtocolar = async () => {
         // Simula a geração de protocolo e envio para o presidente
-        const newProtocol = `${new Date().getFullYear()}/${Math.floor(Math.random() * 100000)}`; 
-        
+        const newProtocol = `${new Date().getFullYear()}/${Math.floor(Math.random() * 100000)}`;
+
         // Prepara os dados para salvar no Firestore
         const materiaData = {
             userId: auth.currentUser?.uid,
@@ -440,7 +457,7 @@ class AddProducts extends Component {
             protocolo: newProtocol,
             status: 'Aguardando Parecer',
             createdAt: new Date().toISOString(),
-            
+
             // Identificação
             tipoMateria: this.state.tipoMateria,
             ano: this.state.ano,
@@ -475,19 +492,23 @@ class AddProducts extends Component {
         materiaData.anexoNome = this.state.fileName;
 
         try {
+             const camaraId  = this.props.match.params.camaraId;
+             if (!camaraId) throw new Error('camaraId não definida na URL');
+
             if (auth.currentUser) {
-                const materiasRef = ref(db, 'camara-teste/materias');
+                materiaData.camaraId = this.props.match.params.camaraId;
+                const materiasRef = ref(db, `${this.props.match.params.camaraId}/materias`);
                 await push(materiasRef, materiaData);
             }
 
-            this.setState({ 
+            this.setState({
                 protocolGenerated: newProtocol,
                 protocolo: newProtocol,
                 status: 'Aguardando Parecer'
             }, () => {
                 this.handleGeneratePDF(); // Atualiza PDF com o protocolo
                 alert(`Documento Assinado Digitalmente e Protocolado!\nProtocolo: ${newProtocol}\nStatus: Enviado para Parecer da Presidência.`);
-                this.props.history.push('/materias-dash');
+                this.props.history.push('/admin/materias-dash/' + this.state.camaraId);
             });
         } catch (error) {
             console.error("Erro ao salvar matéria no Firebase:", error);
@@ -720,62 +741,62 @@ class AddProducts extends Component {
                         <div style={{ width: '100%' }}>
                             {/* Chat de IA */}
                             <div className="ai-generation-card full-screen-ai">
-                            <div className="ai-generation-header">
-                            <h3> Criar Matéria Legislativa</h3>
-                            <p> Assistente de Redação IA</p>
-                            </div>
-                            <div className="chat-interface-container" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                <div className="chat-messages" ref={this.chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
-                                    {this.state.messages.map(msg => (
-                                        <div key={msg.id} className={`message ${msg.sender === 'user' ? 'message-user' : 'message-ai'}`}>
-                                            <div className="message-bubble" dangerouslySetInnerHTML={{ __html: msg.text }} />
-                                        </div>
-                                    ))}
-                                    {this.state.isGenerating && (
-                                        <div className="message message-ai">
-                                            <div className="message-bubble">
-                                                <em>Digitando...</em>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <div ref={this.messagesEndRef} />
+                                <div className="ai-generation-header">
+                                    <h3> Criar Matéria Legislativa</h3>
+                                    <p> Assistente de Redação IA</p>
                                 </div>
-                                
-                                <div className="chat-input-area" style={{ borderTop: '1px solid #eee', padding: '15px', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}>
-                                    {this.state.fileName && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 15px', backgroundColor: '#e0f2f1', borderRadius: '10px', marginBottom: '10px', fontSize: '0.85rem', color: '#126B5E', alignSelf: 'flex-start' }}>
-                                            <span>📎 {this.state.fileName}</span>
-                                            <FaTrash 
-                                                style={{ cursor: 'pointer', color: '#d32f2f' }} 
-                                                onClick={() => this.setState({ file: null, fileBase64: null, fileName: '' })}
+                                <div className="chat-interface-container" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                    <div className="chat-messages" ref={this.chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+                                        {this.state.messages.map(msg => (
+                                            <div key={msg.id} className={`message ${msg.sender === 'user' ? 'message-user' : 'message-ai'}`}>
+                                                <div className="message-bubble" dangerouslySetInnerHTML={{ __html: msg.text }} />
+                                            </div>
+                                        ))}
+                                        {this.state.isGenerating && (
+                                            <div className="message message-ai">
+                                                <div className="message-bubble">
+                                                    <em>Digitando...</em>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div ref={this.messagesEndRef} />
+                                    </div>
+
+                                    <div className="chat-input-area" style={{ borderTop: '1px solid #eee', padding: '15px', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}>
+                                        {this.state.fileName && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 15px', backgroundColor: '#e0f2f1', borderRadius: '10px', marginBottom: '10px', fontSize: '0.85rem', color: '#126B5E', alignSelf: 'flex-start' }}>
+                                                <span>📎 {this.state.fileName}</span>
+                                                <FaTrash
+                                                    style={{ cursor: 'pointer', color: '#d32f2f' }}
+                                                    onClick={() => this.setState({ file: null, fileBase64: null, fileName: '' })}
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="search-box-wrapper-chat">
+                                            <input
+                                                type="file"
+                                                id="file-attachment"
+                                                style={{ display: 'none' }}
+                                                onChange={this.handleFileChange}
                                             />
+                                            <label htmlFor="file-attachment" className="smart-search-btn-chat" style={{ position: 'static', transform: 'none', marginRight: '10px', display: 'flex', backgroundColor: '#f0f2f5', color: '#555' }}>
+                                                <FaPaperclip />
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="smart-search-input-chat"
+                                                placeholder="Digite sua mensagem..."
+                                                value={this.state.currentInput}
+                                                onChange={(e) => this.setState({ currentInput: e.target.value })}
+                                                onKeyDown={(e) => e.key === 'Enter' && this.handleSendMessage()}
+                                            />
+                                            <button className="smart-search-btn-chat" onClick={this.handleSendMessage} disabled={this.state.isGenerating}>
+                                                <FaPaperPlane />
+                                            </button>
                                         </div>
-                                    )}
-                                    <div className="search-box-wrapper-chat">
-                                        <input 
-                                            type="file" 
-                                            id="file-attachment" 
-                                            style={{ display: 'none' }} 
-                                            onChange={this.handleFileChange} 
-                                        />
-                                        <label htmlFor="file-attachment" className="smart-search-btn-chat" style={{ position: 'static', transform: 'none', marginRight: '10px', display: 'flex', backgroundColor: '#f0f2f5', color: '#555' }}>
-                                            <FaPaperclip />
-                                        </label>
-                                        <input 
-                                            type="text"
-                                            className="smart-search-input-chat"
-                                            placeholder="Digite sua mensagem..."
-                                            value={this.state.currentInput}
-                                            onChange={(e) => this.setState({ currentInput: e.target.value })}
-                                            onKeyDown={(e) => e.key === 'Enter' && this.handleSendMessage()}
-                                        />
-                                        <button className="smart-search-btn-chat" onClick={this.handleSendMessage} disabled={this.state.isGenerating}>
-                                            <FaPaperPlane />
-                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        </div>
                         </div>
                     </div>
                 </div>
@@ -844,8 +865,8 @@ class AddProducts extends Component {
                             {/* Área Principal Direita - Editor A4 */}
                             <div className="editor-main">
                                 <div style={{ marginBottom: '15px', alignSelf: 'flex-end' }}>
-                                    <button 
-                                        onClick={this.openPdfPopup} 
+                                    <button
+                                        onClick={this.openPdfPopup}
                                         className="btn-secondary"
                                     >
                                         Visualizar PDF
@@ -853,10 +874,10 @@ class AddProducts extends Component {
                                 </div>
                                 {/* Removida a simulação de página A4 que limitava a altura.
                                     O editor agora ocupa o espaço disponível, permitindo rolagem para conteúdo longo. */}
-                                <ReactQuill 
+                                <ReactQuill
                                     theme="snow"
-                                    value={this.state.textoMateria} 
-                                    onChange={this.handleEditorChange} 
+                                    value={this.state.textoMateria}
+                                    onChange={this.handleEditorChange}
                                     modules={this.modules}
                                     formats={this.formats}
                                     className="full-page-quill-editor" // Classe para garantir que o editor preencha o contêiner
@@ -890,16 +911,16 @@ class AddProducts extends Component {
                         <div className="pdf-popup-content" style={{ maxWidth: '400px', height: 'auto', padding: '30px', textAlign: 'center' }}>
                             <h3>Assinatura Digital</h3>
                             <p style={{ marginBottom: '20px' }}>Digite sua senha para assinar e protocolar o documento.</p>
-                            
-                            <input 
-                                type="password" 
-                                className="smart-search-input-chat" 
+
+                            <input
+                                type="password"
+                                className="smart-search-input-chat"
                                 style={{ width: '100%', marginBottom: '10px', border: '1px solid #ccc' }}
                                 placeholder="Sua senha (ex: 123456)"
                                 value={passwordInput}
                                 onChange={this.handlePasswordChange}
                             />
-                            
+
                             {passwordError && <p style={{ color: 'red', fontSize: '12px', marginBottom: '10px' }}>{passwordError}</p>}
 
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px' }}>

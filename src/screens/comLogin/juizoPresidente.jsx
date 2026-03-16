@@ -7,6 +7,7 @@ import logo from '../../assets/logo.png';
 import { sendMessageToAIPrivate } from '../../aiService';
 import { db } from '../../firebaseConfig';
 import { ref, query, get, update, onValue } from 'firebase/database';
+import { auth } from '../../firebaseConfig';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -29,22 +30,27 @@ class JuizoPresidente extends Component {
             comissoesDisponiveis: [],
             materias: [],
             loading: true,
+            camaraId: this.props.match.params.camaraId,
         };
     }
 
     componentDidMount() {
-        const pathParts = window.location.pathname.split('/').filter(Boolean);
-        const camaraId = pathParts.length > 1 ? pathParts[1] : 'camara-teste';
-        
-        this.setState({ camaraId });
-        this.loadImages();
-        this.fetchMaterias(camaraId);
-        this.fetchComissoes(camaraId);
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const userIndexRef = ref(db, `users_index/${user.uid}`);
+                const snapshot = await get(userIndexRef);
+                const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                this.setState({ camaraId });
+                this.loadImages();
+                this.fetchMaterias(camaraId);
+                this.fetchComissoes(camaraId);
+            }
+        });
     }
 
     fetchMaterias = (camaraId) => {
         this.setState({ loading: true });
-        const materiasRef = ref(db, `${camaraId}/materias`);
+        const materiasRef = ref(db, `${this.props.match.params.camaraId}/materias`);
         // Usar onValue para atualizações em tempo real
         onValue(materiasRef, (snapshot) => {
             const materias = [];
@@ -151,7 +157,7 @@ class JuizoPresidente extends Component {
         };
 
         try {
-            const materiaRef = ref(db, `${camaraId}/materias/${selectedMateria.id}`);
+            const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${selectedMateria.id}`);
             await update(materiaRef, despachoData);
 
             this.generateDespachoPDF(selectedMateria, despachoText, statusFinal);

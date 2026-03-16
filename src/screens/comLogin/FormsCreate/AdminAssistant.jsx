@@ -86,10 +86,13 @@ const AdminAssistant = () => {
     // Carregar configurações do Firebase ao iniciar
     useEffect(() => {
         const fetchConfigs = async () => {
-            const pathParts = window.location.pathname.split('/').filter(Boolean);
-            const camaraId = pathParts.length > 1 ? pathParts[ pathParts.length - 1] : 'camara-teste';
-            
+            if (!auth.currentUser) return;
+            const user = auth.currentUser;
             try {
+                const userIndexRef = ref(db, `users_index/${user.uid}`);
+                const indexSnap = await get(userIndexRef);
+                const camaraId = indexSnap.exists() ? indexSnap.val().camaraId : 'camara-teste';
+
                 const [baseSnap, layoutSnap, homeSnap, footerSnap] = await Promise.all([
                     get(ref(db, `${camaraId}/dados-config/base-conhecimento`)),
                     get(ref(db, `${camaraId}/dados-config/layout`)),

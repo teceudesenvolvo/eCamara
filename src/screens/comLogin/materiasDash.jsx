@@ -13,19 +13,35 @@ class loginDashboard extends Component {
             materias: [],
             loading: true,
             searchTerm: '',
-            filterStatus: 'Todos os Status'
+            filterStatus: 'Todos os Status',
+            camaraId: this.props.match.params.camaraId
         };
     }
 
     componentDidMount() {
-        this.fetchMaterias();
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // Prioriza o ID da URL, mas pode validar com o do usuário se necessário
+                let camaraId = this.state.camaraId;
+                if (!camaraId) {
+                     const userIndexRef = ref(db, `users_index/${user.uid}`);
+                     const snapshot = await get(userIndexRef);
+                     camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                     this.setState({ camaraId });
+                }
+                this.fetchMaterias(user, camaraId);
+                
+            } else {
+                this.props.history.push('/login');
+            }
+        });
     }
 
-    fetchMaterias = async () => {
-        const user = auth.currentUser;
-        if (user) {
+    fetchMaterias = async (user, camaraIdParam) => {
+        const camaraId = camaraIdParam || this.state.camaraId;
+        if (user && camaraId) {
             try {
-                const materiasRef = ref(db, 'camara-teste/materias');
+                const materiasRef = ref(db, `${this.props.match.params.camaraId}/materias`);
                 const q = query(materiasRef, orderByChild('userId'), equalTo(user.uid));
                 const snapshot = await get(q);
                 const materias = [];
@@ -39,13 +55,6 @@ class loginDashboard extends Component {
                 console.error("Erro ao buscar matérias:", error);
                 this.setState({ loading: false });
             }
-        } else {
-            // Se não houver usuário logado (ou delay no auth), pode-se tentar novamente ou redirecionar
-            // Aqui apenas paramos o loading para não travar a tela
-            setTimeout(() => {
-                if (auth.currentUser) this.fetchMaterias();
-                else this.setState({ loading: false });
-            }, 1000);
         }
     };
 
@@ -79,7 +88,7 @@ class loginDashboard extends Component {
                         <button 
                             className="btn-primary" 
                             style={{ width: 'auto' }}
-                            onClick={() => this.props.history.push('/protocolar-materia')}
+                            onClick={() => this.props.history.push('/admin/protocolar-materia/' + this.state.camaraId)}
                         >
                             <FaPlus /> Nova Matéria
                         </button>
@@ -155,7 +164,7 @@ class loginDashboard extends Component {
 
                                 <div style={{ padding: '15px 20px', background: '#fff', borderTop: '1px solid #f0f0f0' }}>
                                     <button className="btn-secondary" style={{ width: '100%', color: '#126B5E', borderColor: '#126B5E' }}
-                                    onClick={() => this.props.history.push('/materia-detalhes', { materiaId: row.id })}
+                                    onClick={() => this.props.history.push(`/admin/materia-detalhes/${this.props.match.params.camaraId}`, { materiaId: row.id })}
                                     onMouseOver={(e) => { e.target.style.background = '#126B5E'; e.target.style.color = 'white'; }}
                                     onMouseOut={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#126B5E'; }}
                                     >

@@ -99,7 +99,7 @@ class SessaoVirtual extends Component {
           <div className='sessao-virtual-main-content'>
             <div className='sessao-virtual-video-wrapper'>
               <div className='player-wrapper'>
-                <ReactPlayer className='react-player' url='https://www.youtube.com/watch?v=KBWvFODawj0' width='100%' height='100%' controls={true} />
+                <ReactPlayer className='react-player' url={sessao.transmissaoUrl || 'https://www.youtube.com/watch?v=KBWvFODawj0'} width='100%' height='100%' controls={true} />
               </div>
             </div>
             <div className='sessao-virtual-historico-wrapper'>

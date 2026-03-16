@@ -25,6 +25,7 @@ import MateriasDash from './screens/comLogin/materiasDash.jsx';
 import JuizoMateria from './screens/comLogin/juizoMateria.jsx';
 import JuizoPresidente from './screens/comLogin/juizoPresidente.jsx';
 import ComissoesDash from './screens/comLogin/comissoesDash.jsx';
+import ComissaoDetails from './screens/comLogin/comissaoDetails.jsx';
 import PautasSessao from './screens/comLogin/pautasSessao.jsx';
 import AdminDocumentsDash from './screens/comLogin/AdminDocumentsDash.jsx';
 import AdminDocumentDetails from './screens/comLogin/AdminDocumentDetails.jsx';
@@ -45,6 +46,7 @@ import Materias from './screens/semLogin/Materias.jsx';
 import LayoutManager from './screens/comLogin/LayoutManager.jsx';
 import CamaraSelector from './screens/semLogin/CamaraSelector.jsx';
 
+import AdminGeral from './screens/comLogin/AdminGeral.jsx';
 // Navigate Components
 import ChatAI from './screens/semLogin/ChatAI.jsx';
 import TopBar from './componets/topBarSearch.jsx';
@@ -79,7 +81,7 @@ function App() {
 
   const location = useLocation();
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/', '/login', '/register', '/perfil', '/materias-dash', '/protocolar-materia', '/juizo-materia', '/materia-detalhes', '/comissoes-dash', '/juizo-presidente', '/pautas-sessao', '/configuracoes', '/assistente-admin', '/assistente-admin/novo', '/assistente-admin/detalhes', '/layout-manager'].includes(location.pathname);
+  const hideMenuDesktop = ['/', '/login', '/register', '/perfil', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/');
 
   useEffect(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
@@ -153,23 +155,25 @@ function App() {
           <Route path="/Mais" component={Mais} />
 
           {/* Páginas Filho */}
-          <Route path="/materias-dash" component={MateriasDash} />
+          <Route path="/admin/materias-dash/:camaraId" component={MateriasDash} />
 
-          <Route path="/materia-detalhes" component={MateriaDetails} />
+          <Route path="/admin/materia-detalhes/:camaraId" component={MateriaDetails} />
 
           {/* Páginas de Formulários */}
-          <Route path="/protocolar-materia" component={AddMateria} />
-          <Route path="/juizo-materia" component={JuizoMateria} />
-          <Route path="/juizo-presidente" component={JuizoPresidente} />
-          <Route path="/comissoes-dash" component={ComissoesDash} />
-          <Route path="/pautas-sessao" component={PautasSessao} />
-          <Route path="/configuracoes" component={Configuracoes} />
-          <Route exact path="/assistente-admin" component={AdminDocumentsDash} />
-          <Route path="/assistente-admin/novo" component={AdminAssistant} />
-          <Route path="/assistente-admin/detalhes" component={AdminDocumentDetails} />
+          <Route path="/admin/protocolar-materia/:camaraId" component={AddMateria} />
+          <Route path="/admin/juizo-materia/:camaraId" component={JuizoMateria} />
+          <Route path="/admin/juizo-presidente/:camaraId" component={JuizoPresidente} />
+          <Route path="/admin/comissoes-dash/:camaraId" component={ComissoesDash} />
+          <Route path="/admin/comissao-detalhes/:camaraId" component={ComissaoDetails} />
+          <Route path="/admin/pautas-sessao/:camaraId" component={PautasSessao} />
+          <Route path="/configuracoes/:camaraId" component={Configuracoes} />
+          <Route exact path="/admin/assistente-admin/:camaraId" component={AdminDocumentsDash} />
+          <Route path="/admin/assistente-admin/novo/:camaraId" component={AdminAssistant} />
+          <Route path="/admin/assistente-admin/detalhes/:camaraId" component={AdminDocumentDetails} />
 
           {/* Paginas de Gerenciamento */}
-          <Route path="/layout-manager" component={LayoutManager} />
+          <Route path="/admin/layout-manager/:camaraId" component={LayoutManager} />
+          <Route path="/camara-ai-admin-geral" component={AdminGeral} />
         </Switch>
 
         {!hideMenuDesktop && (
