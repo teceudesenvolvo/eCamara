@@ -4625,7 +4625,7 @@ footer>p {
 }
 
 .chat-header {
-  background: linear-gradient(135deg, #126B5E 0%, #003f36 100%);
+  background: var(--primary-color, linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png')) ;
   padding: 15px 20px;
   display: flex;
   justify-content: center;
