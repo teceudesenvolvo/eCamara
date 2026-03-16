@@ -26,11 +26,11 @@ class loginDashboard extends Component {
                 if (!camaraId) {
                      const userIndexRef = ref(db, `users_index/${user.uid}`);
                      const snapshot = await get(userIndexRef);
-                     camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
-                     this.setState({ camaraId });
+                     camaraId = this.props.match.params.camaraId;
+                     this.setState({ camaraId:this.props.match.params.camaraId });
                 }
                 this.fetchMaterias(user, camaraId);
-                
+
             } else {
                 this.props.history.push('/login');
             }

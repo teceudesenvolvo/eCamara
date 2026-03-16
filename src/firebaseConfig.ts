@@ -1,5 +1,5 @@
 import {initializeApp, getApp, getApps} from "firebase/app";
-import {getAuth} from "firebase/auth";
+import {getAuth, onAuthStateChanged} from "firebase/auth";
 import {getFunctions} from "firebase/functions";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
@@ -25,3 +25,5 @@ export const storage = getStorage(app);
 // é 'us-central1'. Para projetos no Brasil, 'southamerica-east1' (São Paulo)
 // é recomendado.
 export const functions = getFunctions(app, "southamerica-east1");
+
+
