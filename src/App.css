@@ -3696,7 +3696,7 @@ h3 {
   /* Cor de fundo de fallback */
   background: var(--primary-color, #126B5E);
   /* Gradiente diagonal mais vivo com uma textura sutil */
-  background: var(--primary-color, linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png')) ;
+  background: var(--primary-color, linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png'));
   color: white;
   margin-top: auto;
   width: 100%;
@@ -3843,7 +3843,7 @@ footer>p {
   bottom: 0;
   height: 100vh;
   left: 0;
-  background: var(--primary-color, #126B5E);
+  background: var(--primary-color, linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png'));
   width: 45px;
   overflow: hidden;
   transition: width 0.2 linear;
@@ -4625,7 +4625,7 @@ footer>p {
 }
 
 .chat-header {
-  background: var(--primary-color, linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png')) ;
+  background: var(--primary-color, linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png'));
   padding: 15px 20px;
   display: flex;
   justify-content: center;
@@ -5158,7 +5158,7 @@ footer>p {
 }
 
 .smart-search-btn-openai {
-  background: #0a5d52;
+  background: var(--primary-color, linear-gradient(135deg, rgba(18, 107, 94, 0.95), rgba(0, 63, 54, 0.98)), url('https://www.transparenttextures.com/patterns/stardust.png'));
   color: #fff;
   border: none;
   width: 50px;
@@ -5478,18 +5478,18 @@ footer>p {
   text-align: left;
 }
 
-.modal-content > h2 {
+.modal-content>h2 {
   margin-top: 0;
   color: #126B5E;
   font-size: 18px;
 }
 
-.modal-content > div > label{
+.modal-content>div>label {
   font-size: 12px !important;
   color: #333;
 }
 
-.modal-content > div > div > svg {
+.modal-content>div>div>svg {
   color: #126B5E;
   font-size: 14px;
 }
@@ -5889,18 +5889,18 @@ footer>p {
   cursor: pointer;
 }
 
-.page-title{
-    margin-left: 70px !important;
+.page-title {
+  margin-left: 70px !important;
 }
 
-.color-navMenu-public{
+.color-navMenu-public {
   background: var(--primary-color, #126B5E);
 }
 
 
 @media (max-width: 768px) {
 
-  .page-title{
+  .page-title {
     margin-left: 0px !important;
   }
 
