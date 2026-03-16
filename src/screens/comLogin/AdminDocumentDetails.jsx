@@ -40,7 +40,8 @@ class AdminDocumentDetails extends Component {
             loading: true,
             logoBase64: null,
             pdfData: null,
-            showPdfPopup: false
+            showPdfPopup: false,
+            camaraId: this.props.match.params.camaraId,
         };
     }
 
@@ -59,7 +60,7 @@ class AdminDocumentDetails extends Component {
         }
 
         try {
-            const docRef = ref(db, `camara-teste/documentos_administrativos/${docId}`);
+            const docRef = ref(db, `${this.props.match.params.camaraId}/documentos_administrativos/${docId}`);
             const snapshot = await get(docRef);
 
             if (snapshot.exists()) {

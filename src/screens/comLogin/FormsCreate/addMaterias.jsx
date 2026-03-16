@@ -175,7 +175,7 @@ class AddProducts extends Component {
                 if (user) {
                     const userIndexRef = ref(db, `users_index/${user.uid}`);
                     const snapshot = await get(userIndexRef);
-                    const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                    const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
 
                     this.setState({ camaraId }, () => {
                         this.fetchInitialData();

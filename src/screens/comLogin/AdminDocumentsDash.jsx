@@ -11,7 +11,7 @@ class AdminDocumentsDash extends Component {
             documentos: [],
             loading: true,
             searchTerm: '',
-            camaraId: null
+            camaraId: this.props.match.params.camaraId,
         };
     }
 
@@ -20,7 +20,7 @@ class AdminDocumentsDash extends Component {
             if (user) {
                 const userIndexRef = ref(db, `users_index/${user.uid}`);
                 const snapshot = await get(userIndexRef);
-                const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
                 this.setState({ camaraId }, () => this.fetchDocumentos(user));
             }
         });
@@ -30,7 +30,7 @@ class AdminDocumentsDash extends Component {
         const { camaraId } = this.state;
         if (user) {
             try {
-                const docsRef = ref(db, `${camaraId}/documentos_administrativos`);
+                const docsRef = ref(db, `${camaraId}/documentos_administrativos/`);
                 const q = query(docsRef, orderByChild('userId'), equalTo(user.uid));
                 const snapshot = await get(q);
                 const documentos = [];
@@ -69,7 +69,7 @@ class AdminDocumentsDash extends Component {
                         <button 
                             className="btn-primary" 
                             style={{ width: 'auto' }}
-                            onClick={() => this.props.history.push('/assistente-admin/novo')}
+                            onClick={() => this.props.history.push(`/admin/assistente-admin/novo/${this.props.match.params.camaraId}`)}
                         >
                             <FaPlus /> Novo Documento
                         </button>
