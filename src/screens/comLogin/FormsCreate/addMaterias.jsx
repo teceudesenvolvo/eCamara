@@ -508,7 +508,7 @@ class AddProducts extends Component {
             }, () => {
                 this.handleGeneratePDF(); // Atualiza PDF com o protocolo
                 alert(`Documento Assinado Digitalmente e Protocolado!\nProtocolo: ${newProtocol}\nStatus: Enviado para Parecer da Presidência.`);
-                this.props.history.push('/admin/materias-dash/' + this.state.camaraId);
+                this.props.history.push('/admin/materias-dash/' + this.props.match.params.camaraId); // Redireciona para o dashboard de matérias
             });
         } catch (error) {
             console.error("Erro ao salvar matéria no Firebase:", error);
