@@ -41,7 +41,7 @@ class Configuracoes extends Component {
                 if (!this.state.camaraId || this.state.camaraId === this.props.match.params.camaraId) {
                     const userIndexRef = ref(db, `${this.props.match.params.camaraId}/users${user.uid}`);
                     const snapshot = await get(userIndexRef);
-                    const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                    const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
                     this.setState({ camaraId }, () => this.fetchConfig());
                 } else {
                     this.fetchConfig();
@@ -164,6 +164,7 @@ class Configuracoes extends Component {
         const convitesRef = ref(db, `${camaraId}/convites`);
         const newInviteRef = push(convitesRef);
         const inviteId = newInviteRef.key;
+        const inviteLink = `${window.location.origin}/register?invite=${inviteId}&camara=${camaraId}`;
 
         const inviteData = {
             tipo: inviteType,
@@ -171,12 +172,11 @@ class Configuracoes extends Component {
             used: false
         };
 
-        set(newInviteRef, inviteData).then(() => {
-            const inviteLink = `${window.location.origin}/register?invite=${inviteId}&camara=${camaraId}`;
-            navigator.clipboard.writeText(inviteLink)
-                .then(() => alert(`Link de convite criado e copiado!\n\nEnvie este link para o novo usuário.`))
-                .catch(err => console.error('Erro ao copiar link: ', err));
-        });
+        navigator.clipboard.writeText(inviteLink)
+            .then(() => alert(`Link de convite criado e copiado!\n\nEnvie este link para o novo usuário.`))
+            .catch(err => console.error('Erro ao copiar link: ', err));
+
+        set(newInviteRef, inviteData);
 
         this.handleCloseInviteModal();
     };

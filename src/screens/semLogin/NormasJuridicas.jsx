@@ -8,36 +8,83 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 import SearchIcon from '@mui/icons-material/Search';
 import PageHeader from '../../componets/PageHeader.jsx';
-// You might need a CSS file for custom styles, e.g., NormasJuridicas.css
-// import './NormasJuridicas.css'; 
+import { FaSpinner, FaTimes } from 'react-icons/fa';
+
+// Firebase
+import { db } from '../../firebaseConfig';
+import { ref, get } from 'firebase/database';
 
 class NormasJuridicas extends Component {
-    state = {
-        normas: [
-            {
-                id: '1',
-                tipo: 'Emenda de Revisão à Lei Orgânica',
-                numero: '4',
-                ano: '2023',
-                data: '5 de Outubro de 2023',
-                descricao: 'Altera o art. 16 da Lei Orgânica do Município',
-                status: 'Norma sem alterações posteriores.',
-                imagem: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&w=500&q=60'
-            },
-            {
-                id: '2',
-                tipo: 'Resolução Legislativa',
-                numero: '4',
-                ano: '2023',
-                data: '5 de Outubro de 2023',
-                descricao: 'Altera o art. 16 da Lei Orgânica do Município',
-                status: 'Norma sem alterações posteriores.',
-                imagem: 'https://images.unsplash.com/photo-1589578527966-fdac0f44566c?auto=format&fit=crop&w=500&q=60'
-            },
-            // Add more data as needed
-        ],
-        searchTerm: '', // State for the search input
-        showFilters: false,
+    constructor(props) {
+        super(props);
+        this.state = {
+            normas: [],
+            searchTerm: '',
+            showFilters: false,
+            loading: true,
+            camaraId: this.props.match.params.camaraId || '',
+            showModal: false,
+            selectedNorma: null,
+        };
+    }
+
+    componentDidMount() {
+        this.fetchNormas();
+    }
+
+    fetchNormas = async () => {
+        const { camaraId } = this.state;
+        if (!camaraId) {
+             this.setState({ loading: false });
+             return;
+        }
+
+        try {
+            // Busca da base de conhecimento configurada no painel admin
+            const normasRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
+            const snapshot = await get(normasRef);
+            
+            const fetchedNormas = [];
+
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+
+                // Mapeia a Lei Orgânica se existir
+                if (data.leiOrganicaText) {
+                    fetchedNormas.push({
+                        id: 'lei-organica',
+                        tipo: 'Lei Orgânica',
+                        numero: '',
+                        ano: '',
+                        data: 'Texto Consolidado',
+                        descricao: 'Lei máxima do município. Estabelece as regras e competências locais e a organização dos poderes.',
+                        status: 'Vigente',
+                        imagem: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&w=500&q=60',
+                        textoCompleto: data.leiOrganicaText,
+                    });
+                }
+
+                // Mapeia o Regimento Interno se existir
+                if (data.regimentoText) {
+                    fetchedNormas.push({
+                        id: 'regimento-interno',
+                        tipo: 'Regimento Interno',
+                        numero: '',
+                        ano: '',
+                        data: 'Texto Consolidado',
+                        descricao: 'Conjunto de normas que regem o funcionamento interno da Câmara Municipal e o Processo Legislativo.',
+                        status: 'Vigente',
+                        imagem: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60',
+                        textoCompleto: data.regimentoText,
+                    });
+                }
+            }
+
+            this.setState({ normas: fetchedNormas, loading: false });
+        } catch (error) {
+            console.error("Erro ao buscar normas:", error);
+            this.setState({ loading: false });
+        }
     };
 
     // Handler for search input changes
@@ -49,8 +96,16 @@ class NormasJuridicas extends Component {
         this.setState(prevState => ({ showFilters: !prevState.showFilters }));
     };
 
+    handleOpenModal = (norma) => {
+        this.setState({ showModal: true, selectedNorma: norma });
+    };
+
+    handleCloseModal = () => {
+        this.setState({ showModal: false, selectedNorma: null });
+    };
+
     render() {
-        const { normas, searchTerm, showFilters } = this.state;
+        const { normas, searchTerm, showFilters, loading, showModal, selectedNorma } = this.state;
 
         // Filter the normas array based on the search term
         const filteredNormas = normas.filter((norma) => {
@@ -66,6 +121,12 @@ class NormasJuridicas extends Component {
                         title="Normas Jurídicas" 
                         onToggleFilters={this.toggleFilters} 
                     />
+
+                    {loading && (
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                            <FaSpinner className="animate-spin" size={30} color="#126B5E" />
+                        </div>
+                    )}
 
                     {showFilters && (
                         <Box sx={{ mb: 4 }}>
@@ -89,12 +150,11 @@ class NormasJuridicas extends Component {
 
                     <div className="openai-grid">
                         {filteredNormas.map((norma) => (
-                            <div className="openai-card" key={norma.id}>
-                                <img src={norma.imagem} alt={norma.tipo} className="card-image" />
+                            <div className="openai-card" key={norma.id} onClick={() => this.handleOpenModal(norma)} style={{ cursor: 'pointer' }}>
                                 <div className="card-content-openai">
                                     <span className="card-date">{norma.data}</span>
                                     <h3>
-                                        {norma.tipo} nº {norma.numero}/{norma.ano}
+                                        {norma.tipo} {norma.numero ? `nº ${norma.numero}/${norma.ano}` : ''}
                                     </h3>
                                     <p>{norma.descricao}</p>
                                 </div>
@@ -102,10 +162,26 @@ class NormasJuridicas extends Component {
                         ))}
                     </div>
                     
-                    {filteredNormas.length === 0 && (
+                    {!loading && filteredNormas.length === 0 && (
                         <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
                             Nenhuma norma encontrada.
                         </Typography>
+                    )}
+
+                    {showModal && selectedNorma && (
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ maxWidth: '800px', height: '80vh', display: 'flex', flexDirection: 'column' }}>
+                                <div className="modal-header">
+                                    <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{selectedNorma.tipo}</h2>
+                                    <button onClick={this.handleCloseModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>
+                                        <FaTimes />
+                                    </button>
+                                </div>
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '20px', textAlign: 'left', whiteSpace: 'pre-wrap', background: '#f9f9f9', borderRadius: '8px', border: '1px solid #eee', color: '#333' }}>
+                                    {selectedNorma.textoCompleto}
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

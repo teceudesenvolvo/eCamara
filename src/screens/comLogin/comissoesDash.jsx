@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import { FaUsers, FaArrowRight } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
-import ProfileImage from '../../assets/vereador.jpg'; // Reusing for member avatar
+import MenuDashboard from '../../componets/menuAdmin.jsx'; // Reusing for member avatar
 import { db, auth } from '../../firebaseConfig';
 import { ref, onValue, get } from 'firebase/database';
 
@@ -91,7 +90,7 @@ class ComissoesDash extends Component {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                         {comissao.membros && Object.values(comissao.membros).length > 0 ? Object.values(comissao.membros).map(membro => (
                                             <div key={membro.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <img src={membro.foto || ProfileImage} alt={membro.nome} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                <img src={membro.foto} alt={membro.nome} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #07551a', background: '#fff' }} />
                                                 <div>
                                                     <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{membro.nome}</p>
                                                     <p style={{ margin: 0, fontSize: '0.85rem', color: '#888' }}>{membro.cargo || 'Membro'}</p>

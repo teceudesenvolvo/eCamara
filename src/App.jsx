@@ -42,6 +42,7 @@ import Login from './screens/semLogin/login.jsx';
 // Páginas Publico
 import Mais from './screens/semLogin/Mais.jsx';
 import Materias from './screens/semLogin/Materias.jsx';
+import MateriaDetalhesPublico from './screens/semLogin/MateriaDetalhesPublico.jsx';
 
 // Paginas Configurações e Gerenciamento
 import LayoutManager from './screens/comLogin/LayoutManager.jsx';
@@ -82,7 +83,7 @@ function App() {
 
   const location = useLocation();
   const pathParts = location.pathname.split('/').filter(Boolean);
-  const camaraId = pathParts.length > 1 ? pathParts[1] : this.props.match.params.camaraId; // Extract camaraId from URL
+  const camaraId = pathParts.length > 1 ? pathParts[1] : ''; // Extract camaraId from URL
 
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
   const hideMenuDesktop = ['/', '/login/:camaraId', '/register', '/admin/perfil/:camaraId', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/');
@@ -148,6 +149,7 @@ function App() {
           <Route path="/normas/:camaraId" component={NormasJuridicas} />
           <Route path="/comissoes/:camaraId" component={Comissoes} />
           <Route path="/materias/:camaraId" component={Materias} />
+          <Route path="/materia/:camaraId/:materiaId" component={MateriaDetalhesPublico} />
 
           {/* Perfis de Acesso */}
           <Route path="/admin/perfil/:camaraId" component={Perfil} />
@@ -182,14 +184,14 @@ function App() {
         <footer className='footer'>
           <div className='footer-content'>
             <div className='footer-section footer-about'>
-              <h4 className='footer-logo-text'>Camara AI</h4>
+              <h4 className='footer-logo-text'>Câmara Municipal de {camaraId}</h4>
               <p>{footerConfig.slogan}</p>
-              <div className='social-icons'>
+              {/* <div className='social-icons'>
                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"><FaTwitter /></a>
                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
                 <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
                 <a href="https://youtube.com" target="_blank" rel="noopener noreferrer"><FaYoutube /></a>
-              </div>
+              </div> */}
             </div>
             
             <div className='footer-section footer-links-section'>
@@ -202,14 +204,13 @@ function App() {
               </ul>
             </div>  
             
-            <div className='footer-section footer-links-section'>
+            {/* <div className='footer-section footer-links-section'>
               <h4>Transparência</h4>
               <ul>
-                <li><a href={`/relatorios/${camaraId}`}>Relatórios</a></li>
                 <li><a href={`/sessao-virtual/${camaraId}`}>Sessão Virtual</a></li>
               </ul>
             </div>
-            
+             */}
             <div className='footer-section footer-contact'>
               <h4>Contato</h4>
               <p>📍 {footerConfig.address}</p>

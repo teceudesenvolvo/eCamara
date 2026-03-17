@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { db, auth } from '../../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { ref, get, update, set } from 'firebase/database';
-import logo from '../../assets/logo-camara-ai-sf.png';
+import logo from '../../assets/logo-camara-ai-font-verde.png';
 
 class Register extends Component {
     constructor(props) {
@@ -13,7 +13,7 @@ class Register extends Component {
             email: '',
             senha: '',
             confirmarSenha: '',
-            camaraId: null,
+            camaraId: this.props.match.params.camaraId,
             inviteId: null,
             tipo: null,
             loading: true,
@@ -88,9 +88,9 @@ class Register extends Component {
                 createdAt: new Date().toISOString(),
             });
 
-            // 3. Salvar no índice global para facilitar o login
-            const globalUserRef = ref(db, `users_index/${user.uid}`);
-            await set(globalUserRef, { camaraId });
+            // // 3. Salvar no índice global para facilitar o login
+            // const globalUserRef = ref(db, `${camaraId}/users${user.uid}`);
+            // await set(globalUserRef, { camaraId });
 
             // 4. Se houver inviteId, marcar como usado
             if (inviteId) {

@@ -15,7 +15,7 @@ import {
     FaBars,
     FaTimes
 } from "react-icons/fa";
-import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
+import logoCamaraAI from '../assets/logo-camara-ai-vertical.png';
 import '../App.css';
 import { useState, useEffect } from 'react';
 import { db, auth } from '../firebaseConfig';
@@ -106,8 +106,8 @@ const MenuDashboard = ({ logo: propLogo }) => {
             <label htmlFor="mobile-menu-toggle-checkbox" className="mobile-menu-overlay"></label>
 
             <div className="menuDesktop"> {/* Reutilizando a classe do menu da home */}
-            <div className="logoDesktop">
-                <img src={logo} alt="Logo" className="logo-sidebar" />
+            <div className="logoDesktop" style={{width: "100%"}}>
+                <img src={logoCamaraAI} alt="Logo" className="logo-sidebar" style={{width: "100%"}} />
             </div>
 
             <nav className="nav-desktop">
