@@ -24,9 +24,11 @@ class Configuracoes extends Component {
             // State for commission management modals
             showComissaoModal: false,
             editingComissao: null,
-            comissaoFormData: { nome: '', descricao: '' },
+            comissaoFormData: { nome: '', descricao: '', tipo: 'Permanente' },
             showAddMemberModal: false,
             commissionToUpdateMembers: null,
+            newUserForCommission: '',
+            newRoleForCommission: 'Membro',
             // State for User Invite
             showInviteModal: false,
             inviteType: 'vereador',
@@ -36,8 +38,8 @@ class Configuracoes extends Component {
     componentDidMount() {
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                if (!this.state.camaraId || this.state.camaraId === 'camara-teste') {
-                    const userIndexRef = ref(db, `users_index/${user.uid}`);
+                if (!this.state.camaraId || this.state.camaraId === this.props.match.params.camaraId) {
+                    const userIndexRef = ref(db, `${this.props.match.params.camaraId}/users${user.uid}`);
                     const snapshot = await get(userIndexRef);
                     const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
                     this.setState({ camaraId }, () => this.fetchConfig());
@@ -184,13 +186,17 @@ class Configuracoes extends Component {
             this.setState({
                 showComissaoModal: true,
                 editingComissao: comissao,
-                comissaoFormData: { nome: comissao.nome, descricao: comissao.descricao }
+                comissaoFormData: { 
+                    nome: comissao.nome, 
+                    descricao: comissao.descricao,
+                    tipo: comissao.tipo || 'Permanente'
+                }
             });
         } else {
             this.setState({
                 showComissaoModal: true,
                 editingComissao: null,
-                comissaoFormData: { nome: '', descricao: '' }
+                comissaoFormData: { nome: '', descricao: '', tipo: 'Permanente' }
             });
         }
     };
@@ -228,14 +234,32 @@ class Configuracoes extends Component {
     };
 
     handleOpenAddMemberModal = (comissao) => this.setState({ showAddMemberModal: true, commissionToUpdateMembers: comissao });
-    handleCloseAddMemberModal = () => this.setState({ showAddMemberModal: false, commissionToUpdateMembers: null });
+    handleCloseAddMemberModal = () => this.setState({ 
+        showAddMemberModal: false, 
+        commissionToUpdateMembers: null,
+        newUserForCommission: '',
+        newRoleForCommission: 'Membro'
+    });
 
-    handleAddMemberToCommission = async (user) => {
-        const { camaraId, commissionToUpdateMembers } = this.state;
-        const memberData = { id: user.id, nome: user.nome, foto: user.foto || '', cargo: 'Membro' };
+    handleAddMemberToCommission = async () => {
+        const { camaraId, commissionToUpdateMembers, users, newUserForCommission, newRoleForCommission } = this.state;
+
+        if (!newUserForCommission) {
+            alert('Por favor, selecione um membro.');
+            return;
+        }
+
+        const user = users.find(u => u.id === newUserForCommission);
+        if (!user) {
+            alert('Usuário selecionado não encontrado.');
+            return;
+        }
+
+        const memberData = { id: user.id, nome: user.nome, foto: user.foto || '', cargo: newRoleForCommission };
         const memberRef = ref(db, `${camaraId}/comissoes/${commissionToUpdateMembers.id}/membros/${user.id}`);
         await set(memberRef, memberData);
         this.fetchConfig();
+        this.handleCloseAddMemberModal();
     };
 
     handleRemoveMember = async (comissaoId, memberId) => {
@@ -247,7 +271,7 @@ class Configuracoes extends Component {
     // --- Render Methods for New Tabs ---
 
     renderUserManagement = () => {
-        const { camaraId, users } = this.state;
+        const { camaraId, users, showInviteModal } = this.state;
         return (
             <div className="dashboard-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -286,7 +310,7 @@ class Configuracoes extends Component {
     };
 
     renderComissoesManager = () => {
-        const { comissoes } = this.state;
+        const { comissoes, users, showAddMemberModal } = this.state;
         return (
             <div className="dashboard-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -298,8 +322,12 @@ class Configuracoes extends Component {
                         <div key={comissao.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <h4 style={{ margin: 0, color: '#333' }}>{comissao.nome}</h4>
-                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.9rem', color: '#666' }}>{comissao.descricao}</p>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                        <h4 style={{ margin: 0, color: '#333' }}>{comissao.nome}</h4>
+                                        <span className="tag tag-neutral" style={{padding: '3px 8px', fontSize: '0.7rem'}}>{comissao.tipo || 'Não definido'}</span>
+                                    </div>
+                                    
+                                    <p style={{ margin: '8px 0 0 0', fontSize: '0.9rem', color: '#666' }}>{comissao.descricao}</p>
                                 </div>
                                 <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: '0.8rem' }} onClick={() => this.handleOpenComissaoModal(comissao)}><FaPencilAlt /> Editar</button>
                             </div>
@@ -309,7 +337,7 @@ class Configuracoes extends Component {
                                     {comissao.membros && Object.values(comissao.membros).length > 0 ? Object.values(comissao.membros).map(membro => (
                                         <div key={membro.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f5', padding: '5px 10px', borderRadius: '8px' }}>
                                             <img src={membro.foto} alt={membro.nome} style={{ width: '25px', height: '25px', borderRadius: '50%' }} />
-                                            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{membro.nome}</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{membro.nome} ({membro.cargo})</span>
                                             <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }} onClick={() => this.handleRemoveMember(comissao.id, membro.id)}><FaTimes size={12} /></button>
                                         </div>
                                     )) : (
@@ -524,6 +552,14 @@ class Configuracoes extends Component {
                                 <button onClick={this.handleCloseComissaoModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}><FaTimes /></button>
                             </div>
                             <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' }}>Tipo de Comissão</label>
+                                <select name="tipo" value={this.state.comissaoFormData.tipo} onChange={this.handleComissaoFormChange} className="modal-input">
+                                    <option value="Permanente">Permanente</option>
+                                    <option value="Temporária">Temporária</option>
+                                    <option value="De Representação">De Representação</option>
+                                </select>
+                            </div>
+                            <div style={{ marginBottom: '20px' }}>
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' }}>Nome da Comissão</label>
                                 <input type="text" name="nome" value={this.state.comissaoFormData.nome} onChange={this.handleComissaoFormChange} className="modal-input" placeholder="Ex: Comissão de Educação e Cultura" />
                             </div>
@@ -547,26 +583,39 @@ class Configuracoes extends Component {
                                 <h2 style={{ margin: 0 }}>Adicionar Membro a "{this.state.commissionToUpdateMembers.nome}"</h2>
                                 <button onClick={this.handleCloseAddMemberModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}><FaTimes /></button>
                             </div>
-                            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                                {/* Lista todos os usuários da câmara para serem adicionados, não apenas vereadores, caso queira adicionar assessores etc */}
-                                {users.map(user => {
-                                    const isMember = this.state.commissionToUpdateMembers.membros && Object.values(this.state.commissionToUpdateMembers.membros).some(m => m.id === user.id);
-                                    return (
-                                        <div key={user.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
-                                            <span>{user.nome}</span>
-                                            <button
-                                                className={isMember ? "btn-secondary" : "btn-primary"}
-                                                disabled={isMember}
-                                                onClick={() => !isMember && this.handleAddMemberToCommission(user)}
-                                            >
-                                                {isMember ? 'Já é Membro' : 'Adicionar'}
-                                            </button>
-                                        </div>
-                                    );
-                                })}
+                            <div style={{padding: '20px 0'}}>
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' }}>Selecionar Membro</label>
+                                    <select 
+                                        className="modal-input"
+                                        value={this.state.newUserForCommission}
+                                        onChange={(e) => this.setState({ newUserForCommission: e.target.value })}
+                                    >
+                                        <option value="">-- Escolha um usuário --</option>
+                                        {users.filter(u => u.tipo === 'vereador').map(user => {
+                                            const isMember = this.state.commissionToUpdateMembers.membros && Object.values(this.state.commissionToUpdateMembers.membros).some(m => m.id === user.id);
+                                            return <option key={user.id} value={user.id} disabled={isMember}>{user.nome} {isMember ? '(Já é membro)' : ''}</option>
+                                        })}
+                                    </select>
+                                </div>
+                                <div style={{ marginBottom: '25px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' }}>Cargo na Comissão</label>
+                                    <select 
+                                        className="modal-input"
+                                        value={this.state.newRoleForCommission}
+                                        onChange={(e) => this.setState({ newRoleForCommission: e.target.value })}
+                                    >
+                                        <option value="Membro">Membro (Vogal)</option>
+                                        <option value="Presidente">Presidente</option>
+                                        <option value="Vice-Presidente">Vice-Presidente</option>
+                                        <option value="Relator">Relator</option>
+                                        <option value="Suplente">Suplente</option>
+                                    </select>
+                                </div>
                             </div>
                             <div className="modal-footer">
-                                <button onClick={this.handleCloseAddMemberModal} className="btn-secondary">Fechar</button>
+                                <button onClick={this.handleCloseAddMemberModal} className="btn-secondary">Cancelar</button>
+                                <button onClick={this.handleAddMemberToCommission} className="btn-primary">Adicionar Membro</button>
                             </div>
                         </div>
                     </div>

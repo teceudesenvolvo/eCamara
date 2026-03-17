@@ -5487,6 +5487,8 @@ footer>p {
   max-width: 90%;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   text-align: left;
+  height: auto;
+  overflow-y: scroll;
 }
 
 .modal-content>h2 {
@@ -5539,7 +5541,7 @@ footer>p {
   box-sizing: border-box;
   color: #000 !important;
   background-color: #f9f9f9 !important;
-  height: 200px;
+  height: 50px;
 }
 
 .label-form {
