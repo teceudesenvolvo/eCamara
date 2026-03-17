@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { Link } from 'react-router-dom'; // Import Link for navigation
 
 // Material-UI Table Components
 import Grid from '@mui/material/Grid';
@@ -199,14 +198,12 @@ class Materias extends Component {
 
           <div className="openai-grid">
             {filteredRows.map((row) => (
-              <div className="openai-card" key={row.id}>
-                
+              <div className="openai-card" key={row.id} onClick={() => this.props.history.push(`/materia/${row.camaraId}/${row.id}`)} style={{ cursor: 'pointer' }}>
+                <img src={row.imagem} alt={row.materia} className="card-image" />
                 <div className="card-content-openai">
                   <span className="card-date">{row.data} • {row.situacao}</span>
                   <h3>
-                    <Link to={`/materia/${row.camaraId}/${row.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      {row.materia}
-                    </Link>
+                    {row.materia}
                   </h3>
                   <p style={{fontSize: '0.9rem', marginBottom: '10px', color: '#555', fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
                     {row.tituloCompleto}
