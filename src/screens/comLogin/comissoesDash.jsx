@@ -103,7 +103,7 @@ class ComissoesDash extends Component {
                                     </div>
                                 </div>
                                 <div style={{ padding: '15px 25px', background: '#f8f9fa', borderTop: '1px solid #eee', textAlign: 'right' }}>
-                                    <span style={{ color: '#126B5E', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                                    <span style={{ color: '#126B5E', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
                                         Ver Pautas <FaArrowRight />
                                     </span>
                                 </div>

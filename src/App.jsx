@@ -81,13 +81,13 @@ function App() {
   const closeChat = () => setIsChatOpen(false);
 
   const location = useLocation();
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  const camaraId = pathParts.length > 1 ? pathParts[1] : this.props.match.params.camaraId; // Extract camaraId from URL
+
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
   const hideMenuDesktop = ['/', '/login/:camaraId', '/register', '/admin/perfil/:camaraId', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/');
 
   useEffect(() => {
-    const pathParts = location.pathname.split('/').filter(Boolean);
-    const camaraId = pathParts.length > 1 ? pathParts[1] : 'pacatuba'; // Extract camaraId from URL
-
     const fetchLayoutConfig = async () => {
       if (camaraId) {
         const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
@@ -113,7 +113,7 @@ function App() {
     };
 
     fetchLayoutConfig();
-  }, [location.pathname]);
+  }, [location.pathname, camaraId]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -127,7 +127,7 @@ function App() {
         <Route 
           path="/:page?/:camaraId?"
           render={({ match }) => (
-            <MenuDesktop onOpenChat={openChat} camaraId={match.params.camaraId || 'pacatuba'} logo={layoutConfig.logo} />
+            <MenuDesktop onOpenChat={openChat} camaraId={match.params.camaraId} logo={layoutConfig.logo} />
           )} />
       )}
       
@@ -168,7 +168,7 @@ function App() {
           <Route path="/admin/comissao-detalhes/:camaraId" component={ComissaoDetails} />
           <Route path="/admin/reuniao-virtual/:camaraId/:comissaoId/:reuniaoId" component={VirtualMeetingPage} />
           <Route path="/admin/pautas-sessao/:camaraId" component={PautasSessao} />
-          <Route path="/configuracoes/:camaraId" component={Configuracoes} />
+          <Route path="/admin/configuracoes/:camaraId" component={Configuracoes} />
           <Route exact path="/admin/assistente-admin/:camaraId" component={AdminDocumentsDash} />
           <Route path="/admin/assistente-admin/novo/:camaraId" component={AdminAssistant} />
           <Route path="/admin/assistente-admin/detalhes/:camaraId" component={AdminDocumentDetails} />
@@ -195,20 +195,18 @@ function App() {
             <div className='footer-section footer-links-section'>
               <h4>Legislativo</h4>
               <ul>
-                <li><a href="/sessoes/pacatuba">Sessões</a></li>
-                <li><a href="/materias/pacatuba">Matérias</a></li>
-                <li><a href="/normas/pacatuba">Normas Jurídicas</a></li>
-                <li><a href="/comissoes/pacatuba">Comissões</a></li>
+                <li><a href={`/sessoes/${camaraId}`}>Sessões</a></li>
+                <li><a href={`/materias/${camaraId}`}>Matérias</a></li>
+                <li><a href={`/normas/${camaraId}`}>Normas Jurídicas</a></li>
+                <li><a href={`/comissoes/${camaraId}`}>Comissões</a></li>
               </ul>
-            </div>
+            </div>  
             
             <div className='footer-section footer-links-section'>
               <h4>Transparência</h4>
               <ul>
-                <li><a href="/relatorios/pacatuba">Relatórios</a></li>
-                <li><a href="/sessao-virtual/pacatuba">Sessão Virtual</a></li>
-                <li><a href="/novidades">Novidades</a></li>
-                <li><a href="/acessibilidade">Acessibilidade</a></li>
+                <li><a href={`/relatorios/${camaraId}`}>Relatórios</a></li>
+                <li><a href={`/sessao-virtual/${camaraId}`}>Sessão Virtual</a></li>
               </ul>
             </div>
             
@@ -222,11 +220,7 @@ function App() {
           
           <div className='footer-bottom-wrapper'>
             <div className='footer-bottom'>
-              <p>&copy; 2026 Camara AI - Todos os direitos reservados. Desenvolvido por <strong>Blu Sistemas</strong></p>
-              <div className='footer-bottom-links'>
-                  <a href="/politica-privacidade">Política de Privacidade</a>
-                  <a href="/termos-uso">Termos de Uso</a>
-                </div>
+              <p>&copy; 2026 Camara AI - Todos os direitos reservados. Desenvolvido por <strong>Blu Tecnologias</strong></p>
             </div>
           </div>
         </footer>

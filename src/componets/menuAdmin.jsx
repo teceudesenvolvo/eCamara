@@ -143,7 +143,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
                     <span className="text-desktop">Sessões</span>
                 </Link>
 
-                <Link to={`/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
+                <Link to={`/admin/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
                     <FaCog className="icon-desktop" />
                     <span className="text-desktop">Configurações</span>
                 </Link>

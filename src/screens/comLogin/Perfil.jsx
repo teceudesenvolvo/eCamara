@@ -58,68 +58,68 @@ class Perfil extends Component {
     }
 
     componentDidMount() {
-    auth.onAuthStateChanged(async (userAuth) => {
+        auth.onAuthStateChanged(async (userAuth) => {
 
-        if (!userAuth) {
-            this.props.history.push(`/login/${this.props.match.params.camaraId}`);
-            return;
-        }
-
-        try {
-
-            const camaraId = this.props.match.params.camaraId;
-
-            const userRef = ref(db, `${camaraId}/users/${userAuth.uid}`);
-
-            const snapshot = await get(userRef);
-
-            let userData = {
-                nome: userAuth.displayName,
-                email: userAuth.email
-            };
-
-            if (snapshot.exists()) {
-                userData = snapshot.val();
+            if (!userAuth) {
+                this.props.history.push(`/login/${this.props.match.params.camaraId}`);
+                return;
             }
 
-            const materiasRef = ref(db, `${camaraId}/materias`);
-            const q = query(materiasRef, orderByChild('userId'), equalTo(userAuth.uid));
+            try {
 
-            const materiasSnap = await get(q);
+                const camaraId = this.props.match.params.camaraId;
 
-            let materias = [];
+                const userRef = ref(db, `${camaraId}/users/${userAuth.uid}`);
 
-            if (materiasSnap.exists()) {
-                materiasSnap.forEach(item => {
-                    materias.push({
-                        id: item.key,
-                        ...item.val()
+                const snapshot = await get(userRef);
+
+                let userData = {
+                    nome: userAuth.displayName,
+                    email: userAuth.email
+                };
+
+                if (snapshot.exists()) {
+                    userData = snapshot.val();
+                }
+
+                const materiasRef = ref(db, `${camaraId}/materias`);
+                const q = query(materiasRef, orderByChild('userId'), equalTo(userAuth.uid));
+
+                const materiasSnap = await get(q);
+
+                let materias = [];
+
+                if (materiasSnap.exists()) {
+                    materiasSnap.forEach(item => {
+                        materias.push({
+                            id: item.key,
+                            ...item.val()
+                        });
                     });
+                }
+
+                const stats = this.calculateStats(materias);
+
+                this.setState({
+                    user: {
+                        uid: userAuth.uid,
+                        ...userData
+                    },
+                    materias,
+                    stats,
+                    loading: false
                 });
+
+            } catch (error) {
+
+                console.error("Erro ao carregar perfil:", error);
+
+                this.setState({ loading: false });
+
             }
 
-            const stats = this.calculateStats(materias);
-
-            this.setState({
-                user: {
-                    uid: userAuth.uid,
-                    ...userData
-                },
-                materias,
-                stats,
-                loading: false
-            });
-
-        } catch (error) {
-
-            console.error("Erro ao carregar perfil:", error);
-
-            this.setState({ loading: false });
-
-        }
-
-    });
-}
+        });
+    }
 
     calculateStats = (materias) => {
 
@@ -190,6 +190,51 @@ class Perfil extends Component {
         return (
             <>
                 <div className='profile-data-cards-container'>
+                    <div className='profile-section-header'>
+                        <h3>Últimas Matérias</h3>
+                    </div>
+
+                    <div className='matters-list-container'>
+
+                        {materias.length > 0 ?
+
+                            materias.slice(0, 5).map(materia => (
+
+                                <div className='matter-item' key={materia.id}>
+
+                                    <div className='matter-title-date'>
+                                        <p className='matter-type'>{materia.tipoMateria} - {materia.numero}</p>
+                                        <p className='matter-description'>{materia.ementa}</p>
+                                    </div>
+
+                                    <div className='matter-status-button'>
+
+                                        <span className='matter-date'>{materia.dataApresenta}</span>
+
+                                        <button
+                                            className='matter-view-button'
+                                            onClick={() =>
+                                                this.props.history.push(`/admin/materia-detalhes/${this.props.match.params.camaraId}`, { materiaId: materia.id })
+                                            }
+                                        >
+                                            Ver
+                                        </button>
+
+                                    </div>
+
+                                </div>
+
+                            ))
+
+                            :
+
+                            <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                                Nenhuma matéria cadastrada.
+                            </p>
+
+                        }
+
+                    </div>
 
                     <div className='profile-data-card'>
                         <h3>Resumo da Atuação</h3>
@@ -245,51 +290,7 @@ class Perfil extends Component {
                     </div>
                 </div>
 
-                <div className='profile-section-header'>
-                    <h3>Últimas Matérias</h3>
-                </div>
 
-                <div className='matters-list-container'>
-
-                    {materias.length > 0 ?
-
-                        materias.slice(0, 5).map(materia => (
-
-                            <div className='matter-item' key={materia.id}>
-
-                                <div className='matter-title-date'>
-                                    <p className='matter-type'>{materia.tipoMateria} - {materia.numero}</p>
-                                    <p className='matter-description'>{materia.ementa}</p>
-                                </div>
-
-                                <div className='matter-status-button'>
-
-                                    <span className='matter-date'>{materia.dataApresenta}</span>
-
-                                    <button
-                                        className='matter-view-button'
-                                        onClick={() =>
-                                            this.props.history.push('/materia-detalhes', { materiaId: materia.id })
-                                        }
-                                    >
-                                        Ver
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                        ))
-
-                        :
-
-                        <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                            Nenhuma matéria cadastrada.
-                        </p>
-
-                    }
-
-                </div>
 
             </>
         );
@@ -413,7 +414,7 @@ class Perfil extends Component {
 
                 <div className='profile-main-content'>
 
-                    
+
 
                     <div className='profile-header-card'>
 

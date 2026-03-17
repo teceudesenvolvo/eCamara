@@ -41,7 +41,7 @@ class JuizoMateria extends Component {
     fetchMaterias = (camaraId) => {
         this.setState({ loading: true });
         try {
-            const materiasRef = ref(db, `${camaraId}/materias`);
+            const materiasRef = ref(db, `${camaraId}/materias/`);
             // Usando onValue para escuta em tempo real das matérias
             onValue(materiasRef, (snapshot) => {
                 const materias = [];
