@@ -141,7 +141,7 @@ class HomePage extends Component {
                         </div>
                         <div className="openai-grid">
                             {agenda.length > 0 ? agenda.map(item => (
-                                <div className="openai-card" key={item.id}>
+                                <div className="openai-card" key={item.id} onClick={() => this.props.history.push(`/materia/${camaraId}/${item.id}`)} style={{ cursor: 'pointer' }}>
                                     <div className="card-content-openai">
                                         <span className="card-date">{item.day} {item.month} • {item.time}</span>
                                         <h3>{item.title}</h3>
