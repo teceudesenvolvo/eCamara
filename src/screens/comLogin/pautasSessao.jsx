@@ -96,8 +96,8 @@ class PautasSessao extends Component {
 
             const layoutData = layoutSnap.val() || {};
             
-            if (layoutData.logoDark) {
-                this.getBase64(layoutData.logoDark).then(logoBase64 => this.setState({ logoBase64 }));
+            if (layoutData.logoLight) {
+                this.getBase64(layoutData.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
             } else if (layoutData.logo) {
                 this.getBase64(layoutData.logo).then(logoBase64 => this.setState({ logoBase64 }));
             }

@@ -102,8 +102,8 @@ const AdminAssistant = () => {
 
                 const layoutData = layoutSnap.val() || {};
                 let logoB64 = null;
-                if (layoutData.logoDark) {
-                    logoB64 = await getBase64(layoutData.logoDark);
+                if (layoutData.logoLight) {
+                    logoB64 = await getBase64(layoutData.logoLight);
                 }
 
                 setCamaraConfigs({

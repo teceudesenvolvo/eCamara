@@ -148,8 +148,8 @@ class AddProducts extends Component {
 
         // Busca e converte o logo após a configuração inicial ser carregada
         const layoutData = this.state.layoutConfig;
-        if (layoutData.logoDark) {
-            this.setState({ logoBase64: await this.getBase64(layoutData.logoDark) });
+        if (layoutData.logoLight) {
+            this.setState({ logoBase64: await this.getBase64(layoutData.logoLight) });
         }
 
     };
@@ -545,7 +545,7 @@ class AddProducts extends Component {
             logoBase64 && {
                 image: logoBase64, // Usa a versão Base64
                 width: 80,
-                alignment: 'center'
+                alignment: 'right'
             },
             {
                 text: this.state.homeConfig.titulo || `Câmara Municipal de ${camaraId}`,
@@ -553,61 +553,18 @@ class AddProducts extends Component {
                 style: 'timbrado'
             },
             {
-                text: `Protocolo: ${protocolo || 'Não informado'}`, // Adiciona fallback
+                text: `Protocolo: ${protocolo}`, // Adiciona fallback
                 alignment: 'center'
             },
             {
-                text: titulo || 'Título da Matéria', // Adiciona fallback
+                text: titulo, // Adiciona fallback
                 style: 'header',
                 alignment: 'center'
             },
-            {
-                text: 'Identificação da Matéria',
-                alignment: 'center',
-                style: 'subheader'
-            },
+           
             { text: '\n' }, // Espaçamento
 
-            // Identificação Básica
-            { text: [{ text: 'Tipo de Matéria: ', bold: true }, tipoMateria || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Ano: ', bold: true }, ano || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Número: ', bold: true }, numero || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Data da Apresentação: ', bold: true }, dataApresenta || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Tipo de Apresentação: ', bold: true }, tipoApresentacao || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Autor: ', bold: true }, `${tipoAutor || ''} ${autor || 'Não informado'}`.trim()], style: 'infoText' },
-            { text: '\n' },
-
-            // Outras Informações
-            {
-                text: 'Outras Informações',
-                alignment: 'center',
-                style: 'subheader'
-            },
-            { text: '\n' },
-            { text: [{ text: 'Apelido: ', bold: true }, apelido || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Prazo: ', bold: true }, `${prazo || 'Não informado'} dias`], style: 'infoText' },
-            { text: [{ text: 'Matéria Polêmica: ', bold: true }, materiaPolemica || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Objeto: ', bold: true }, objeto || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Regime de Tramitação: ', bold: true }, regTramita || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Situação: ', bold: true }, status || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Fim do Prazo: ', bold: true }, dataPrazo || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'Publicação: ', bold: true }, publicacao || 'Não informado'], style: 'infoText' },
-            { text: [{ text: 'É Complementar: ', bold: true }, isComplementar || 'Não informado'], style: 'infoText' },
-            { text: '\n' },
-
-            // Origem Externa (apenas se houver dados)
-            (tipoMateriaExt || numeroMateriaExt || anoMateriaExt || dataMateriaExt) && {
-                text: 'Origem Externa',
-                alignment: 'center',
-                style: 'subheader'
-            },
-            (tipoMateriaExt || numeroMateriaExt || anoMateriaExt || dataMateriaExt) && { text: '\n' },
-            tipoMateriaExt && { text: [{ text: 'Tipo Matéria Externa: ', bold: true }, tipoMateriaExt], style: 'infoText' },
-            numeroMateriaExt && { text: [{ text: 'Número Matéria Externa: ', bold: true }, numeroMateriaExt], style: 'infoText' },
-            anoMateriaExt && { text: [{ text: 'Ano Matéria Externa: ', bold: true }, anoMateriaExt], style: 'infoText' },
-            dataMateriaExt && { text: [{ text: 'Data Matéria Externa: ', bold: true }, dataMateriaExt], style: 'infoText' },
-            (tipoMateriaExt || numeroMateriaExt || anoMateriaExt || dataMateriaExt) && { text: '\n' },
-
+            
             // Dados Textuais
             {
                 text: 'Dados Textuais',
@@ -616,8 +573,6 @@ class AddProducts extends Component {
             },
             { text: '\n' },
             { text: [{ text: 'Ementa: ', bold: true }, ementa || 'Não informado'], style: 'descricoes' },
-            { text: [{ text: 'Indexação: ', bold: true }, indexacao || 'Não informado'], style: 'descricoes' },
-            { text: [{ text: 'Observação: ', bold: true }, observacao || 'Não informado'], style: 'descricoes' },
 
             // Minuta da Lei (Se houver)
             textoMateria && { text: '\n\n' },
