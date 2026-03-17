@@ -43,6 +43,7 @@ import Login from './screens/semLogin/login.jsx';
 import Mais from './screens/semLogin/Mais.jsx';
 import Materias from './screens/semLogin/Materias.jsx';
 import MateriaDetalhesPublico from './screens/semLogin/MateriaDetalhesPublico.jsx';
+import VereadorProfile from './screens/semLogin/VereadorProfile.jsx';
 
 // Paginas Configurações e Gerenciamento
 import LayoutManager from './screens/comLogin/LayoutManager.jsx';
@@ -162,6 +163,7 @@ function App() {
           <Route path="/comissoes/:camaraId" component={Comissoes} />
           <Route path="/materias/:camaraId" component={Materias} />
           <Route path="/materia/:camaraId/:materiaId" component={MateriaDetalhesPublico} />
+          <Route path="/vereador/:camaraId/:vereadorId" component={VereadorProfile} />
 
           {/* Perfis de Acesso */}
           <Route path="/admin/perfil/:camaraId" component={Perfil} />
