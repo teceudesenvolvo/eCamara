@@ -71,6 +71,11 @@ function App() {
     email: "Email não informado",
   });
 
+  const [homeConfig, setHomeConfig] = useState({
+    titulo: 'Camara AI',
+    slogan: "Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.",
+  });
+
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState({
     corPrimaria: '#126B5E', // Default primary color
@@ -91,11 +96,14 @@ function App() {
   useEffect(() => {
     const fetchLayoutConfig = async () => {
       if (camaraId) {
+        const homeRef = ref(db, `${camaraId}/dados-config/home`);
         const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
         const footerRef = ref(db, `${camaraId}/dados-config/footer`);
         try {
           const snapshot = await get(layoutRef);
           const footerSnapshot = await get(footerRef);
+          const homeSnapshot = await get(homeRef);
+
 
           if (snapshot.exists()) {
             setLayoutConfig(snapshot.val());
@@ -106,6 +114,10 @@ function App() {
 
           if (footerSnapshot.exists()) {
             setFooterConfig(footerSnapshot.val());
+          }
+
+          if (homeSnapshot.exists()) {
+            setHomeConfig(homeSnapshot.val());
           }
         } catch (error) {
           console.error("Error fetching layout config:", error);
@@ -184,7 +196,7 @@ function App() {
         <footer className='footer'>
           <div className='footer-content'>
             <div className='footer-section footer-about'>
-              <h4 className='footer-logo-text'>Câmara Municipal de {camaraId}</h4>
+              <h4 className='footer-logo-text'>{homeConfig.titulo}</h4>
               <p>{footerConfig.slogan}</p>
               {/* <div className='social-icons'>
                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"><FaTwitter /></a>

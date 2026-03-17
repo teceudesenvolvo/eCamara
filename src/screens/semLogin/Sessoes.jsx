@@ -152,7 +152,6 @@ class Sessoes extends Component {
                     <div className="openai-grid">
                         {filteredSessoes.map((sessao) => (
                             <div className="openai-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })}>
-                                <img src={sessao.imagem || 'https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?auto=format&fit=crop&w=500&q=60'} alt={sessao.tipo} className="card-image" />
                                 <div className="card-content-openai">
                                     <span className="card-date">{sessao.data} • {new Date(sessao.createdAt).getFullYear()}</span>
                                     <h3>{sessao.tipo} nº {sessao.numero}</h3>

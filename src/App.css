@@ -3733,6 +3733,15 @@ h3 {
   display: inline-block;
 }
 
+.footer-section h3 {
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  display: inline-block;
+}
+
 .footer-section p {
   color: #e0e6ed;
   line-height: 1.6;

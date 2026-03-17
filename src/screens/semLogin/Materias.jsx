@@ -69,7 +69,6 @@ class Materias extends Component {
             tramitacao: val.regTramita || 'Ordinária',
             exercicio: val.ano || '',
             data: val.dataApresenta || new Date(val.createdAt).toLocaleDateString('pt-BR'),
-            imagem: `https://loremflickr.com/500/300/${keyword},brasil,politica/all`, // Busca imagem semelhante
             linkId: child.key
           });
         });
@@ -199,7 +198,7 @@ class Materias extends Component {
           <div className="openai-grid">
             {filteredRows.map((row) => (
               <div className="openai-card" key={row.id} onClick={() => this.props.history.push(`/materia/${row.camaraId}/${row.id}`)} style={{ cursor: 'pointer' }}>
-                <img src={row.imagem} alt={row.materia} className="card-image" />
+                
                 <div className="card-content-openai">
                   <span className="card-date">{row.data} • {row.situacao}</span>
                   <h3>

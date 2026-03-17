@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-    FaHome, FaGavel, FaFileAlt, FaVideo, FaBook, FaBars, FaTimes,
-    FaRobot
+    FaHome, FaGavel, FaFileAlt, FaVideo, FaBook, FaBars, FaTimes, FaUsers, FaRobot
 } from 'react-icons/fa';
 import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
 import '../App.css';
@@ -49,9 +48,9 @@ const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
                         <FaBook className="icon-desktop" />
                         <span className="text-desktop">Normas</span>
                     </Link>
-                    <Link to={`/sessao-virtual/${camaraId}`} className={`aDesktop ${isActive(`/sessao-virtual/${camaraId}`)}`}>
-                        <FaVideo className="icon-desktop" />
-                        <span className="text-desktop">Sessão Virtual</span>
+                    <Link to={`/comissoes/${camaraId}`} className={`aDesktop ${isActive(`/comissoes/${camaraId}`)}`}>
+                        <FaUsers className="icon-desktop" />
+                        <span className="text-desktop">Comissões</span>
                     </Link>
 
                     <div className="divider-desktop">Camara AI</div>

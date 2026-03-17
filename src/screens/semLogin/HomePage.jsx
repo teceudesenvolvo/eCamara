@@ -142,7 +142,6 @@ class HomePage extends Component {
                         <div className="openai-grid">
                             {agenda.length > 0 ? agenda.map(item => (
                                 <div className="openai-card" key={item.id}>
-                                    <img src={item.imagem} alt={item.title} className="card-image" />
                                     <div className="card-content-openai">
                                         <span className="card-date">{item.day} {item.month} • {item.time}</span>
                                         <h3>{item.title}</h3>
