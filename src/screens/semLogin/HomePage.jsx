@@ -115,7 +115,7 @@ class HomePage extends Component {
                             <p>{homeConfig.slogan || `Inteligência Artificial para uma legislação mais transparente e acessível em ${camaraId}.`}</p>
                             <div className="hero-buttons-openai">
                                 <Link to={`/materias/${camaraId}`} className="btn-openai btn-primary">Explorar Projetos</Link>
-                                <Link to="/login" className="btn-openai btn-secondary">Acesso Restrito</Link>
+                                <Link to={`/login/${camaraId}`} className="btn-openai btn-secondary">Acesso Restrito</Link>
                             </div>
                         </div>
                     </div>

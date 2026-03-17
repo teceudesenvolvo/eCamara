@@ -19,9 +19,9 @@ class ComissoesDash extends Component {
     componentDidMount() {
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                const userIndexRef = ref(db, `users_index/${user.uid}`);
+                const userIndexRef = ref(db, `${this.props.match.params.camaraId}/users/${user.uid}`);
                 const snapshot = await get(userIndexRef);
-                const camaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
+                const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
                 
                 this.setState({ camaraId });
                 this.setState({ userId: user.uid });
@@ -53,7 +53,7 @@ class ComissoesDash extends Component {
     };
 
     handleNavigateToDetails = (comissaoId) => {
-        this.props.history.push('/comissao-detalhes', { comissaoId });
+        this.props.history.push(`/admin/comissao-detalhes/${this.props.match.params.camaraId}`, { comissaoId });
     };
 
     render() {

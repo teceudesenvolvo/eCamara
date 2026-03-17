@@ -158,7 +158,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
                     <span className="text-desktop">Layouts</span>
                 </Link>
 
-                <Link to="/perfil" className={`aDesktop ${isActive('/perfil')}`}>
+                <Link to={`/admin/perfil/${camaraId}`} className={`aDesktop ${isActive('/perfil')}`}>
                     <FaRegUser className="icon-desktop" />
                     <span className="text-desktop">Minha Conta</span>
                 </Link>

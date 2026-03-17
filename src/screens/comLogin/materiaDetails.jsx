@@ -19,11 +19,11 @@ class MateriaDetails extends Component {
 
         if (!materiaId) {
             this.setState({ loading: false });
-            return;
+            return;  // Early return to prevent further execution
         }
 
         try {
-            const materiaRef = ref(db, `camara-teste/materias/${materiaId}`);
+            const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${materiaId}`);
             const snapshot = await get(materiaRef);
 
             if (snapshot.exists()) {
@@ -131,7 +131,10 @@ class MateriaDetails extends Component {
         }
 
         if (!materia) {
-            return (
+        return (
+                
+
+
                 <div className='App-header' style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f0f2f5' }}>
                     <p>Matéria não encontrada.</p>
                     <button onClick={() => this.props.history.goBack()} className="btn-back">Voltar</button>

@@ -11,6 +11,7 @@ import { auth, db } from "../../firebaseConfig";
 
 //mudança de páginas
 
+
 class loginClient extends Component {
     constructor(props) {
         super(props);
@@ -39,19 +40,35 @@ class loginClient extends Component {
             // Buscar a câmara do usuário para redirecionar corretamente
             const user = auth.currentUser;
             if (user) {
-                const userIndexRef = ref(db, `users_index/${user.uid}`);
+                const userIndexRef = ref(db, `${this.props.match.params.camaraId}/users/${user.uid}`);
                 const snapshot = await get(userIndexRef);
+                const camaraIdFromUrl = this.props.match.params.camaraId;
+                const camaraIdFromIndex = snapshot.exists() ? snapshot.val().camaraId : null;
+                const camaraId = camaraIdFromUrl || camaraIdFromIndex;
                 
-                if (snapshot.exists()) {
-                    const camaraId = snapshot.val().camaraId;
-                    window.location.href = `/admin/materias-dash/${camaraId}`;
-                } else {
-                    window.location.href = '/perfil';
+
+                // Verifique se o usuário existe na câmara correta
+                const userRef = ref(db, `${camaraId}/users/${user.uid}`);
+                const userSnapshot = await get(userRef);
+
+                 if (userSnapshot.exists()) {
+                     window.location.href = `/admin/materias-dash/${camaraId}`;
+
+
                 }
+                else if(error.code === 'auth/user-not-found') {
+                    this.setState({ 
+                        error: "Você não tem permissão para acessar esta câmara.", 
+                        loading: false 
+                    });
+
+                } else {
+                    this.setState({ error: 'Erro ao verificar informações do usuário.', loading: false });
+                 }
             }
         } catch (error) {
             console.error("Erro no login:", error);
-            let errorMessage = "Ocorreu um erro ao tentar fazer login.";
+            let errorMessage = "Você não faz parte desta câmara!";
             
             // Tratamento de erros comuns do Firebase
             if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
@@ -68,10 +85,10 @@ class loginClient extends Component {
 
     render() {
         const { email, password, error, loading } = this.state;
-
+        const { camaraId } = this.props.match.params;
         return (
             <div className='App-header loginPage' >
-                <div className='Container' >
+             <div className='Container' >
                     <form className='formLogin' onSubmit={this.handleLogin}>
                         <h1>Entre com sua conta:</h1> 
                         
@@ -85,7 +102,7 @@ class loginClient extends Component {
                             {loading ? 'Entrando...' : 'Entrar'}
                         </button>
                     </form>
-                    {/* <p>Não tem uma conta? <a href='/register' className='linkLogin'>Crie uma</a></p> */}
+                     <p>Não tem uma conta? <a href={`/register?camara=${camaraId}`} className='linkLogin'>Crie uma</a></p>
                 </div>
             </div>
         );

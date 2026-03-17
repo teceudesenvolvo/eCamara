@@ -164,7 +164,7 @@ class loginDashboard extends Component {
 
                                 <div style={{ padding: '15px 20px', background: '#fff', borderTop: '1px solid #f0f0f0' }}>
                                     <button className="btn-secondary" style={{ width: '100%', color: '#126B5E', borderColor: '#126B5E' }}
-                                    onClick={() => this.props.history.push(`/admin/materia-detalhes/${this.props.match.params.camaraId}`, { materiaId: row.id })}
+                                    onClick={() => this.props.history.push(`/admin/materia-detalhes/${this.state.camaraId}`, { materiaId: row.id })}
                                     onMouseOver={(e) => { e.target.style.background = '#126B5E'; e.target.style.color = 'white'; }}
                                     onMouseOut={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#126B5E'; }}
                                     >

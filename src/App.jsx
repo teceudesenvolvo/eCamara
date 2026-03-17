@@ -25,6 +25,7 @@ import MateriasDash from './screens/comLogin/materiasDash.jsx';
 import JuizoMateria from './screens/comLogin/juizoMateria.jsx';
 import JuizoPresidente from './screens/comLogin/juizoPresidente.jsx';
 import ComissoesDash from './screens/comLogin/comissoesDash.jsx';
+import VirtualMeetingPage from './screens/comLogin/VirtualMeetingPage.jsx';
 import ComissaoDetails from './screens/comLogin/comissaoDetails.jsx';
 import PautasSessao from './screens/comLogin/pautasSessao.jsx';
 import AdminDocumentsDash from './screens/comLogin/AdminDocumentsDash.jsx';
@@ -81,7 +82,7 @@ function App() {
 
   const location = useLocation();
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/', '/login', '/register', '/perfil', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/');
+  const hideMenuDesktop = ['/', '/login/:camaraId', '/register', '/admin/perfil/:camaraId', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/');
 
   useEffect(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
@@ -136,7 +137,7 @@ function App() {
           {/* Página Principal */}
           <Route exact path="/" component={CamaraSelector} />
 
-          <Route path="/login" component={Login} />
+          <Route path="/login/:camaraId" component={Login} />
           <Route path="/register" component={Register} />
           
           {/* Dynamic routes for each city council */}
@@ -149,7 +150,7 @@ function App() {
           <Route path="/materias/:camaraId" component={Materias} />
 
           {/* Perfis de Acesso */}
-          <Route path="/perfil" component={Perfil} />
+          <Route path="/admin/perfil/:camaraId" component={Perfil} />
 
           {/* Páginas Mobile */}
           <Route path="/Mais" component={Mais} />
@@ -165,6 +166,7 @@ function App() {
           <Route path="/admin/juizo-presidente/:camaraId" component={JuizoPresidente} />
           <Route path="/admin/comissoes-dash/:camaraId" component={ComissoesDash} />
           <Route path="/admin/comissao-detalhes/:camaraId" component={ComissaoDetails} />
+          <Route path="/admin/reuniao-virtual/:camaraId/:comissaoId/:reuniaoId" component={VirtualMeetingPage} />
           <Route path="/admin/pautas-sessao/:camaraId" component={PautasSessao} />
           <Route path="/configuracoes/:camaraId" component={Configuracoes} />
           <Route exact path="/admin/assistente-admin/:camaraId" component={AdminDocumentsDash} />
