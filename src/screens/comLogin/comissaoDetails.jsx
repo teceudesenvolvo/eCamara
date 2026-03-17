@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-import { FaUsers, FaFileAlt, FaCheck, FaTimes, FaPlus, FaCalendarCheck } from 'react-icons/fa';
+import { FaUsers, FaFileAlt, FaCheck, FaTimes, FaPlus, FaCalendarCheck, FaUserTag, FaPenFancy, FaRobot, FaEye, FaSpinner } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuAdmin.jsx';
-import { db } from '../../firebaseConfig';
+import { db, auth } from '../../firebaseConfig';
 import { ref, get, onValue, update, push, set } from 'firebase/database';
+import { sendMessageToAIPrivate } from '../../aiService';
 
 class ComissaoDetails extends Component {
     constructor(props) {
@@ -12,6 +13,7 @@ class ComissaoDetails extends Component {
             materias: [],
             reunioes: [],
             loading: true,
+            userRole: 'Visitante',
             camaraId: this.props.match.params.camaraId, // Será atualizado
             comissaoId: null,
             activeTab: 'pautas',
@@ -21,7 +23,25 @@ class ComissaoDetails extends Component {
             novaReuniaoTipo: 'Presencial',
             novaReuniaoLocal: '',
             novaReuniaoPauta: '',
-            novaReuniaoMaterias: [] // Novo estado para as matérias selecionadas
+            novaReuniaoMaterias: [], // Novo estado para as matérias selecionadas
+
+            // State for Relator Designation (Presidente)
+            showDesignateModal: false,
+            designatingMateria: null,
+            selectedRelatorId: '',
+
+            // State for Parecer (Relator)
+            showParecerModal: false,
+            parecerMateria: null,
+            parecerText: '',
+            parecerVoto: 'Favorável',
+            isGeneratingParecer: false,
+
+            // State for Voting
+            votingMateria: null,
+            memberVote: 'Favorável',
+            votoEmSeparadoFile: null,
+            votoEmSeparadoBase64: null
         };
     }
 
@@ -55,7 +75,17 @@ class ComissaoDetails extends Component {
             const snapshot = await get(comissaoRef);
             console.log(snapshot.exists());
             if (snapshot.exists()) {
-                this.setState({ comissao: { id: snapshot.key, ...snapshot.val() } }, () => {                    this.fetchReunioes();
+                const comissaoData = { id: snapshot.key, ...snapshot.val() };
+                
+                // Determine User Role
+                let userRole = 'Visitante';
+                if (auth.currentUser && comissaoData.membros) {
+                    const membro = Object.values(comissaoData.membros).find(m => m.id === auth.currentUser.uid);
+                    if (membro) userRole = membro.cargo;
+                }
+
+                this.setState({ comissao: comissaoData, userRole }, () => {
+                    this.fetchReunioes();
                     this.fetchMaterias();
                 });
             } else {
@@ -83,7 +113,19 @@ class ComissaoDetails extends Component {
                 });
             }
             // Filtra matérias destinadas a esta comissão
-            const materiasDaComissao = allMaterias.filter(m => m.status === `Encaminhado à ${comissao.nome}`);
+            const materiasDaComissao = allMaterias.filter(m => {
+                // 1. Matérias recém encaminhadas (sem relator ainda ou status inicial)
+                if (m.status === `Encaminhado à ${comissao.nome}`) return true;
+
+                // 2. Matérias já em processo na comissão (com relator definido que pertence a esta comissão)
+                if (m.relatorId && comissao.membros && comissao.membros[m.relatorId]) {
+                    return m.status.startsWith('Em Análise pelo Relator') ||
+                           m.status === 'Parecer Emitido - Aguardando Votação' ||
+                           m.status === 'Aprovado na Comissão' ||
+                           m.status === 'Rejeitado na Comissão';
+                }
+                return false;
+            });
             this.setState({ materias: materiasDaComissao, loading: false });
         },  (error) => {
             console.error("Erro ao buscar matérias da comissão:", error);
@@ -118,6 +160,59 @@ class ComissaoDetails extends Component {
             console.error("Erro ao atualizar status da matéria:", error);
         }
     };
+
+    // --- Voting Methods ---
+
+    handleOpenVoting = (materia) => {
+        this.setState({ showVotingModal: true, votingMateria: materia, memberVote: 'Favorável' });
+    };
+
+    handleVotoFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                this.setState({
+                    votoEmSeparadoFile: file,
+                    votoEmSeparadoBase64: reader.result
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    handleCastVote = async () => {
+        const { camaraId, votingMateria, memberVote, votoEmSeparadoBase64 } = this.state;
+        const userId = auth.currentUser.uid;
+        
+        // Save vote to Firebase
+        const voteRef = ref(db, `${camaraId}/materias/${votingMateria.id}/votosComissao/${userId}`);
+        
+        const voteData = {
+            voto: memberVote,
+            data: new Date().toISOString(),
+            nome: auth.currentUser.displayName || 'Membro'
+        };
+
+        if (memberVote === 'Voto em Separado' && votoEmSeparadoBase64) {
+            voteData.parecerBase64 = votoEmSeparadoBase64;
+        }
+
+        await update(voteRef, voteData);
+
+        this.setState({ showVotingModal: false, votingMateria: null, memberVote: 'Favorável', votoEmSeparadoFile: null, votoEmSeparadoBase64: null });
+    };
+
+    handleFinalizeVoting = async (materiaId, resultado) => {
+        const { camaraId } = this.state;
+        const materiaRef = ref(db, `${camaraId}/materias/${materiaId}`);
+        
+        await update(materiaRef, {
+            status: resultado === 'Aprovado' ? 'Aprovado na Comissão' : 'Rejeitado na Comissão',
+            dataVotacaoComissao: new Date().toISOString()
+        });
+    };
+
 
     // --- Meeting Modal Methods ---
 
@@ -178,7 +273,7 @@ class ComissaoDetails extends Component {
         };
 
         if (novaReuniaoTipo === 'Virtual') {
-            const roomName = `eCamara-${camaraId}-${comissaoId}-${newReuniaoRef.key}`;
+            const roomName = `camara-ai-${camaraId}-${comissaoId}-${newReuniaoRef.key}`;
             reuniaoData.url = `https://meet.jit.si/${roomName}`;
         } else {
             reuniaoData.local = novaReuniaoLocal || 'A definir';
@@ -194,8 +289,96 @@ class ComissaoDetails extends Component {
         }
     };
 
+    // --- Relator Designation Methods (Presidente) ---
+    handleOpenDesignate = (materia) => {
+        this.setState({ showDesignateModal: true, designatingMateria: materia, selectedRelatorId: '' });
+    };
+
+    handleDesignateRelator = async () => {
+        const { camaraId, designatingMateria, selectedRelatorId, comissao } = this.state;
+        if (!selectedRelatorId) return alert("Selecione um relator.");
+
+        const relatorMember = Object.values(comissao.membros).find(m => m.id === selectedRelatorId);
+        if (!relatorMember) return;
+
+        const materiaRef = ref(db, `${camaraId}/materias/${designatingMateria.id}`);
+        try {
+            await update(materiaRef, {
+                relatorId: relatorMember.id,
+                relatorNome: relatorMember.nome,
+                status: `Em Análise pelo Relator (${relatorMember.nome})`
+            });
+            alert(`Relator ${relatorMember.nome} designado com sucesso.`);
+            this.setState({ showDesignateModal: false, designatingMateria: null });
+        } catch (error) {
+            console.error("Erro ao designar relator:", error);
+        }
+    };
+
+    // --- Parecer Creation Methods (Relator) ---
+    handleOpenParecer = (materia) => {
+        this.setState({ 
+            showParecerModal: true, 
+            parecerMateria: materia, 
+            parecerText: materia.parecerComissao || '',
+            parecerVoto: materia.votoRelator || 'Favorável'
+        });
+    };
+
+    handleGenerateParecerAI = async () => {
+        const { parecerMateria, comissao, parecerVoto } = this.state;
+        this.setState({ isGeneratingParecer: true });
+
+        const prompt = `
+            Atue como Relator da ${comissao.nome}.
+            Sua tarefa é redigir um Parecer Técnico legislativo sobre a seguinte matéria:
+            Título: ${parecerMateria.titulo}
+            Ementa: ${parecerMateria.ementa}
+            Tipo: ${parecerMateria.tipoMateria}
+            Autor: ${parecerMateria.autor}
+
+            Seu voto é: ${parecerVoto}.
+
+            Estrutura do Parecer:
+            1. Relatório: Breve resumo do que trata a matéria.
+            2. Fundamentação: Análise técnica sobre a legalidade, constitucionalidade e mérito do projeto. Argumente a favor do seu voto (${parecerVoto}).
+            3. Conclusão do Relator: Voto final explícito.
+
+            Use linguagem formal, técnica e impessoal. Formate em HTML com parágrafos <p> e negritos <strong>.
+        `;
+
+        try {
+            const response = await sendMessageToAIPrivate(prompt);
+            this.setState({ parecerText: response, isGeneratingParecer: false });
+        } catch (error) {
+            console.error("Erro na IA:", error);
+            this.setState({ isGeneratingParecer: false });
+            alert("Erro ao gerar parecer com IA.");
+        }
+    };
+
+    handleSaveParecer = async () => {
+        const { camaraId, parecerMateria, parecerText, parecerVoto } = this.state;
+        if (!parecerText) return alert("O texto do parecer não pode estar vazio.");
+
+        const materiaRef = ref(db, `${camaraId}/materias/${parecerMateria.id}`);
+        try {
+            await update(materiaRef, {
+                parecerComissao: parecerText,
+                votoRelator: parecerVoto,
+                status: 'Parecer Emitido - Aguardando Votação',
+                dataParecer: new Date().toISOString()
+            });
+            alert("Parecer salvo e emitido com sucesso.");
+            this.setState({ showParecerModal: false, parecerMateria: null });
+        } catch (error) {
+            console.error("Erro ao salvar parecer:", error);
+        }
+    };
+
     render() {
-        const { comissao, materias, reunioes, loading, error, activeTab, showReuniaoModal, novaReuniaoData, novaReuniaoTipo, novaReuniaoLocal, novaReuniaoPauta, novaReuniaoMaterias } = this.state;
+        const { comissao, materias, reunioes, loading, error, activeTab, showReuniaoModal, novaReuniaoData, novaReuniaoTipo, novaReuniaoLocal, novaReuniaoPauta, novaReuniaoMaterias, userRole, 
+            showDesignateModal, showParecerModal, isGeneratingParecer, parecerText, parecerVoto, designatingMateria, showVotingModal, votingMateria, memberVote, votoEmSeparadoFile } = this.state;
 
         
 
@@ -234,6 +417,12 @@ class ComissaoDetails extends Component {
                         <button onClick={() => this.setState({ activeTab: 'reunioes' })} className={`tab-button ${activeTab === 'reunioes' ? 'active' : ''}`} style={{ padding: '10px 20px', background: activeTab === 'reunioes' ? '#fff' : 'transparent', border: 'none', borderBottom: activeTab === 'reunioes' ? '3px solid #126B5E' : '3px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <FaCalendarCheck /> Reuniões Agendadas
                         </button>
+                        <button onClick={() => this.setState({ activeTab: 'relatoria' })} className={`tab-button ${activeTab === 'relatoria' ? 'active' : ''}`} style={{ padding: '10px 20px', background: activeTab === 'relatoria' ? '#fff' : 'transparent', border: 'none', borderBottom: activeTab === 'relatoria' ? '3px solid #126B5E' : '3px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FaPenFancy /> Minha Relatoria
+                        </button>
+                        <button onClick={() => this.setState({ activeTab: 'votacao' })} className={`tab-button ${activeTab === 'votacao' ? 'active' : ''}`} style={{ padding: '10px 20px', background: activeTab === 'votacao' ? '#fff' : 'transparent', border: 'none', borderBottom: activeTab === 'votacao' ? '3px solid #126B5E' : '3px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FaCheck /> Votação
+                        </button>
                     </div>
 
                     {/* Conteúdo da Aba Ativa */}
@@ -247,22 +436,41 @@ class ComissaoDetails extends Component {
                                             <div className="list-item-header">
                                                 <span className="tag tag-primary">{materia.tipoMateria} {materia.numero}</span>
                                             </div>
-                                            <h3 className="list-item-title">{materia.titulo}</h3>
-                                            <p style={{fontSize: '0.9rem', color: '#666', margin: '5px 0 0 0'}}>Autor: {materia.autor}</p>
+                                            <h3 className="list-item-title" style={{margin: '5px 0'}}>{materia.titulo}</h3>
+                                            <p style={{fontSize: '0.9rem', color: '#666', margin: '5px 0 0 0'}}>
+                                                <strong>Autor:</strong> {materia.autor} <br/>
+                                                <strong>Status:</strong> {materia.status} <br/>
+                                                {materia.relatorNome && <span style={{color: '#126B5E'}}><strong>Relator:</strong> {materia.relatorNome}</span>}
+                                            </p>
                                         </div>
                                         <div className="list-item-actions">
-                                            <button 
-                                                className="btn-danger" 
-                                                onClick={() => this.handleUpdateMateriaStatus(materia.id, 'Rejeitado na Comissão')}
-                                            >
-                                                <FaTimes /> Rejeitar
-                                            </button>
-                                            <button 
-                                                className="btn-success" 
-                                                onClick={() => this.handleUpdateMateriaStatus(materia.id, 'Aprovado na Comissão')}
-                                            >
-                                                <FaCheck /> Aprovar Parecer
-                                            </button>
+                                            {/* Ações do Presidente: Designar Relator */}
+                                            {userRole === 'Presidente' && !materia.relatorId && (
+                                                <button className="btn-secondary" onClick={() => this.handleOpenDesignate(materia)} style={{fontSize: '0.8rem'}}>
+                                                    <FaUserTag /> Designar Relator
+                                                </button>
+                                            )}
+
+                                            {/* Ações do Relator: Emitir Parecer */}
+                                            {auth.currentUser && materia.relatorId === auth.currentUser.uid && !materia.parecerComissao && (
+                                                <button className="btn-primary" onClick={() => this.handleOpenParecer(materia)} style={{fontSize: '0.8rem'}}>
+                                                    <FaPenFancy /> Emitir Parecer
+                                                </button>
+                                            )}
+
+                                            {/* Ações Gerais: Ver Parecer */}
+                                            {materia.parecerComissao && (
+                                                <button className="btn-secondary" onClick={() => this.handleOpenParecer(materia)} style={{fontSize: '0.8rem'}}>
+                                                    <FaEye /> Ver Parecer
+                                                </button>
+                                            )}
+                                            
+                                            {/* Ações de Votação (Para quando estiver em pauta de reunião, ou atalho para Presidente) */}
+                                            {userRole === 'Presidente' && materia.status.includes('Aguardando Votação') && (
+                                                <button className="btn-success" onClick={() => this.handleUpdateMateriaStatus(materia.id, 'Aprovado na Comissão')} style={{fontSize: '0.8rem'}}>
+                                                    <FaCheck /> Aprovar
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 )) : (
@@ -301,6 +509,95 @@ class ComissaoDetails extends Component {
                                     </div>
                                 )) : (
                                     <p style={{ color: '#999', fontStyle: 'italic', textAlign: 'center' }}>Nenhuma reunião agendada para esta comissão.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'relatoria' && (
+                        <div className="dashboard-card">
+                            <h3 style={{ margin: '0 0 20px 0', color: '#126B5E' }}>Minhas Relatorias</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                {materias.filter(m => m.relatorId === auth.currentUser?.uid).length > 0 ? 
+                                materias.filter(m => m.relatorId === auth.currentUser?.uid).map(materia => (
+                                    <div key={materia.id} className="list-item">
+                                        <div className="list-item-content">
+                                            <div className="list-item-header">
+                                                <span className="tag tag-primary">{materia.tipoMateria} {materia.numero}</span>
+                                                <span className="tag tag-warning">{materia.status}</span>
+                                            </div>
+                                            <h3 className="list-item-title" style={{margin: '5px 0'}}>{materia.titulo}</h3>
+                                            <p style={{fontSize: '0.9rem', color: '#666', margin: '5px 0 0 0'}}>
+                                                <strong>Ementa:</strong> {materia.ementa}
+                                            </p>
+                                        </div>
+                                        <div className="list-item-actions">
+                                            {!materia.parecerComissao ? (
+                                                <button className="btn-primary" onClick={() => this.handleOpenParecer(materia)} style={{fontSize: '0.8rem'}}>
+                                                    <FaPenFancy /> Redigir Parecer
+                                                </button>
+                                            ) : (
+                                                <button className="btn-secondary" onClick={() => this.handleOpenParecer(materia)} style={{fontSize: '0.8rem'}}>
+                                                    <FaEye /> Editar/Ver Parecer
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <p style={{ color: '#999', fontStyle: 'italic', textAlign: 'center' }}>Você não possui matérias designadas para relatoria.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'votacao' && (
+                        <div className="dashboard-card">
+                            <h3 style={{ margin: '0 0 20px 0', color: '#126B5E' }}>Votação de Pareceres</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                {materias.filter(m => m.status && (m.status.includes('Aguardando Votação') || m.status === 'Parecer Emitido - Aguardando Votação')).length > 0 ? 
+                                materias.filter(m => m.status && (m.status.includes('Aguardando Votação') || m.status === 'Parecer Emitido - Aguardando Votação')).map(materia => (
+                                    <div key={materia.id} className="list-item">
+                                        <div className="list-item-content">
+                                            <div className="list-item-header">
+                                                <span className="tag tag-primary">{materia.tipoMateria} {materia.numero}</span>
+                                                <span className="tag tag-success">Pronto para Votação</span>
+                                            </div>
+                                            <h3 className="list-item-title" style={{margin: '5px 0'}}>{materia.titulo}</h3>
+                                            <div style={{background: '#f9f9f9', padding: '10px', borderRadius: '5px', marginTop: '10px'}}>
+                                                <p style={{fontSize: '0.85rem', color: '#333', margin: 0}}><strong>Parecer do Relator ({materia.relatorNome}):</strong> {materia.votoRelator}</p>
+                                            </div>
+                                            
+                                            {/* Exibição dos Votos Parciais */}
+                                            {materia.votosComissao && (
+                                                <div style={{marginTop: '10px', fontSize: '0.8rem', color: '#666'}}>
+                                                    <strong>Votos Computados: </strong>
+                                                    {Object.values(materia.votosComissao).length} / {Object.keys(comissao.membros || {}).length}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="list-item-actions" style={{flexDirection: 'column', alignItems: 'flex-end', gap: '5px'}}>
+                                            {/* Botão de Voto para Membros */}
+                                            {auth.currentUser && comissao.membros && comissao.membros[auth.currentUser.uid] && (
+                                                <button className="btn-primary" onClick={() => this.handleOpenVoting(materia)} style={{fontSize: '0.8rem'}}>
+                                                    <FaCheck /> Votar
+                                                </button>
+                                            )}
+                                            
+                                            {/* Botão de Encerrar para Presidente */}
+                                            {userRole === 'Presidente' && (
+                                                <div style={{display: 'flex', gap: '5px', marginTop: '5px'}}>
+                                                    <button className="btn-success" onClick={() => this.handleFinalizeVoting(materia.id, 'Aprovado')} style={{fontSize: '0.7rem', padding: '5px 10px'}}>
+                                                        Aprovar
+                                                    </button>
+                                                    <button className="btn-danger" onClick={() => this.handleFinalizeVoting(materia.id, 'Rejeitado')} style={{fontSize: '0.7rem', padding: '5px 10px'}}>
+                                                        Rejeitar
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <p style={{ color: '#999', fontStyle: 'italic', textAlign: 'center' }}>Nenhuma matéria aguardando votação no momento.</p>
                                 )}
                             </div>
                         </div>
@@ -375,6 +672,133 @@ class ComissaoDetails extends Component {
                                 <div className="modal-footer">
                                     <button className="btn-secondary" onClick={this.handleCloseReuniaoModal}>Cancelar</button>
                                     <button className="btn-primary" onClick={this.handleCreateReuniao}>Agendar Reunião</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal Designar Relator */}
+                    {showDesignateModal && designatingMateria && (
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ width: '400px' }}>
+                                <h3 className="modal-header">Designar Relator</h3>
+                                <p style={{marginBottom: '15px'}}>Matéria: {designatingMateria.titulo}</p>
+                                <label className="label-form">Selecione o Relator:</label>
+                                <select className="modal-input" value={this.state.selectedRelatorId} onChange={(e) => this.setState({selectedRelatorId: e.target.value})}>
+                                    <option value="">Selecione...</option>
+                                    {comissao.membros && Object.values(comissao.membros).map(membro => (
+                                        <option key={membro.id} value={membro.id}>{membro.nome}</option>
+                                    ))}
+                                </select>
+                                <div className="modal-footer">
+                                    <button className="btn-secondary" onClick={() => this.setState({showDesignateModal: false})}>Cancelar</button>
+                                    <button className="btn-primary" onClick={this.handleDesignateRelator}>Salvar</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal Elaborar Parecer */}
+                    {showParecerModal && this.state.parecerMateria && (
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ width: '800px', maxWidth: '95%' }}>
+                                <h3 className="modal-header">Parecer do Relator</h3>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                                    <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                                        <label className="label-form" style={{marginBottom: 0}}>Voto do Relator:</label>
+                                        <select className="modal-input" style={{width: 'auto', padding: '5px'}} value={parecerVoto} onChange={(e) => this.setState({parecerVoto: e.target.value})}>
+                                            <option value="Favorável">Favorável</option>
+                                            <option value="Contrário">Contrário</option>
+                                            <option value="Com Emendas">Com Emendas</option>
+                                        </select>
+                                    </div>
+                                    <button className="btn-secondary" onClick={this.handleGenerateParecerAI} disabled={isGeneratingParecer} style={{color: '#126B5E', borderColor: '#126B5E'}}>
+                                        {isGeneratingParecer ? <FaSpinner className="animate-spin" /> : <FaRobot />} Gerar com IA
+                                    </button>
+                                </div>
+                                <textarea className="modal-textarea" rows="15" value={parecerText} onChange={(e) => this.setState({parecerText: e.target.value})} placeholder="Texto do parecer..."></textarea>
+                                <div className="modal-footer">
+                                    <button className="btn-secondary" onClick={() => this.setState({showParecerModal: false})}>Fechar</button>
+                                    <button className="btn-primary" onClick={this.handleSaveParecer}>Salvar e Emitir</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal de Votação */}
+                    {showVotingModal && votingMateria && (
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ width: '400px' }}>
+                                <h3 className="modal-header">Votar Parecer</h3>
+                                <p style={{marginBottom: '15px'}}>Matéria: {votingMateria.titulo}</p>
+                                <label className="label-form">Seu Voto:</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px', marginBottom: '20px' }}>
+                                    <button 
+                                        className="btn-secondary"
+                                        style={{ 
+                                            backgroundColor: memberVote === 'Favorável' ? '#e8f5e9' : '#fff',
+                                            color: memberVote === 'Favorável' ? '#2e7d32' : '#666',
+                                            borderColor: memberVote === 'Favorável' ? '#2e7d32' : '#ccc'
+                                        }}
+                                        onClick={() => this.setState({ memberVote: 'Favorável' })}
+                                    >
+                                        <FaCheck /> Favorável
+                                    </button>
+                                    <button 
+                                        className="btn-secondary"
+                                        style={{ 
+                                            backgroundColor: memberVote === 'Contrário' ? '#ffebee' : '#fff',
+                                            color: memberVote === 'Contrário' ? '#c62828' : '#666',
+                                            borderColor: memberVote === 'Contrário' ? '#c62828' : '#ccc'
+                                        }}
+                                        onClick={() => this.setState({ memberVote: 'Contrário' })}
+                                    >
+                                        <FaTimes /> Contrário
+                                    </button>
+                                    <button 
+                                        className="btn-secondary"
+                                        style={{ 
+                                            backgroundColor: memberVote === 'Abstenção' ? '#f5f5f5' : '#fff',
+                                            color: memberVote === 'Abstenção' ? '#333' : '#666',
+                                            borderColor: memberVote === 'Abstenção' ? '#333' : '#ccc'
+                                        }}
+                                        onClick={() => this.setState({ memberVote: 'Abstenção' })}
+                                    >
+                                        Abster-se
+                                    </button>
+                                    <button 
+                                        className="btn-secondary"
+                                        style={{ 
+                                            backgroundColor: memberVote === 'Voto em Separado' ? '#e3f2fd' : '#fff',
+                                            color: memberVote === 'Voto em Separado' ? '#1565c0' : '#666',
+                                            borderColor: memberVote === 'Voto em Separado' ? '#1565c0' : '#ccc'
+                                        }}
+                                        onClick={() => this.setState({ memberVote: 'Voto em Separado' })}
+                                    >
+                                        <FaFileAlt /> Voto em Separado
+                                    </button>
+                                </div>
+
+                                {memberVote === 'Voto em Separado' && (
+                                    <div style={{ marginBottom: '20px', animation: 'fadeIn 0.3s' }}>
+                                        <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Anexar Parecer Próprio (PDF)</label>
+                                        <input 
+                                            type="file" 
+                                            accept="application/pdf"
+                                            className="modal-input"
+                                            onChange={this.handleVotoFileChange}
+                                        />
+                                        {votoEmSeparadoFile && (
+                                            <p style={{ fontSize: '0.8rem', color: '#126B5E', marginTop: '5px' }}>
+                                                Arquivo selecionado: {votoEmSeparadoFile.name}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="modal-footer">
+                                    <button className="btn-secondary" onClick={() => this.setState({showVotingModal: false})}>Cancelar</button>
+                                    <button className="btn-primary" onClick={this.handleCastVote}>Confirmar Voto</button>
                                 </div>
                             </div>
                         </div>

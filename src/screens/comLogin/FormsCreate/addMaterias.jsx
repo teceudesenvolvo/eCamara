@@ -131,6 +131,7 @@ class AddProducts extends Component {
                     homeConfig,
                     footerConfig,
                     loadingConfig: false
+                    // O logoBase64 será definido após a busca
                 },
                 this.handleGeneratePDF
             );
@@ -145,30 +146,30 @@ class AddProducts extends Component {
 
         }
 
-    };
-
-    // Função auxiliar para converter imagem URL em Base64
-    loadImagesAndGeneratePDF = async () => {
-        try {
-            const getBase64 = async (url) => {
-                const response = await fetch(url);
-                const blob = await response.blob();
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.readAsDataURL(blob);
-                });
-            };
-
-            // Esta função será substituída por fetchInitialData
-            // const logoBase64 = await getBase64(logo);
-            // const signatureBase64 = await getBase64(signature);
-            // this.setState({ logoBase64, signatureBase64 }, this.handleGeneratePDF);
-        } catch (error) {
-            console.error("Erro ao carregar imagens para o PDF:", error);
-            this.handleGeneratePDF(); // Tenta gerar mesmo sem imagens em caso de erro
+        // Busca e converte o logo após a configuração inicial ser carregada
+        const layoutData = this.state.layoutConfig;
+        if (layoutData.logoDark) {
+            this.setState({ logoBase64: await this.getBase64(layoutData.logoDark) });
         }
+
     };
+
+    // Função auxiliar para converter imagem URL em Base64, agora como método de classe
+    getBase64 = async (url) => {
+        if (!url) return null;
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error("Error converting image to Base64:", error);
+            return null;
+        }
+    }
     async componentDidMount() {
         try {
             auth.onAuthStateChanged(async (user) => {
@@ -409,14 +410,28 @@ class AddProducts extends Component {
                     nextStep = 2; // Mantém no passo 2 para o usuário tentar novamente
                 } else {
                     aiResponseText = `Perfeito! Validei o regimento e a base de dados. Estou gerando a minuta da matéria. Abrindo o editor...`;
-                    shouldOpenEditor = true;
-                    // Prepara os dados para o editor, mas não atualiza o estado ainda
-                    nextStateUpdates = {
-                        ...nextStateUpdates,
-                        titulo: (`${this.state.tipoMateria || 'Matéria'} sobre ${this.state.objeto}`).toUpperCase(),
-                        ementa: `Dispõe sobre ${this.state.objeto} e dá outras providências.`,
-                        textoMateria: response,
-                    };
+                    shouldOpenEditor = true;                    
+                    try {
+                        const jsonMatch = response.match(/\{[\s\S]*\}/);
+                        if (!jsonMatch) throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+                        
+                        const generatedData = JSON.parse(jsonMatch[0]);
+                        
+                        nextStateUpdates = {
+                            ...nextStateUpdates,
+                            titulo: (`${this.state.tipoMateria || 'Matéria'} sobre ${this.state.objeto}`).toUpperCase(),
+                            ementa: generatedData.ementa || `Dispõe sobre ${this.state.objeto} e dá outras providências.`,
+                            indexacao: generatedData.indexacao || '',
+                            observacao: generatedData.observacao || '',
+                            textoMateria: generatedData.textoMateria || '<p>Erro ao gerar o texto da matéria.</p>',
+                        };
+                    } catch (e) {
+                        console.error("Falha ao analisar JSON da IA:", e, "Resposta recebida:", response);
+                        nextStateUpdates = {
+                            ...nextStateUpdates,
+                            textoMateria: response, // Usa a resposta bruta como fallback
+                        };
+                    }
                 }
             } else {
                 aiResponseText = response;
@@ -520,7 +535,7 @@ class AddProducts extends Component {
         // Desestruturar todos os dados do estado
         const {
             tipoMateria, ano, numero, dataApresenta, protocolo, tipoApresentacao, tipoAutor, autor, apelido, camaraId,
-            prazo, materiaPolemica, objeto, regTramita, status, dataPrazo, publicacao, isComplementar, tipoMateriaExt,
+            prazo, materiaPolemica, objeto, regTramita, status, dataPrazo, publicacao, isComplementar, tipoMateriaExt, footerConfig,
             numeroMateriaExt, anoMateriaExt, dataMateriaExt, titulo, ementa, indexacao, observacao, textoMateria, isSigned,
             logoBase64, signatureBase64
         } = this.state;
@@ -607,51 +622,46 @@ class AddProducts extends Component {
             // Minuta da Lei (Se houver)
             textoMateria && { text: '\n\n' },
             textoMateria && { canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1 }] },
-            textoMateria && { text: '\nMINUTA DO PROJETO (Gerada por IA)', style: 'subheader', alignment: 'center' },
             textoMateria && { stack: this.processHtmlToPdfMake(textoMateria), marginTop: 15 },
         ].filter(Boolean); // Filtra elementos falsy (como os blocos de Origem Externa vazios)
 
+        const today = new Date();
+        const formattedDate = today.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+        const cityName = this.state.homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+
+        // Adiciona bloco de encerramento e assinatura
+        docContent.push(
+            { text: '\n\n\n' }, // Espaçador
+            { text: `${cityName}, ${formattedDate}.`, alignment: 'center', style: 'infoText' },
+            { text: '\n\n\n\n' }, // Espaçador para assinatura
+            { text: '________________________________', alignment: 'center' },
+            { text: this.state.autor || 'Vereador(a) Proponente', alignment: 'center', style: 'small', bold: true, margin: [0, 5, 0, 0] },
+            { text: 'Vereador(a)', alignment: 'center', style: 'small' }
+        );
+
         // Adiciona a assinatura digital se isSigned for true
-        if (isSigned && signatureBase64) {
+        if (isSigned) {
             docContent.push(
                 {
-                    text: '\n\n' // Espaço antes da assinatura
-                },
-                {
-                    image: signatureBase64, // Usa a versão Base64
-                    width: 150,
-                    alignment: 'center',
-                    style: 'assinatura'
-                },
-                {
-                    text: '___________________________________________________',
-                    alignment: 'center',
-                    style: 'underline'
-                },
-                {
-                    text: autor || 'Autor não informado', // Nome do autor abaixo da assinatura
-                    alignment: 'center',
-                    style: 'small'
-                },
-                {
-                    text: `Assinado Digitalmente em: ${new Date().toLocaleString()}, Blu Legis`,
+                    text: `\n\nAssinado Digitalmente via Camara AI em: ${new Date().toLocaleString()}`,
                     alignment: 'center',
                     style: 'digitalSignatureInfo'
                 }
             );
         }
 
+        const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
+
         const docDefinition = {
             content: docContent,
             // Adiciona numeração de páginas no rodapé
-            footer: (currentPage, pageCount) => {
-                return {
-                    text: `Página ${currentPage} de ${pageCount}`,
-                    alignment: 'center',
-                    margin: [0, 0, 0, 0],
-                    fontSize: 8
-                };
-            },
+            footer: (currentPage, pageCount) => ({
+                stack: [
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
+                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'center', fontSize: 8, margin: [0, 2, 0, 0] }
+                ]
+            }),
             styles: {
                 header: {
                     fontSize: 18,
@@ -711,6 +721,11 @@ class AddProducts extends Component {
                     lineHeight: 1.5,
                     marginBottom: 10, // Espaço entre parágrafos
                     leadingIndent: 30 // Identação da primeira linha (padrão legislativo)
+                },
+                footerStyle: {
+                    fontSize: 8,
+                    color: '#777',
+                    lineHeight: 1.3
                 }
             }
         };

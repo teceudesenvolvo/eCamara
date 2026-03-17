@@ -102,8 +102,8 @@ const AdminAssistant = () => {
 
                 const layoutData = layoutSnap.val() || {};
                 let logoB64 = null;
-                if (layoutData.logo) {
-                    logoB64 = await getBase64(layoutData.logo);
+                if (layoutData.logoDark) {
+                    logoB64 = await getBase64(layoutData.logoDark);
                 }
 
                 setCamaraConfigs({
@@ -304,7 +304,7 @@ const AdminAssistant = () => {
     };
 
     const generateDocDefinition = () => {
-        const { logoBase64, home, footer } = camaraConfigs;
+        const { logoBase64, home, footer, camaraId } = camaraConfigs;
 
         const content = [
             logoBase64 && { image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] },
@@ -314,13 +314,25 @@ const AdminAssistant = () => {
             ...processHtmlToPdfMake(generatedContent)
         ];
 
+        const today = new Date();
+        const formattedDate = today.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+        const cityName = home.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const signatoryName = formData.de || auth.currentUser?.displayName || '_________________________';
+
+        // Adiciona bloco de encerramento e assinatura
+        content.push(
+            { text: '\n\n\n' }, // Espaçador
+            { text: `${cityName}, ${formattedDate}.`, alignment: 'center' },
+            { text: '\n\n\n\n' }, // Espaçador para assinatura
+            { text: '________________________________', alignment: 'center' },
+            { text: signatoryName, alignment: 'center', style: 'small', bold: true, margin: [0, 5, 0, 0] },
+            { text: 'Emitente', alignment: 'center', style: 'small' }
+        );
+
         const footerText = `📍 ${footer.address || ''} | 📞 ${footer.phone || ''}\n📧 ${footer.email || ''}\n${footer.copyright || ''}`;
 
         if (isSigned) {
-            content.push(
-                { text: '\n\n\n____________________________________', alignment: 'center', margin: [0, 20, 0, 0] },
-                { text: 'Assinado Digitalmente via Camara AI', alignment: 'center', color: '#126B5E', fontSize: 9, bold: true }
-            );
+            content.push({ text: `\n\nAssinado Digitalmente via Camara AI em: ${new Date().toLocaleString()}`, alignment: 'center', style: 'digitalSignatureInfo' });
         }
 
         return {
@@ -336,7 +348,17 @@ const AdminAssistant = () => {
                 header: { fontSize: 14, bold: true, color: '#333' },
                 slogan: { fontSize: 9, italics: true, color: '#666' },
                 subheader: { fontSize: 13, color: '#126B5E', marginTop: 10 },
-                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 }
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
+                small: {
+                    fontSize: 9,
+                    color: '#666'
+                },
+                digitalSignatureInfo: {
+                    fontSize: 8,
+                    color: '#007bff',
+                    marginTop: 5,
+                    italics: true
+                },
             }
         };
     };

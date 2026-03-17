@@ -39,6 +39,8 @@ class AdminDocumentDetails extends Component {
             documento: null,
             loading: true,
             logoBase64: null,
+            homeConfig: {},
+            footerConfig: {},
             pdfData: null,
             showPdfPopup: false,
             camaraId: this.props.match.params.camaraId,
@@ -46,7 +48,7 @@ class AdminDocumentDetails extends Component {
     }
 
     componentDidMount() {
-        this.loadLogo();
+        this.fetchConfigs();
         this.fetchDocumento();
     }
 
@@ -74,21 +76,43 @@ class AdminDocumentDetails extends Component {
         }
     };
 
-    loadLogo = async () => {
+    fetchConfigsAndLogo = async () => {
+        const { camaraId } = this.state;
         try {
-            const getBase64 = async (url) => {
-                const response = await fetch(url);
-                const blob = await response.blob();
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.readAsDataURL(blob);
-                });
-            };
-            const logoBase64 = await getBase64(logo);
-            this.setState({ logoBase64 });
+            const [layoutSnap, homeSnap, footerSnap] = await Promise.all([
+                get(ref(db, `${camaraId}/dados-config/layout`)),
+                get(ref(db, `${camaraId}/dados-config/home`)),
+                get(ref(db, `${camaraId}/dados-config/footer`))
+            ]);
+
+            const layoutData = layoutSnap.val() || {};
+            
+            if (layoutData.logoDark) {
+                this.getBase64(layoutData.logoDark).then(logoBase64 => this.setState({ logoBase64 }));
+            } else {
+                this.getBase64(logo).then(logoBase64 => this.setState({ logoBase64 }));
+            }
+
+            this.setState({
+                homeConfig: homeSnap.val() || {},
+                footerConfig: footerSnap.val() || {}
+            });
         } catch (error) {
-            console.error("Erro ao carregar o logo para o PDF:", error);
+            console.error("Erro ao carregar configurações:", error);
+        }
+    };
+
+    getBase64 = async (url) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
         }
     };
 
@@ -104,28 +128,62 @@ class AdminDocumentDetails extends Component {
     };
 
     generateDocDefinition = () => {
-        const { documento, logoBase64 } = this.state;
+        const { documento, logoBase64, homeConfig, footerConfig, camaraId } = this.state;
         if (!documento) return null;
 
         const content = [
-            logoBase64 && { image: logoBase64, width: 70, alignment: 'center', margin: [0, 0, 0, 10] },
-            { text: 'Câmara Municipal de Teste', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
+            logoBase64 && { image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] },
+            { text: homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
+            footerConfig.slogan && { text: footerConfig.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
             { text: documento.tipo.toUpperCase(), style: 'subheader', alignment: 'center', bold: true, margin: [0, 0, 0, 20] },
             ...this.processHtmlToPdfMake(documento.conteudo)
         ];
 
+        const today = new Date();
+        const formattedDate = today.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+        const cityName = homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const signatoryName = (documento.metadata && documento.metadata.de) ? documento.metadata.de : 'Emitente';
+
+        // Adiciona bloco de encerramento e assinatura
+        content.push(
+            { text: '\n\n\n' }, // Espaçador
+            { text: `${cityName}, ${formattedDate}.`, alignment: 'center' },
+            { text: '\n\n\n\n' }, // Espaçador para assinatura
+            { text: '________________________________', alignment: 'center' },
+            { text: signatoryName, alignment: 'center', style: 'small', bold: true, margin: [0, 5, 0, 0] },
+            { text: 'Emitente', alignment: 'center', style: 'small' }
+        );
+
         if (documento.status === 'Assinado') {
-            content.push(
-                { text: '\n\n\n____________________________________', alignment: 'center' },
-                { text: 'Assinado Digitalmente', alignment: 'center', color: 'blue', fontSize: 10 }
-            );
+            content.push({ text: `\n\nAssinado Digitalmente via Camara AI em: ${new Date(documento.createdAt).toLocaleString()}`, alignment: 'center', style: 'digitalSignatureInfo' });
         }
+
+        const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
 
         return {
             content: content,
+            footer: (currentPage, pageCount) => ({
+                stack: [
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
+                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
+                ]
+            }),
             styles: {
-                header: { fontSize: 16, bold: true },
-                subheader: { fontSize: 14 }
+                header: { fontSize: 14, bold: true, color: '#333' },
+                slogan: { fontSize: 9, italics: true, color: '#666' },
+                subheader: { fontSize: 13, color: '#126B5E', marginTop: 10 },
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
+                small: {
+                    fontSize: 9,
+                    color: '#666'
+                },
+                digitalSignatureInfo: {
+                    fontSize: 8,
+                    color: '#007bff',
+                    marginTop: 5,
+                    italics: true
+                },
             }
         };
     };

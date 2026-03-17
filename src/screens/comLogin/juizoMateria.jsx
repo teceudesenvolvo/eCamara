@@ -24,8 +24,12 @@ class JuizoMateria extends Component {
             materias: [],
             loading: true,
             camaraId: this.props.match.params.camaraId,
+            homeConfig: {},
+            footerConfig: {},
             viewingMateria: null,
-            showDetailModal: false
+            showDetailModal: false,
+            showPdfPopup: false,
+            pdfData: null
         };
     }
 
@@ -34,7 +38,7 @@ class JuizoMateria extends Component {
         const camaraId = this.props.match.params.camaraId;
         
         this.setState({ camaraId });
-        this.loadLogo();
+        this.fetchConfigsAndLogo();
         this.fetchMaterias(camaraId);
     }
 
@@ -60,21 +64,29 @@ class JuizoMateria extends Component {
         }
     };
 
-    loadLogo = async () => {
+    fetchConfigsAndLogo = async () => {
+        const { camaraId } = this.state;
         try {
-            const getBase64 = async (url) => {
-                const response = await fetch(url);
-                const blob = await response.blob();
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.readAsDataURL(blob);
-                });
-            };
-            const logoBase64 = await getBase64(logo);
-            this.setState({ logoBase64 });
+            const [layoutSnap, homeSnap, footerSnap] = await Promise.all([
+                get(ref(db, `${camaraId}/dados-config/layout`)),
+                get(ref(db, `${camaraId}/dados-config/home`)),
+                get(ref(db, `${camaraId}/dados-config/footer`))
+            ]);
+
+            const layoutData = layoutSnap.val() || {};
+            
+            if (layoutData.logoDark) {
+                this.getBase64(layoutData.logoDark).then(logoBase64 => this.setState({ logoBase64 }));
+            } else {
+                this.getBase64(logo).then(logoBase64 => this.setState({ logoBase64 }));
+            }
+
+            this.setState({
+                homeConfig: homeSnap.val() || {},
+                footerConfig: footerSnap.val() || {}
+            });
         } catch (error) {
-            console.error("Erro ao carregar o logo para o PDF:", error);
+            console.error("Erro ao carregar configurações:", error);
         }
     };
 
@@ -92,6 +104,24 @@ class JuizoMateria extends Component {
 
     handleCloseParecer = () => {
         this.setState({ selectedMateria: null });
+    };
+
+    closePdfPopup = () => {
+        this.setState({ showPdfPopup: false, pdfData: null });
+    };
+
+    getBase64 = async (url) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
+        }
     };
 
     generateParecerPDFBase64 = (materia, parecerText, decisao) => {
@@ -123,8 +153,8 @@ class JuizoMateria extends Component {
             const materiaRef = ref(db, `${camaraId}/materias/${selectedMateria.id}`);
             await update(materiaRef, parecerData);
 
-            // Abre o PDF para o usuário após salvar
-            this.openParecerPDF(selectedMateria, parecerText, decisao);
+            // Abre o PDF no popup para o usuário após salvar
+            this.setState({ pdfData: pdfBase64, showPdfPopup: true });
             this.setState({ selectedMateria: null });
         } catch (error) {
             console.error("Erro ao salvar parecer:", error);
@@ -164,18 +194,21 @@ class JuizoMateria extends Component {
     };
 
     getDocDefinition = (materia, parecerText, decisao) => {
-        const { logoBase64 } = this.state;
+        const { logoBase64, homeConfig, footerConfig, camaraId } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
+        
+        const cityName = homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
 
         return {
             content: [
                 logoBase64 && {
                     image: logoBase64,
-                    width: 80,
+                    width: 60,
                     alignment: 'center',
-                    marginBottom: 10
+                    margin: [0, 0, 0, 5]
                 },
-                { text: 'Câmara Municipal de Teste', style: 'header', alignment: 'center' },
+                { text: homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
                 { text: 'Procuradoria Jurídica', style: 'subheader', alignment: 'center', marginBottom: 30 },
 
                 { text: 'PARECER JURÍDICO', style: 'title', alignment: 'center' },
@@ -207,30 +240,45 @@ class JuizoMateria extends Component {
                 { text: 'III - CONCLUSÃO', style: 'sectionHeader' },
                 { text: [ 'Diante do exposto, esta Procuradoria Jurídica opina pela ', { text: decisao === 'favoravel' ? 'CONSTITUCIONALIDADE e LEGALIDADE' : 'INCONSTITUCIONALIDADE e ILEGALIDADE', bold: true }, ' da proposição, nos termos da análise apresentada.' ], style: 'bodyText' },
 
-                { text: `\n\nCâmara Municipal, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
+                { text: `\n\n${cityName}, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
 
                 { text: '\n\n\n\n________________________________', style: 'signature', alignment: 'center' },
                 { text: 'Procurador Jurídico', style: 'signatureName', alignment: 'center' },
                 { text: 'OAB/XX 123.456', style: 'signatureOAB', alignment: 'center' },
             ].filter(Boolean),
+            footer: (currentPage, pageCount) => ({
+                stack: [
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
+                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
+                ]
+            }),
             styles: {
-                header: { fontSize: 16, bold: true }, subheader: { fontSize: 12, color: '#555' },
-                title: { fontSize: 14, bold: true, marginBottom: 20 }, infoBox: { margin: [0, 0, 0, 20] },
-                infoText: { fontSize: 10, margin: [5, 2, 5, 2] }, sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 5 },
-                bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 }, signature: { fontSize: 11 },
-                signatureName: { fontSize: 11, bold: true }, signatureOAB: { fontSize: 10, color: '#555' },
+                header: { fontSize: 14, bold: true, color: '#333' },
+                subheader: { fontSize: 13, color: '#126B5E', marginTop: 10 },
+                title: { fontSize: 14, bold: true, marginBottom: 20 },
+                infoBox: { margin: [0, 0, 0, 20] },
+                infoText: { fontSize: 10, margin: [5, 2, 5, 2] },
+                sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 5 },
+                bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 },
+                signature: { fontSize: 11 },
+                signatureName: { fontSize: 11, bold: true },
+                signatureOAB: { fontSize: 10, color: '#555' },
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 }
             }
         };
     };
 
     openParecerPDF = (materia, parecerText, decisao) => {
         const docDefinition = this.getDocDefinition(materia, parecerText, decisao);
-        pdfMake.createPdf(docDefinition).open();
+        pdfMake.createPdf(docDefinition).getBase64((data) => {
+            this.setState({ pdfData: data, showPdfPopup: true });
+        });
     };
 
 
     render() {
-        const { searchTerm, filterStatus, filterType, materias, selectedMateria, isGeneratingParecer, parecerText, loading, showDetailModal, viewingMateria } = this.state;
+        const { searchTerm, filterStatus, filterType, materias, selectedMateria, isGeneratingParecer, parecerText, loading, showDetailModal, viewingMateria, showPdfPopup, pdfData } = this.state;
 
         // Filtros
         const filteredMaterias = materias.filter(m => {
@@ -523,6 +571,24 @@ class JuizoMateria extends Component {
                                 <div className="modal-footer" style={{ borderTop: '1px solid #eee', paddingTop: '15px' }}>
                                     <button className="btn-secondary" onClick={this.handleCloseDetail}>Fechar Visualização</button>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- POPUP DE PREVIEW DO PDF --- */}
+                    {showPdfPopup && pdfData && (
+                        <div className="pdf-popup-overlay">
+                            <div className="pdf-popup-content">
+                                <button className="pdf-popup-close-button" onClick={this.closePdfPopup}>
+                                    X
+                                </button>
+                                <iframe
+                                    title="Preview PDF"
+                                    src={`data:application/pdf;base64,${pdfData}`}
+                                    width="100%"
+                                    height="100%"
+                                    frameBorder="0"
+                                />
                             </div>
                         </div>
                     )}

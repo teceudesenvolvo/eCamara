@@ -30,6 +30,8 @@ class JuizoPresidente extends Component {
             comissoesDisponiveis: [],
             materias: [],
             loading: true,
+            homeConfig: {},
+            footerConfig: {},
             camaraId: this.props.match.params.camaraId,
         };
     }
@@ -40,8 +42,7 @@ class JuizoPresidente extends Component {
                 const userIndexRef = ref(db, `users_index/${user.uid}`);
                 const snapshot = await get(userIndexRef);
                 const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
-                this.setState({ camaraId });
-                this.loadImages();
+                this.setState({ camaraId }, () => this.fetchConfigsAndLogo());
                 this.fetchMaterias(camaraId);
                 this.fetchComissoes(camaraId);
             }
@@ -81,8 +82,27 @@ class JuizoPresidente extends Component {
         });
     };
 
-    loadImages = async () => {
+    fetchConfigsAndLogo = async () => {
+        const { camaraId } = this.state;
         try {
+            const [layoutSnap, homeSnap, footerSnap] = await Promise.all([
+                get(ref(db, `${camaraId}/dados-config/layout`)),
+                get(ref(db, `${camaraId}/dados-config/home`)),
+                get(ref(db, `${camaraId}/dados-config/footer`))
+            ]);
+
+            const layoutData = layoutSnap.val() || {};
+            
+            if (layoutData.logoDark) {
+                this.getBase64(layoutData.logoDark).then(logoBase64 => this.setState({ logoBase64 }));
+            } else {
+                this.getBase64(logo).then(logoBase64 => this.setState({ logoBase64 }));
+            }
+
+            this.setState({
+                homeConfig: homeSnap.val() || {},
+                footerConfig: footerSnap.val() || {}
+            });
             const getBase64 = async (url) => {
                 const response = await fetch(url);
                 const blob = await response.blob();
@@ -92,10 +112,22 @@ class JuizoPresidente extends Component {
                     reader.readAsDataURL(blob);
                 });
             };
-            const logoBase64 = await getBase64(logo);
-            this.setState({ logoBase64 });
         } catch (error) {
-            console.error("Erro ao carregar imagens para o PDF:", error);
+            console.error("Erro ao carregar configurações:", error);
+        }
+    };
+
+    getBase64 = async (url) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
         }
     };
 
@@ -236,13 +268,19 @@ class JuizoPresidente extends Component {
     };
 
     generateDespachoPDF = (materia, despachoText, statusFinal) => {
-        const { logoBase64 } = this.state;
+        const { logoBase64, homeConfig, footerConfig, camaraId } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
+        
+        const cityName = homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
 
         const docDefinition = {
             content: [
-                logoBase64 && { image: logoBase64, width: 80, alignment: 'center', marginBottom: 10 },
-                { text: 'Câmara Municipal de Teste', style: 'header', alignment: 'center' },
+                logoBase64 && { 
+                    image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] 
+                },
+                { text: homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
+                footerConfig.slogan && { text: footerConfig.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
                 { text: 'Gabinete da Presidência', style: 'subheader', alignment: 'center', marginBottom: 30 },
 
                 { text: 'DESPACHO DE ADMISSIBILIDADE', style: 'title', alignment: 'center' },
@@ -265,24 +303,37 @@ class JuizoPresidente extends Component {
                 { text: 'I - DO PARECER JURÍDICO', style: 'sectionHeader' },
                 { text: `A Procuradoria Jurídica desta Casa emitiu parecer opinando pela ${materia.decisaoParecer === 'favoravel' ? 'constitucionalidade e legalidade' : 'inconstitucionalidade e ilegalidade'} da matéria, nos seguintes termos: "${materia.parecer}"`, style: 'bodyText' },
 
-                { text: 'II - DO DESPACHO', style: 'sectionHeader' },
+                { text: 'II - DO DESPACHO', style: 'sectionHeader', margin: [0, 10, 0, 5] },
                 { text: despachoText || 'Considerando o parecer da Procuradoria Jurídica e a competência desta Presidência, decido pelo trâmite a seguir.', style: 'bodyText' },
 
-                { text: 'III - DECISÃO', style: 'sectionHeader' },
+                { text: 'III - DECISÃO', style: 'sectionHeader', margin: [0, 10, 0, 5] },
                 { text: [ 'Diante do exposto, determino o: ', { text: statusFinal.toUpperCase(), bold: true }], style: 'bodyText' },
 
-                { text: `\n\nCâmara Municipal, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
+                { text: `\n\n${cityName}, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
 
                 { text: '\n\n\n\n________________________________', style: 'signature', alignment: 'center' },
                 { text: 'Presidente da Câmara', style: 'signatureName', alignment: 'center' },
                 { text: `Assinado Digitalmente em: ${new Date().toLocaleString()}, Blu Legis`, alignment: 'center', style: 'digitalSignatureInfo' }
             ].filter(Boolean),
+            footer: (currentPage, pageCount) => ({
+                stack: [
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
+                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
+                ]
+            }),
             styles: {
-                header: { fontSize: 16, bold: true }, subheader: { fontSize: 12, color: '#555' },
-                title: { fontSize: 14, bold: true, marginBottom: 20 }, infoBox: { margin: [0, 0, 0, 20] },
-                infoText: { fontSize: 10, margin: [5, 2, 5, 2] }, sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 5, color: '#126B5E' },
-                bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 }, signature: { fontSize: 11 },
+                header: { fontSize: 14, bold: true, color: '#333' }, 
+                subheader: { fontSize: 13, color: '#126B5E', marginTop: 10 },
+                slogan: { fontSize: 9, italics: true, color: '#666' },
+                title: { fontSize: 14, bold: true, marginBottom: 20 }, 
+                infoBox: { margin: [0, 0, 0, 20] },
+                infoText: { fontSize: 10, margin: [5, 2, 5, 2] }, 
+                sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 5, color: '#126B5E' },
+                bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 }, 
+                signature: { fontSize: 11 },
                 signatureName: { fontSize: 11, bold: true },
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
                 digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 5, italics: true }
             }
         };

@@ -31,7 +31,7 @@ class VirtualMeetingPage extends Component {
         }
 
         try {
-            const reuniaoRef = ref(db, `${camaraId}/comissoes//reunioes/`);
+            const reuniaoRef = ref(db, `${camaraId}/comissoes/${comissaoId}/reunioes/${reuniaoId}`);
             const snapshot = await get(reuniaoRef);
 
             if (snapshot.exists()) {

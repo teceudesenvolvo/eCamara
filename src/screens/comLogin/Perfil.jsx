@@ -105,6 +105,10 @@ class Perfil extends Component {
                         uid: userAuth.uid,
                         ...userData
                     },
+                    editNome: userData.nome || '',
+                    editCargo: userData.cargo || '',
+                    editBio: userData.bio || '',
+                    editFoto: userData.foto || '',
                     materias,
                     stats,
                     loading: false
@@ -159,6 +163,54 @@ class Perfil extends Component {
 
         this.props.history.push(`/login/${this.props.match.params.camaraId}`);
 
+    };
+
+    handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                this.setState({ editFoto: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    handleSaveProfile = async () => {
+        const { user, editNome, editCargo, editBio, editFoto } = this.state;
+        const camaraId = this.props.match.params.camaraId;
+
+        if (!user) return;
+
+        this.setState({ loading: true });
+
+        try {
+            const userRef = ref(db, `${camaraId}/users/${user.uid}`);
+            await update(userRef, {
+                nome: editNome,
+                cargo: editCargo,
+                bio: editBio,
+                foto: editFoto
+            });
+
+            // Atualiza o objeto user no estado para refletir na UI imediatamente
+            this.setState(prevState => ({
+                user: {
+                    ...prevState.user,
+                    nome: editNome,
+                    cargo: editCargo,
+                    bio: editBio,
+                    foto: editFoto
+                },
+                loading: false
+            }));
+
+            alert('Perfil atualizado com sucesso!');
+        } catch (error) {
+            console.error("Erro ao atualizar perfil:", error);
+            alert("Erro ao salvar alterações.");
+            this.setState({ loading: false });
+        }
     };
 
     renderOverview = () => {
@@ -309,29 +361,39 @@ class Perfil extends Component {
 
                     <div>
 
-                        <label className="label-form">Foto de Perfil (URL)</label>
+                        <label className="label-form">Foto de Perfil</label>
 
-                        <input
-                            type="text"
-                            className="modal-input"
-                            value={editFoto}
-                            onChange={(e) => this.setState({ editFoto: e.target.value })}
-                        />
-
-                        {editFoto &&
-
-                            <img
-                                src={editFoto}
-                                alt="Preview"
-                                style={{
-                                    width: '100px',
-                                    height: '100px',
-                                    borderRadius: '50%',
-                                    marginTop: '10px'
-                                }}
-                            />
-
-                        }
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
+                            <div style={{ position: 'relative', width: '100px', height: '100px' }}>
+                                <img
+                                    src={editFoto || ProfileImage}
+                                    alt="Preview"
+                                    style={{
+                                        width: '100px',
+                                        height: '100px',
+                                        borderRadius: '50%',
+                                        objectFit: 'cover',
+                                        border: '2px solid #ddd'
+                                    }}
+                                />
+                                <label htmlFor="profile-upload" style={{
+                                    position: 'absolute', bottom: '0', right: '0',
+                                    background: '#126B5E', color: 'white', borderRadius: '50%',
+                                    width: '30px', height: '30px', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                }}>
+                                    <FaCamera size={14} />
+                                </label>
+                                <input
+                                    id="profile-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: 'none' }}
+                                    onChange={this.handleImageChange}
+                                />
+                            </div>
+                            <span style={{ fontSize: '0.9rem', color: '#666' }}>Clique na câmera para alterar a foto.</span>
+                        </div>
 
                     </div>
 
@@ -376,7 +438,7 @@ class Perfil extends Component {
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
 
-                        <button className="btn-primary" disabled={loading}>
+                        <button className="btn-primary" disabled={loading} onClick={this.handleSaveProfile}>
                             <FaSave /> Salvar Alterações
                         </button>
 

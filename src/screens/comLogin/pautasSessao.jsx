@@ -16,7 +16,7 @@ class PautasSessao extends Component {
         this.state = {
             sessoes: [],
             showModal: false,
-            selectedSessao: null,
+            selectedSessaoId: null,
             novaData: '',
             novoTipo: 'Sessão Ordinária',
             novaTransmissaoUrl: '',
@@ -29,6 +29,9 @@ class PautasSessao extends Component {
             roteiroPdfUrl: null, // Novo estado para armazenar a URL do PDF gerado
             isEditingUrl: false,
             editedTransmissaoUrl: '',
+            homeConfig: {},
+            footerConfig: {},
+            logoBase64: null,
             camaraId: this.props.match.params.camaraId
         };
     }
@@ -39,7 +42,7 @@ class PautasSessao extends Component {
                 const userIndexRef = ref(db, `users_index/${user.uid}`);
                 const snapshot = await get(userIndexRef);
                 const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
-                this.setState({ camaraId }, () => {
+                this.setState({ camaraId }, () => { this.fetchConfigsAndLogo();
                     this.fetchSessoes();
                     this.fetchMateriasDisponiveis();
                 });
@@ -82,12 +85,52 @@ class PautasSessao extends Component {
         }
     };
 
+    fetchConfigsAndLogo = async () => {
+        const { camaraId } = this.state;
+        try {
+            const [layoutSnap, homeSnap, footerSnap] = await Promise.all([
+                get(ref(db, `${camaraId}/dados-config/layout`)),
+                get(ref(db, `${camaraId}/dados-config/home`)),
+                get(ref(db, `${camaraId}/dados-config/footer`))
+            ]);
+
+            const layoutData = layoutSnap.val() || {};
+            
+            if (layoutData.logoDark) {
+                this.getBase64(layoutData.logoDark).then(logoBase64 => this.setState({ logoBase64 }));
+            } else if (layoutData.logo) {
+                this.getBase64(layoutData.logo).then(logoBase64 => this.setState({ logoBase64 }));
+            }
+
+            this.setState({
+                homeConfig: homeSnap.val() || {},
+                footerConfig: footerSnap.val() || {}
+            });
+        } catch (error) {
+            console.error("Erro ao carregar configurações:", error);
+        }
+    };
+
+    getBase64 = async (url) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
+        }
+    };
+
     handleOpenModal = () => {
-        this.setState({ showModal: true, selectedSessao: null, novaData: '', novoTipo: 'Sessão Ordinária', novaTransmissaoUrl: '' });
+        this.setState({ showModal: true, selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária', novaTransmissaoUrl: '' });
     };
 
     handleCloseModal = () => {
-        this.setState({ showModal: false, selectedSessao: null });
+        this.setState({ showModal: false, selectedSessaoId: null });
     };
 
     handleCreateSessao = async () => {
@@ -120,8 +163,8 @@ class PautasSessao extends Component {
     };
 
     handleSelectSessao = (sessao) => {
-        this.setState({ 
-            selectedSessao: sessao, 
+        this.setState({
+            selectedSessaoId: sessao.id,
             editalText: sessao.edital || '', 
             roteiroPdfUrl: null, // Reseta o PDF ao selecionar nova sessão
             isEditingUrl: false, // Reseta o modo de edição da URL
@@ -130,8 +173,11 @@ class PautasSessao extends Component {
     };
 
     handleAddItem = async () => {
-        const { selectedSessao, selectedMateriaToAdd, materiasDisponiveis, camaraId } = this.state;
-        if (!selectedMateriaToAdd || !selectedSessao) return;
+        const { selectedSessaoId, sessoes, selectedMateriaToAdd, materiasDisponiveis, camaraId } = this.state;
+        if (!selectedMateriaToAdd || !selectedSessaoId) return;
+
+        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
+        if (!selectedSessao) return;
 
         const materia = materiasDisponiveis.find(m => m.id.toString() === selectedMateriaToAdd);
         if (materia) {
@@ -144,7 +190,7 @@ class PautasSessao extends Component {
 
             const updatedItens = [...currentItens, materia];
             
-            const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessao.id}`);
+            const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
             const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${materia.id}`);
 
             try {
@@ -165,12 +211,17 @@ class PautasSessao extends Component {
     };
 
     handleRemoveItem = async (itemId) => {
-        const { selectedSessao, camaraId } = this.state;
+        const { selectedSessaoId, sessoes, camaraId } = this.state;
+        if (!selectedSessaoId) return;
+
+        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
+        if (!selectedSessao) return;
+
         // Encontra o item a ser removido para ter referência dele
         const itemToRemove = (selectedSessao.itens || []).find(i => i.id === itemId);
         const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId); // Remove da lista local
 
-        const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessao.id}`);
+        const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
         const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${itemId}`);
 
         try {
@@ -186,7 +237,8 @@ class PautasSessao extends Component {
     };
 
     handleFinalizeSessao = async () => {
-        const { selectedSessao } = this.state;
+        const { selectedSessaoId, sessoes } = this.state;
+        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!selectedSessao) return;
     
         this.setState({ isFinalizing: true });
@@ -232,18 +284,35 @@ class PautasSessao extends Component {
     };
 
     generateRoteiroPDF = (sessao, roteiroText, storeUrl = false) => {
+        const { logoBase64, homeConfig, footerConfig, camaraId } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
+        
+        const cityName = homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
     
         const docDefinition = {
             content: [
-                { text: 'Câmara Municipal de Teste', style: 'header', alignment: 'center' },
+                logoBase64 && { 
+                    image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] 
+                },
+                { text: homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
+                footerConfig.slogan && { text: footerConfig.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
                 { text: `ROTEIRO DA ${sessao.tipo.toUpperCase()} Nº ${sessao.numero}`, style: 'title', alignment: 'center' },
                 { text: `Data: ${sessao.data}`, style: 'subheader', alignment: 'center', marginBottom: 30 },
                 { text: 'ROTEIRO DA SESSÃO', style: 'sectionHeader' },
                 { text: roteiroText, style: 'bodyText' },
-                { text: `\n\nCâmara Municipal, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
-            ],
-            styles: { header: { fontSize: 16, bold: true }, subheader: { fontSize: 12, color: '#555' }, title: { fontSize: 14, bold: true, marginTop: 20, marginBottom: 5 }, sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 10, color: '#126B5E' }, bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 } }
+                { text: `\n\n${cityName}, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
+            ].filter(Boolean),
+            footer: (currentPage, pageCount) => ({
+                stack: [
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
+                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
+                ]
+            }),
+            styles: { header: { fontSize: 14, bold: true, color: '#333' }, slogan: { fontSize: 9, italics: true, color: '#666' }, subheader: { fontSize: 12, color: '#555' }, title: { fontSize: 14, bold: true, marginTop: 20, marginBottom: 5 }, sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 10, color: '#126B5E' }, bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 },
+            footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 }
+            }
         };
     
         const pdfDocGenerator = pdfMake.createPdf(docDefinition);
@@ -258,7 +327,8 @@ class PautasSessao extends Component {
     };
 
     handleGenerateEditalWithAI = async () => {
-        const { selectedSessao } = this.state;
+        const { selectedSessaoId, sessoes } = this.state;
+        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!selectedSessao) return;
 
         this.setState({ isGeneratingEdital: true, editalText: '' });
@@ -286,10 +356,10 @@ class PautasSessao extends Component {
     };
 
     handleSaveUrl = async () => {
-        const { selectedSessao, editedTransmissaoUrl, camaraId } = this.state;
-        if (!selectedSessao) return;
+        const { selectedSessaoId, editedTransmissaoUrl, camaraId } = this.state;
+        if (!selectedSessaoId) return;
 
-        const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessao.id}`);
+        const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
         try {
             await update(sessaoRef, { transmissaoUrl: editedTransmissaoUrl });
             this.setState({ isEditingUrl: false });
@@ -302,7 +372,10 @@ class PautasSessao extends Component {
     };
 
     render() {
-        const { sessoes, showModal, selectedSessao, novaData, novoTipo, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl } = this.state;
+        const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl } = this.state;
+
+        // Encontra a sessão selecionada a partir do ID
+        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
 
         // Ordenar sessoes por data (mais recente primeiro)
         const sortedSessoes = [...sessoes].sort((a, b) => {
@@ -375,7 +448,7 @@ class PautasSessao extends Component {
                                             className="list-item dashboard-card-hover" 
                                             style={{ 
                                                 cursor: 'pointer', 
-                                                borderLeft: `4px solid ${selectedSessao && selectedSessao.id === sessao.id ? '#FF740F' : '#126B5E'}`,
+                                                borderLeft: `4px solid ${selectedSessaoId === sessao.id ? '#FF740F' : '#126B5E'}`,
                                                 marginBottom: '10px'
                                             }}
                                             onClick={() => this.handleSelectSessao(sessao)}

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel, FaSpinner, FaUsers, FaUserShield, FaPlus, FaPencilAlt, FaTimes, FaUserPlus, FaCopy } from 'react-icons/fa';
+import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel, FaSpinner, FaUsers, FaUserShield, FaPlus, FaPencilAlt, FaTimes, FaUserPlus, FaPalette, FaImage } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import { db } from '../../../firebaseConfig';
 import { query, orderByChild, equalTo, ref, get, update, push, set, remove } from 'firebase/database';
@@ -32,6 +32,13 @@ class Configuracoes extends Component {
             // State for User Invite
             showInviteModal: false,
             inviteType: 'vereador',
+            // Layout Config
+            layoutConfig: {
+                logoLight: '',
+                logoDark: '',
+                corPrimaria: '#126B5E',
+                corDestaque: '#FF740F'
+            }
         };
     }
 
@@ -68,16 +75,19 @@ class Configuracoes extends Component {
             const baseRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
             const usersRef = ref(db, `${camaraId}/users`);
             const comissoesRef = ref(db, `${camaraId}/comissoes`);
+            const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
 
-            const [baseSnapshot, usersSnapshot, comissoesSnapshot] = await Promise.all([
+            const [baseSnapshot, usersSnapshot, comissoesSnapshot, layoutSnapshot] = await Promise.all([
                 get(baseRef),
                 get(usersRef),
-                get(comissoesRef)
+                get(comissoesRef),
+                get(layoutRef)
             ]);
 
             let baseData = {};
             let usersList = [];
             let comissoesList = [];
+            let layoutData = this.state.layoutConfig;
 
             if (baseSnapshot.exists()) {
                 baseData = baseSnapshot.val();
@@ -101,13 +111,22 @@ class Configuracoes extends Component {
                 });
             }
 
+            if (layoutSnapshot.exists()) {
+                layoutData = { ...layoutData, ...layoutSnapshot.val() };
+            }
+
             this.setState({
                 regimentoText: baseData.regimentoText || '',
+                regimentoFile: baseData.regimentoFile || null,
                 leiOrganicaText: baseData.leiOrganicaText || '',
+                leiOrganicaFile: baseData.leiOrganicaFile || null,
                 materiasText: baseData.materiasText || '',
+                materiasFile: baseData.materiasFile || null,
                 atasText: baseData.atasText || '',
+                atasFile: baseData.atasFile || null,
                 users: usersList,
                 comissoes: comissoesList,
+                layoutConfig: layoutData,
                 loading: false
             });
 
@@ -124,17 +143,25 @@ class Configuracoes extends Component {
     };
 
     handleSave = async () => {
-        const { camaraId, regimentoText, leiOrganicaText, materiasText, atasText } = this.state;
+        const { camaraId, regimentoText, regimentoFile, leiOrganicaText, leiOrganicaFile, materiasText, materiasFile, atasText, atasFile, layoutConfig } = this.state;
         this.setState({ isSaving: true });
         const { camaraId: camaraIdUrl } = this.props.match.params.camaraId;
         const camaraIdParaSalvar = this.props.match.params.camaraId;// Prioriza o camaraId da URL, mas cai para o estado se não tiver
 
-        const configRef = ref(db, `${camaraIdParaSalvar}/dados-config/base-conhecimento`);
+        const baseRef = ref(db, `${camaraIdParaSalvar}/dados-config/base-conhecimento`);
+        const layoutRef = ref(db, `${camaraIdParaSalvar}/dados-config/layout`);
 
-        const config = { regimentoText, leiOrganicaText, materiasText, atasText, camaraId };
+        const baseConfig = { 
+            regimentoText, regimentoFile: regimentoFile || null,
+            leiOrganicaText, leiOrganicaFile: leiOrganicaFile || null,
+            materiasText, materiasFile:materiasFile || null,
+            atasText, atasFile: atasFile || null,
+            camaraId 
+        };
 
         try {
-            await update(configRef, config);
+            await update(baseRef, baseConfig);
+            await update(layoutRef, layoutConfig);
             alert('Base de Conhecimento atualizada com sucesso! A IA agora utilizará estas informações para gerar documentos mais precisos.');
         } catch (error) {
             console.error("Erro ao salvar base de conhecimento:", error);
@@ -268,6 +295,54 @@ class Configuracoes extends Component {
         this.fetchConfig();
     };
 
+    // --- File Upload Handlers ---
+
+    handleBaseFileChange = (e, key) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const content = event.target.result;
+            if (file.type === 'application/json') {
+                try {
+                    const jsonContent = JSON.parse(content);
+                    this.setState({ [key + 'File']: jsonContent });
+                } catch (error) {
+                    alert('Erro ao processar arquivo JSON. Verifique a formatação.');
+                }
+            } else if (file.type === 'application/pdf') {
+                // content is already base64 data URL
+                this.setState({ [key + 'File']: content });
+            } else {
+                alert('Formato não suportado. Use JSON ou PDF.');
+            }
+        };
+
+        if (file.type === 'application/json') {
+            reader.readAsText(file);
+        } else {
+            reader.readAsDataURL(file);
+        }
+    };
+
+    handleLogoUpload = (e, type) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.type !== 'image/png') {
+            alert('Por favor, carregue apenas imagens PNG.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const base64 = event.target.result;
+            this.setState(prevState => ({ layoutConfig: { ...prevState.layoutConfig, [type]: base64 } }));
+        };
+        reader.readAsDataURL(file);
+    };
+
     // --- Render Methods for New Tabs ---
 
     renderUserManagement = () => {
@@ -362,8 +437,48 @@ class Configuracoes extends Component {
         );
     };
 
+    renderLayoutManager = () => {
+        const { layoutConfig, isSaving } = this.state;
+        return (
+            <div className="dashboard-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+                    <h3 style={{ color: 'var(--primary-color, #126B5E)', margin: '0' }}>Identidade Visual</h3>
+                    <button className="btn-primary" onClick={this.handleSave} disabled={isSaving} style={{ height: '45px' }}>
+                        {isSaving ? <FaSpinner className="animate-spin" /> : <FaSave />} {isSaving ? 'Salvando...' : 'Salvar'}
+                    </button>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                    <div style={{ padding: '20px', border: '1px solid #eee', borderRadius: '12px', textAlign: 'center' }}>
+                        <h4 style={{ color: '#333' }}>Logo (Fundo Claro)</h4>
+                        <p style={{ fontSize: '0.8rem', color: '#666' }}>Usada em cabeçalhos e fundos brancos. Formato PNG.</p>
+                        
+                        <div style={{ margin: '20px 0', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px dashed #ccc' }}>
+                            {layoutConfig.logoLight ? <img src={layoutConfig.logoLight} alt="Logo Light" style={{ maxHeight: '80px' }} /> : <FaImage size={30} color="#ccc" />}
+                        </div>
+                        
+                        <input type="file" accept="image/png" id="logoLight" style={{ display: 'none' }} onChange={(e) => this.handleLogoUpload(e, 'logoLight')} />
+                        <label htmlFor="logoLight" className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-block' }}><FaUpload /> Carregar Logo</label>
+                    </div>
+
+                    <div style={{ padding: '20px', border: '1px solid #eee', borderRadius: '12px', textAlign: 'center', background: '#333' }}>
+                        <h4 style={{ color: '#fff' }}>Logo (Fundo Escuro)</h4>
+                        <p style={{ fontSize: '0.8rem', color: '#ccc' }}>Usada em menus laterais e fundos escuros. Formato PNG.</p>
+                        
+                        <div style={{ margin: '20px 0', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #666' }}>
+                            {layoutConfig.logoDark ? <img src={layoutConfig.logoDark} alt="Logo Dark" style={{ maxHeight: '80px' }} /> : <FaImage size={30} color="#666" />}
+                        </div>
+                        
+                        <input type="file" accept="image/png" id="logoDark" style={{ display: 'none' }} onChange={(e) => this.handleLogoUpload(e, 'logoDark')} />
+                        <label htmlFor="logoDark" className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-block', background: '#555', color: '#fff', border: 'none' }}><FaUpload /> Carregar Logo</label>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     renderContent = () => {
-        const { activeTab, regimentoText, leiOrganicaText, materiasText, atasText } = this.state;
+        const { activeTab, regimentoText, leiOrganicaText, materiasText, atasText, regimentoFile, leiOrganicaFile, materiasFile, atasFile } = this.state;
 
         let title, description, value, onChangeKey;
 
@@ -373,24 +488,28 @@ class Configuracoes extends Component {
                 description = 'Cole aqui o texto completo do Regimento Interno da Câmara. A IA usará isso para validar ritos, prazos e competências.';
                 value = regimentoText;
                 onChangeKey = 'regimentoText';
+                // fileKey = 'regimento';
                 break;
             case 'lei_organica':
                 title = 'Lei Orgânica';
                 description = 'Cole o texto da Lei Orgânica do Município. Fundamental para análise de constitucionalidade e competência municipal.';
                 value = leiOrganicaText;
                 onChangeKey = 'leiOrganicaText';
+                // fileKey = 'leiOrganica';
                 break;
             case 'materias':
                 title = 'Histórico de Matérias';
                 description = 'Insira resumos ou textos de matérias antigas para que a IA verifique duplicidades e mantenha a coerência legislativa.';
                 value = materiasText;
                 onChangeKey = 'materiasText';
+                // fileKey = 'materias';
                 break;
             case 'atas':
                 title = 'Atas e Sessões';
                 description = 'Base de conhecimento sobre decisões tomadas em sessões anteriores e jurisprudência da casa.';
                 value = atasText;
                 onChangeKey = 'atasText';
+                // fileKey = 'atas';
                 break;
             case 'usuarios':
                 return this.renderUserManagement();
@@ -398,9 +517,14 @@ class Configuracoes extends Component {
                 // This will call the full render method for commissions
                 return this.renderComissoesManager();
                 break;
+            case 'layout':
+                return this.renderLayoutManager();
             default:
                 return null;
         }
+
+        const fileKey = activeTab === 'regimento' ? 'regimento' : activeTab === 'lei_organica' ? 'leiOrganica' : activeTab === 'materias' ? 'materias' : 'atas';
+        const fileValue = this.state[`${fileKey}File`];
 
         return (
             <div className="dashboard-card">
@@ -434,12 +558,17 @@ class Configuracoes extends Component {
 
                 <div style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
                     <label style={{ display: 'block', marginBottom: '10px', fontWeight: '700', color: '#333', fontSize: '0.9rem' }}>UPLOAD DE DOCUMENTOS COMPLEMENTARES</label>
-                    <div style={{ border: '2px dashed #ccc', borderRadius: '12px', padding: '40px', textAlign: 'center', color: '#888', cursor: 'pointer', backgroundColor: '#fcfcfc', transition: 'all 0.2s' }}
+                    <div style={{ border: '2px dashed #ccc', borderRadius: '12px', padding: '40px', textAlign: 'center', color: '#888', cursor: 'pointer', backgroundColor: '#fcfcfc', transition: 'all 0.2s', position: 'relative' }}
                         onMouseOver={(e) => e.currentTarget.style.borderColor = '#126B5E'}
                         onMouseOut={(e) => e.currentTarget.style.borderColor = '#ccc'}>
+                        
+                        <input type="file" accept=".json,.pdf" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} onChange={(e) => this.handleBaseFileChange(e, fileKey)} />
+                        
                         <FaUpload size={30} style={{ marginBottom: '10px', color: '#126B5E' }} />
-                        <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>Arraste arquivos aqui ou clique para selecionar</p>
-                        <p style={{ fontSize: '0.8rem', margin: '8px 0 0 0' }}>(PDF, DOCX ou TXT)</p>
+                        <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{fileValue ? 'Arquivo carregado (Pronto para salvar)' : 'Arraste arquivos aqui ou clique para selecionar'}</p>
+                        <p style={{ fontSize: '0.8rem', margin: '8px 0 0 0' }}>
+                            {fileValue ? (typeof fileValue === 'string' ? '(PDF Base64 Carregado)' : '(Objeto JSON Carregado)') : '(JSON ou PDF)'}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -481,6 +610,7 @@ class Configuracoes extends Component {
                                 { id: 'atas', label: 'Atas e Sessões', icon: <FaFileAlt /> },
                                 { id: 'usuarios', label: 'Gestão de Usuários', icon: <FaUserShield /> },
                                 { id: 'comissoes', label: 'Gestão de Comissões', icon: <FaUsers /> },
+                                { id: 'layout', label: 'Identidade Visual', icon: <FaPalette /> },
                             ].map(item => (
                                 <div
                                     key={item.id}
