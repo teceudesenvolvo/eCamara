@@ -7,6 +7,7 @@ import logo from '../../assets/logo.png';
 import { sendMessageToAIPrivate } from '../../aiService';
 import { db } from '../../firebaseConfig';
 import { ref, onValue, update, get } from 'firebase/database';
+import { auth } from '../../firebaseConfig';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -137,7 +138,19 @@ class JuizoMateria extends Component {
         const { selectedMateria, parecerText, camaraId } = this.state;
         if (!selectedMateria) return;
 
-        const pdfBase64 = await this.generateParecerPDFBase64(selectedMateria, parecerText, decisao);
+        const user = auth.currentUser;
+        // Simplificado: Aqui não temos modal de senha explícito no fluxo original, 
+        // mas vamos adicionar metadados básicos de quem está logado ao salvar
+        // Para rigidez total, deveria haver um modal de senha aqui também.
+        const signatureMetadata = {
+            nome: user?.displayName || 'Procurador',
+            email: user?.email,
+            timestamp: new Date().toISOString(),
+            // IP e hash simplificados aqui pois não há modal de confirmação no fluxo atual
+            // userAgent: navigator.userAgent
+        };
+
+        const pdfBase64 = await this.generateParecerPDFBase64(selectedMateria, parecerText, decisao, signatureMetadata);
 
         const newStatus = decisao === 'favoravel' ? 'Parecer Favorável' : 'Parecer Contrário';
         const parecerData = {
@@ -146,6 +159,7 @@ class JuizoMateria extends Component {
             decisao: decisao,
             parecerDate: new Date().toISOString(),
             parecerPdfBase64: pdfBase64,
+            parecerSignatureMetadata: signatureMetadata
         };
 
         try {
@@ -193,7 +207,7 @@ class JuizoMateria extends Component {
         }
     };
 
-    getDocDefinition = (materia, parecerText, decisao) => {
+    getDocDefinition = (materia, parecerText, decisao, signatureMetadata = null) => {
         const { logoBase64, homeConfig, footerConfig, camaraId } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
         
@@ -245,6 +259,15 @@ class JuizoMateria extends Component {
                 { text: '\n\n\n\n________________________________', style: 'signature', alignment: 'center' },
                 { text: 'Procurador Jurídico', style: 'signatureName', alignment: 'center' },
                 { text: 'OAB/XX 123.456', style: 'signatureOAB', alignment: 'center' },
+                signatureMetadata && { 
+                    text: [
+                        { text: '\nASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
+                        { text: `Assinado por: ${signatureMetadata.nome} (${signatureMetadata.email})\n`, fontSize: 8 },
+                        { text: `Data/Hora: ${new Date(signatureMetadata.timestamp).toLocaleString()}`, fontSize: 8 }
+                    ], 
+                    alignment: 'center', 
+                    style: 'digitalSignatureInfo' 
+                }
             ].filter(Boolean),
             footer: (currentPage, pageCount) => ({
                 stack: [
@@ -264,7 +287,8 @@ class JuizoMateria extends Component {
                 signature: { fontSize: 11 },
                 signatureName: { fontSize: 11, bold: true },
                 signatureOAB: { fontSize: 10, color: '#555' },
-                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 }
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
+                digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 10, italics: true, background: '#f0f8ff', padding: 5, borderRadius: 4 }
             }
         };
     };

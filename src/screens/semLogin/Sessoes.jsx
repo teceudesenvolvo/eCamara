@@ -29,6 +29,7 @@ class Sessoes extends Component {
                 exercicio: '',
             },
             showFilters: false,
+            activeTab: 'todas', // 'todas' ou 'abertas'
             camaraId: this.props.match.params.camaraId || 'camara-teste',
         };
     }
@@ -65,14 +66,20 @@ class Sessoes extends Component {
     };
 
     render() {
-        const { sessoes, filterText, showFilters, loading, camaraId } = this.state;
+        const { sessoes, filterText, showFilters, loading, camaraId, activeTab } = this.state;
 
         const filteredSessoes = sessoes.filter((sessao) => {
-            return Object.keys(filterText).every((key) => {
+            const matchesFilter = Object.keys(filterText).every((key) => {
                 const sessaoValue = String(sessao[key] || '').toLowerCase();
                 const filterValue = filterText[key].toLowerCase();
                 return sessaoValue.includes(filterValue);
             });
+
+            if (!matchesFilter) return false;
+
+            if (activeTab === 'abertas') return (sessao.status || '').toLowerCase() === 'aberta';
+
+            return true;
         });
 
         // Helper function to get unique values for select options
@@ -96,6 +103,17 @@ class Sessoes extends Component {
                         <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
                             Carregando sessões...
                         </Typography>
+                    )}
+
+                    {!loading && (
+                         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, display: 'flex', gap: 2 }}>
+                            <button className={`tab-button ${activeTab === 'todas' ? 'active' : ''}`} onClick={() => this.setState({ activeTab: 'todas' })} style={{fontWeight: activeTab === 'todas' ? 'bold' : 'normal', color: activeTab === 'todas' ? '#126B5E' : '#555', borderBottom: activeTab === 'todas' ? '2px solid #126B5E' : '2px solid transparent', padding: '10px 15px', background: 'none', border: 'none', cursor: 'pointer'}}>
+                                Todas as Sessões
+                            </button>
+                            <button className={`tab-button ${activeTab === 'abertas' ? 'active' : ''}`} onClick={() => this.setState({ activeTab: 'abertas' })} style={{fontWeight: activeTab === 'abertas' ? 'bold' : 'normal', color: activeTab === 'abertas' ? '#126B5E' : '#555', borderBottom: activeTab === 'abertas' ? '2px solid #126B5E' : '2px solid transparent', padding: '10px 15px', background: 'none', border: 'none', cursor: 'pointer'}}>
+                                Sessões Abertas
+                            </button>
+                        </Box>
                     )}
 
                     {showFilters && (
@@ -151,7 +169,7 @@ class Sessoes extends Component {
                     
                     <div className="openai-grid">
                         {filteredSessoes.map((sessao) => (
-                            <div className="openai-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })}>
+                            <div className="openai-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })} style={{cursor: 'pointer'}}>
                                 <div className="card-content-openai">
                                     <span className="card-date">{sessao.data} • {new Date(sessao.createdAt).getFullYear()}</span>
                                     <h3>{sessao.tipo} nº {sessao.numero}</h3>

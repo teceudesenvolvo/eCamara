@@ -8,15 +8,14 @@ import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
 //Imagens
-
+import { JitsiMeeting } from '@jitsi/react-sdk';
 
 // Icones
 import { 
-  FaFileAlt
+  FaFileAlt, FaUserCheck, FaMicrophone, FaVoteYea
 } from "react-icons/fa";
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-import PageHeader from '../../componets/PageHeader.jsx';
 
 
 // Components
@@ -24,7 +23,8 @@ import HistoricoSessao from '../../componets/HistoricoSessao.jsx';
 
 // Firebase
 import { db } from '../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import { ref, get, onValue, update } from 'firebase/database';
+import { auth } from '../../firebaseConfig';
 
 class SessaoVirtual extends Component {
   constructor(props) {
@@ -36,12 +36,37 @@ class SessaoVirtual extends Component {
       camaraId: this.props.match.params.camaraId || 'camara-teste',
       selectedMateria: null,
       showMateriaModal: false,
+      user: null,
+      userRole: null,
     };
   }
 
   componentDidMount() {
-    this.fetchSessaoData();
+    this.unsubscribeAuth = auth.onAuthStateChanged(user => {
+        this.setState({ user });
+        if (user) {
+            this.fetchUserRole(user.uid);
+        } else {
+            this.setState({ userRole: null });
+        }
+        this.fetchSessaoData(); // Fetch session data regardless of login
+    });
   }
+
+  componentWillUnmount() {
+    if (this.unsubscribeAuth) {
+        this.unsubscribeAuth();
+    }
+  }
+
+    fetchUserRole = async (uid) => {
+        const { camaraId } = this.state;
+        const userRef = ref(db, `${camaraId}/users/${uid}`);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+            this.setState({ userRole: snapshot.val().tipo });
+        }
+    }
 
   fetchSessaoData = async () => {
     const { camaraId } = this.state;
@@ -54,13 +79,13 @@ class SessaoVirtual extends Component {
     }
 
     const sessaoRef = ref(db, `${camaraId}/sessoes/${sessaoId}`);
-    const snapshot = await get(sessaoRef);
-
-    if (snapshot.exists()) {
-      this.setState({ sessao: { id: snapshot.key, ...snapshot.val() }, loading: false });
-    } else {
-      this.setState({ loading: false });
-    }
+    onValue(sessaoRef, (snapshot) => {
+        if (snapshot.exists()) {
+            this.setState({ sessao: { id: snapshot.key, ...snapshot.val() }, loading: false });
+        } else {
+            this.setState({ loading: false });
+        }
+    });
   }
 
   toggleFilters = () => {
@@ -76,7 +101,7 @@ class SessaoVirtual extends Component {
   };
 
   render() {
-    const { sessao, loading, showMateriaModal, selectedMateria } = this.state;
+    const { sessao, loading, showMateriaModal, selectedMateria, user, userRole } = this.state;
 
     if (loading) {
       return <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Carregando sessão...</p></div>;
@@ -87,6 +112,7 @@ class SessaoVirtual extends Component {
     }
 
     const materias = sessao.itens || [];
+    const isRemoteOrHybrid = sessao.tipoDeSessao === 'Remota' || sessao.tipoDeSessao === 'Híbrida';
 
     return (
 
@@ -97,15 +123,55 @@ class SessaoVirtual extends Component {
           </Typography>
 
           <div className='sessao-virtual-main-content'>
-            <div className='sessao-virtual-video-wrapper'>
-              <div className='player-wrapper'>
-                <ReactPlayer className='react-player' url={sessao.transmissaoUrl || 'https://www.youtube.com/watch?v=PDtvNjcgqdI'} width='100%' height='100%' controls={true} />
-              </div>
-            </div>
+            {isRemoteOrHybrid && sessao.transmissaoUrl ? (
+                <div className='sessao-virtual-video-wrapper'>
+                    <JitsiMeeting
+                        roomName={sessao.transmissaoUrl.substring(sessao.transmissaoUrl.lastIndexOf('/') + 1)}
+                        configOverwrite={{
+                            startWithAudioMuted: true,
+                            disableModeratorIndicator: true,
+                            startScreenSharing: false,
+                            enableEmailInStats: false
+                        }}
+                        interfaceConfigOverwrite={{
+                            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true
+                        }}
+                        userInfo={{
+                            displayName: user ? user.displayName : 'Visitante'
+                        }}
+                        getIFrameRef={(iframeRef) => { iframeRef.style.height = '500px'; }}
+                    />
+                </div>
+            ) : (
+                <div className='sessao-virtual-video-wrapper'>
+                  <div className='player-wrapper'>
+                    <ReactPlayer className='react-player' url={sessao.transmissaoUrl || 'https://www.youtube.com/watch?v=PDtvNjcgqdI'} width='100%' height='100%' controls={true} />
+                  </div>
+                </div>
+            )}
             <div className='sessao-virtual-historico-wrapper'>
               <HistoricoSessao sessao={sessao} />
             </div>
           </div>
+
+          {/* Painel de Interação do Vereador */}
+          {user && (userRole === 'vereador' || userRole === 'presidente') && (
+            <div className="dashboard-card" style={{marginBottom: '20px', background: '#e8f5e9'}}>
+                <h3 style={{marginTop: 0, color: '#1b5e20'}}>Painel do Parlamentar</h3>
+                <div style={{display: 'flex', gap: '15px'}}>
+                    <button className="btn-primary" style={{background: '#388e3c'}}><FaUserCheck /> Registrar Presença</button>
+                    <button className="btn-secondary"><FaMicrophone /> Solicitar Palavra</button>
+                </div>
+            </div>
+          )}
+
+          {/* Painel de Controles do Presidente */}
+          {user && userRole === 'presidente' && (
+            <div className="dashboard-card" style={{marginBottom: '20px', background: '#fff3e0'}}>
+                <h3 style={{marginTop: 0, color: '#e65100'}}>Controles da Presidência</h3>
+                <p>Aqui ficarão os controles para alterar status das matérias, gerenciar a fila de oradores, etc.</p>
+            </div>
+          )}
 
           <div className='sessao-virtual-materias-wrapper'>
             

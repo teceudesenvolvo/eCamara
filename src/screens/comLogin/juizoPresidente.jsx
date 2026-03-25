@@ -8,6 +8,7 @@ import { sendMessageToAIPrivate } from '../../aiService';
 import { db } from '../../firebaseConfig';
 import { ref, query, get, update, onValue } from 'firebase/database';
 import { auth } from '../../firebaseConfig';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -170,7 +171,7 @@ class JuizoPresidente extends Component {
         this.setState({ showPasswordModal: true, pendingAction: action, passwordInput: '', passwordError: '' });
     };
 
-    handleSubmitDespacho = async (novoStatus) => {
+    handleSubmitDespacho = async (novoStatus, signatureData) => {
         const { selectedMateria, selectedComissao, despachoText, camaraId } = this.state;
         if (!selectedMateria) return;
 
@@ -187,13 +188,14 @@ class JuizoPresidente extends Component {
             status: statusFinal,
             despachoPresidente: despachoText || `Despacho padrão para: ${statusFinal}`,
             despachoDate: new Date().toISOString(),
+            despachoSignatureMetadata: signatureData // Salva metadados
         };
 
         try {
             const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${selectedMateria.id}`);
             await update(materiaRef, despachoData);
 
-            this.generateDespachoPDF(selectedMateria, despachoText, statusFinal);
+            this.generateDespachoPDF(selectedMateria, despachoText, statusFinal, signatureData);
 
             // A atualização do estado será feita automaticamente pelo listener `onValue`
             this.setState({ selectedMateria: null });
@@ -203,12 +205,49 @@ class JuizoPresidente extends Component {
         }
     };
 
-    confirmSignature = () => {
-        if (this.state.passwordInput === '123456') { // Simulação de senha
-            this.handleSubmitDespacho(this.state.pendingAction); // Chama o despacho
-            this.setState({ showPasswordModal: false }); // Apenas fecha o modal de senha
-        } else {
-            this.setState({ passwordError: 'Senha incorreta.' });
+    generateHash = async (content) => {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(content);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    };
+
+    confirmSignature = async () => {
+        const { passwordInput, despachoText } = this.state;
+        const user = auth.currentUser;
+
+        if (!user || !passwordInput) {
+            this.setState({ passwordError: 'Senha necessária.' });
+            return;
+        }
+
+        try {
+            const credential = EmailAuthProvider.credential(user.email, passwordInput);
+            await reauthenticateWithCredential(user, credential);
+
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            const hash = await this.generateHash(despachoText || '');
+
+            const signatureData = {
+                nome: user.displayName || 'Presidente',
+                email: user.email,
+                timestamp: new Date().toISOString(),
+                ip: ipData.ip,
+                userAgent: navigator.userAgent,
+                documentHash: hash
+            };
+
+            this.handleSubmitDespacho(this.state.pendingAction, signatureData);
+            this.setState({ showPasswordModal: false });
+        } catch (error) {
+            console.error("Erro na reautenticação ou assinatura:", error);
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                this.setState({ passwordError: 'Senha incorreta. Verifique e tente novamente.' });
+            } else {
+                this.setState({ passwordError: 'Ocorreu um erro. Verifique sua conexão ou tente mais tarde.' });
+            }
         }
     };
 
@@ -267,7 +306,7 @@ class JuizoPresidente extends Component {
         }
     };
 
-    generateDespachoPDF = (materia, despachoText, statusFinal) => {
+    generateDespachoPDF = (materia, despachoText, statusFinal, signatureData) => {
         const { logoBase64, homeConfig, footerConfig, camaraId } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
         
@@ -313,7 +352,15 @@ class JuizoPresidente extends Component {
 
                 { text: '\n\n\n\n________________________________', style: 'signature', alignment: 'center' },
                 { text: 'Presidente da Câmara', style: 'signatureName', alignment: 'center' },
-                { text: `Assinado Digitalmente em: ${new Date().toLocaleString()}, Blu Legis`, alignment: 'center', style: 'digitalSignatureInfo' }
+                { 
+                    text: [
+                        { text: 'ASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
+                        { text: `Assinado por: ${signatureData?.nome} (${signatureData?.email})\n`, fontSize: 8 },
+                        { text: `Data/Hora: ${new Date(signatureData?.timestamp).toLocaleString()}\n`, fontSize: 8 },
+                        { text: `IP: ${signatureData?.ip} | Hash: ${signatureData?.documentHash?.substring(0, 20)}...`, fontSize: 8 }
+                    ], 
+                    alignment: 'center', style: 'digitalSignatureInfo' 
+                }
             ].filter(Boolean),
             footer: (currentPage, pageCount) => ({
                 stack: [
@@ -334,7 +381,7 @@ class JuizoPresidente extends Component {
                 signature: { fontSize: 11 },
                 signatureName: { fontSize: 11, bold: true },
                 footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
-                digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 5, italics: true }
+                digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 10, italics: true, background: '#f0f8ff', padding: 5, borderRadius: 4 }
             }
         };
 

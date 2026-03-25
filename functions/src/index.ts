@@ -51,9 +51,9 @@ export const falarComCamaraAIPrivado = onCall(
       const response = await result.response;
       const text = response.text();
       return { response: text };
-    } catch (error) {
+    } catch (error: any) {
       logger.error("Erro na chamada da API do Gemini:", error);
-      throw new HttpsError("internal", "Erro ao processar a resposta da IA.");
+      throw new HttpsError("internal", `Erro no Gemini: ${error.message || error}`);
     }
   });
 
@@ -93,9 +93,9 @@ export const falarComCamaraAIPublico = onCall(
       const result = await model.generateContent(prompt);
       const text = result.response.text();
       return { response: text };
-    } catch (error) {
+    } catch (error: any) {
       logger.error("[PÚBLICO] Erro na chamada da API do Gemini:", error);
-      throw new HttpsError("internal", "Erro ao processar a resposta da IA.");
+      throw new HttpsError("internal", `Erro no Gemini (Público): ${error.message || error}`);
     }
   },
 );

@@ -19,6 +19,7 @@ class PautasSessao extends Component {
             selectedSessaoId: null,
             novaData: '',
             novoTipo: 'Sessão Ordinária',
+            novoTipoDeSessao: 'Presencial', // Presencial, Remota, Híbrida
             novaTransmissaoUrl: '',
             materiasDisponiveis: [],
             selectedMateriaToAdd: '',
@@ -126,7 +127,7 @@ class PautasSessao extends Component {
     };
 
     handleOpenModal = () => {
-        this.setState({ showModal: true, selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária', novaTransmissaoUrl: '' });
+        this.setState({ showModal: true, selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária', novaTransmissaoUrl: '', novoTipoDeSessao: 'Presencial' });
     };
 
     handleCloseModal = () => {
@@ -134,7 +135,7 @@ class PautasSessao extends Component {
     };
 
     handleCreateSessao = async () => {
-        const { novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId } = this.state;
+        const { novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId, novoTipoDeSessao } = this.state;
         if (!novaData) {
             alert("Por favor, selecione uma data.");
             return;
@@ -142,11 +143,18 @@ class PautasSessao extends Component {
         const year = new Date(novaData).getFullYear();
         const sessoesDoAno = sessoes.filter(s => s.data.endsWith(`/${year}`)).length;
 
+        let finalTransmissaoUrl = novaTransmissaoUrl || '';
+        if ((novoTipoDeSessao === 'Remota' || novoTipoDeSessao === 'Híbrida') && !finalTransmissaoUrl) {
+            const jitsiRoomName = `e-camara-${this.props.match.params.camaraId}-${Date.now()}`;
+            finalTransmissaoUrl = `https://meet.jit.si/${jitsiRoomName}`;
+        }
+
         const newSessao = {
             data: novaData.split('-').reverse().join('/'), // Formata para DD/MM/AAAA
             tipo: novoTipo,
             numero: `${sessoesDoAno + 1}/${year}`,
-            transmissaoUrl: novaTransmissaoUrl || '',
+            tipoDeSessao: novoTipoDeSessao,
+            transmissaoUrl: finalTransmissaoUrl,
             status: 'Em Elaboração',
             itens: [],
             edital: '',
@@ -233,6 +241,22 @@ class PautasSessao extends Component {
         } catch (error) {
             console.error("Erro ao remover item:", error);
             alert("Erro ao remover item da sessão.");
+        }
+    };
+
+    handleOpenSessao = async () => {
+        const { selectedSessaoId } = this.state;
+        if (!selectedSessaoId) return;
+
+        if (window.confirm("Tem certeza que deseja ABRIR esta sessão? Ela ficará visível publicamente como 'Aberta' e permitirá a interação dos vereadores.")) {
+            const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
+            try {
+                await update(sessaoRef, { status: 'Aberta' });
+                alert('Sessão aberta com sucesso!');
+            } catch (error) {
+                console.error("Erro ao abrir sessão:", error);
+                alert("Erro ao abrir sessão.");
+            }
         }
     };
 
@@ -372,7 +396,7 @@ class PautasSessao extends Component {
     };
 
     render() {
-        const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl } = this.state;
+        const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novoTipoDeSessao, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl } = this.state;
 
         // Encontra a sessão selecionada a partir do ID
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
@@ -497,6 +521,10 @@ class PautasSessao extends Component {
                                         <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Status</label>
                                         <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.status}</span>
                                     </div>
+                                    <div>
+                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Formato</label>
+                                        <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.tipoDeSessao || 'Presencial'}</span>
+                                    </div>
                                     <div style={{ width: '100%', marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
                                         <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Link da Transmissão</label>
                                         {isEditingUrl ? (
@@ -596,6 +624,11 @@ class PautasSessao extends Component {
                                 </div>
 
                                 <div className="modal-footer" style={{ borderTop: '1px solid #eee', marginTop: '20px', paddingTop: '20px' }}>
+                                    {selectedSessao.status !== 'Aberta' && (
+                                        <button onClick={this.handleOpenSessao} className="btn-success">
+                                            <FaVideo /> Abrir Sessão
+                                        </button>
+                                    )}
                                     <button 
                                         onClick={this.handleFinalizeSessao}
                                         disabled={isFinalizing}
@@ -633,6 +666,14 @@ class PautasSessao extends Component {
                                         <option>Sessão Extraordinária</option>
                                         <option>Sessão Solene</option>
                                         <option>Audiência Pública</option>
+                                    </select>
+                                </div>
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Formato da Sessão</label>
+                                    <select className="modal-input" value={novoTipoDeSessao} onChange={(e) => this.setState({ novoTipoDeSessao: e.target.value })}>
+                                        <option>Presencial</option>
+                                        <option>Híbrida</option>
+                                        <option>Remota</option>
                                     </select>
                                 </div>
                                 <div style={{ marginBottom: '20px' }}>

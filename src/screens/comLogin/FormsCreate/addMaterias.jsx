@@ -8,7 +8,8 @@ import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
 import { sendMessageToAIPrivate } from '../../../aiService';
 import { auth, db } from '../../../firebaseConfig';
-import { ref, get, push } from "firebase/database";
+import { ref, get, push, update } from "firebase/database";
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -57,6 +58,7 @@ class AddProducts extends Component {
 
             // Para Assinatura Digital
             isSigned: false, // Booleano para controlar se o documento está assinado
+            signatureMetadata: null, // Metadados da assinatura
 
             // Controle do preview PDF
             showPdfPopup: false, // Estado para controlar a visibilidade do popup do PDF
@@ -293,14 +295,60 @@ class AddProducts extends Component {
         this.setState({ passwordInput: e.target.value });
     };
 
-    confirmSignature = () => {
-        // Simulação de validação de senha (ex: '123456')
-        if (this.state.passwordInput === '123456') {
-            this.setState({ isSigned: true, showPasswordModal: false }, () => {
-                this.handleProtocolar(); // Chama o protocolo após assinar
+    generateHash = async (content) => {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(content);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    };
+
+    confirmSignature = async () => {
+        const { passwordInput, textoMateria } = this.state;
+        const user = auth.currentUser;
+
+        if (!user || !passwordInput) {
+            this.setState({ passwordError: 'Senha necessária.' });
+            return;
+        }
+
+        try {
+            // Reautenticar para validar senha
+            const credential = EmailAuthProvider.credential(user.email, passwordInput);
+            await reauthenticateWithCredential(user, credential);
+
+            // Coletar metadados
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            const ip = ipData.ip;
+            const userAgent = navigator.userAgent;
+            const timestamp = new Date().toISOString();
+            const hash = await this.generateHash(textoMateria || ''); // Hash do conteúdo principal
+
+            const signatureMetadata = {
+                nome: user.displayName || 'Usuário',
+                email: user.email,
+                cpf: 'CPF não informado', // Firebase Auth padrão não tem CPF nativo, usando placeholder ou email validado
+                timestamp: timestamp,
+                ip: ip,
+                userAgent: userAgent,
+                documentHash: hash
+            };
+
+            this.setState({ 
+                isSigned: true, 
+                signatureMetadata,
+                showPasswordModal: false 
+            }, () => {
+                this.handleProtocolar();
             });
-        } else {
-            this.setState({ passwordError: 'Senha incorreta. Tente novamente.' });
+        } catch (error) {
+            console.error("Erro na assinatura:", error);
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                this.setState({ passwordError: 'Senha incorreta. Tente novamente.' });
+            } else {
+                this.setState({ passwordError: 'Ocorreu um erro. Verifique sua conexão ou tente mais tarde.' });
+            }
         }
     };
 
@@ -499,6 +547,7 @@ class AddProducts extends Component {
             observacao: this.state.observacao,
             textoMateria: this.state.textoMateria,
 
+            signatureMetadata: this.state.signatureMetadata, // Salva metadados no objeto
             // Histórico do Chat com a IA
             chatHistory: this.state.messages
         };
@@ -537,7 +586,7 @@ class AddProducts extends Component {
             tipoMateria, ano, numero, dataApresenta, protocolo, tipoApresentacao, tipoAutor, autor, apelido, camaraId,
             prazo, materiaPolemica, objeto, regTramita, status, dataPrazo, publicacao, isComplementar, tipoMateriaExt, footerConfig,
             numeroMateriaExt, anoMateriaExt, dataMateriaExt, titulo, ementa, indexacao, observacao, textoMateria, isSigned,
-            logoBase64, signatureBase64
+            logoBase64, signatureBase64, signatureMetadata
         } = this.state;
 
         // Conteúdo base do PDF
@@ -597,10 +646,16 @@ class AddProducts extends Component {
         // Adiciona a assinatura digital se isSigned for true
         if (isSigned) {
             docContent.push(
-                {
-                    text: `\n\nAssinado Digitalmente via Camara AI em: ${new Date().toLocaleString()}`,
-                    alignment: 'center',
-                    style: 'digitalSignatureInfo'
+                { text: '\n\n' },
+                { 
+                    text: [
+                        { text: 'ASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
+                        { text: `Assinado por: ${signatureMetadata?.nome} (${signatureMetadata?.email})\n`, fontSize: 8 },
+                        { text: `Data/Hora: ${new Date(signatureMetadata?.timestamp).toLocaleString()}\n`, fontSize: 8 },
+                        { text: `IP: ${signatureMetadata?.ip} | Hash: ${signatureMetadata?.documentHash?.substring(0, 20)}...`, fontSize: 8 }
+                    ],
+                    style: 'digitalSignatureInfo',
+                    alignment: 'center'
                 }
             );
         }
@@ -667,8 +722,11 @@ class AddProducts extends Component {
                 digitalSignatureInfo: {
                     fontSize: 8,
                     color: '#007bff',
-                    marginTop: 5,
-                    italics: true
+                    marginTop: 10,
+                    italics: true,
+                    background: '#f0f8ff',
+                    padding: 5,
+                    borderRadius: 4
                 },
                 textoLeiParagraph: {
                     fontSize: 12,
@@ -885,7 +943,7 @@ class AddProducts extends Component {
                             <input
                                 type="password"
                                 className="smart-search-input-chat"
-                                style={{ width: '100%', marginBottom: '10px', border: '1px solid #ccc' }}
+                                style={{ width: '90%', marginBottom: '10px', border: '1px solid #ccc' }}
                                 placeholder="Sua senha (ex: 123456)"
                                 value={passwordInput}
                                 onChange={this.handlePasswordChange}

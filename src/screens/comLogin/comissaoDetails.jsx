@@ -3,6 +3,7 @@ import { FaUsers, FaFileAlt, FaCheck, FaTimes, FaPlus, FaCalendarCheck, FaUserTa
 import MenuDashboard from '../../componets/menuAdmin.jsx';
 import { db, auth } from '../../firebaseConfig';
 import { ref, get, onValue, update, push, set } from 'firebase/database';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { sendMessageToAIPrivate } from '../../aiService';
 
 class ComissaoDetails extends Component {
@@ -184,14 +185,26 @@ class ComissaoDetails extends Component {
     handleCastVote = async () => {
         const { camaraId, votingMateria, memberVote, votoEmSeparadoBase64 } = this.state;
         const userId = auth.currentUser.uid;
+        const user = auth.currentUser;
         
+        // Metadados básicos para o voto
+        const signatureMetadata = {
+            nome: user.displayName || 'Membro',
+            email: user.email,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+            // IP requires async fetch which might be overkill for simple vote, 
+            // but can be added if needed. Kept simple for list view votes.
+        };
+
         // Save vote to Firebase
         const voteRef = ref(db, `${camaraId}/materias/${votingMateria.id}/votosComissao/${userId}`);
         
         const voteData = {
             voto: memberVote,
             data: new Date().toISOString(),
-            nome: auth.currentUser.displayName || 'Membro'
+            nome: auth.currentUser.displayName || 'Membro',
+            signature: signatureMetadata
         };
 
         if (memberVote === 'Voto em Separado' && votoEmSeparadoBase64) {
