@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaSearch, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt } from 'react-icons/fa';
 import MenuDashboard from '../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -15,6 +15,7 @@ class PautasSessao extends Component {
         super(props);
         this.state = {
             sessoes: [],
+            activeTab: 'gerenciar',
             showModal: false,
             selectedSessaoId: null,
             novaData: '',
@@ -395,10 +396,8 @@ class PautasSessao extends Component {
         }
     };
 
-    render() {
+    renderGerenciarSessoes = () => {
         const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novoTipoDeSessao, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl } = this.state;
-
-        // Encontra a sessão selecionada a partir do ID
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
 
         // Ordenar sessoes por data (mais recente primeiro)
@@ -429,10 +428,9 @@ class PautasSessao extends Component {
         const displayedGroups = groupedSessoes.filter(g => g.month === currentMonth);
 
         return (
-            <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
-                <MenuDashboard />
-                <div className="dashboard-content" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
-                    
+            <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', animation: 'fadeIn 0.5s' }}>
+                
+                {/* Coluna Esquerda: Lista de Sessões */}
                     {/* Coluna Esquerda: Lista de Sessões */}
                     <div style={{ flex: 1, maxWidth: '400px' }}>
                         <div className="dashboard-header" style={{ marginBottom: '20px' }}>
@@ -697,6 +695,72 @@ class PautasSessao extends Component {
                             </div>
                         </div>
                     )}
+            </div>
+        );
+    }
+
+    renderSessoesList = (status, title, subtitle) => {
+        const { sessoes, camaraId } = this.state;
+        const filteredSessoes = sessoes.filter(s => s.status === status);
+
+        return (
+            <div className="dashboard-card" style={{ animation: 'fadeIn 0.5s' }}>
+                <div className="dashboard-header" style={{ marginBottom: '20px' }}>
+                    <div>
+                        <h1 className="dashboard-header-title">{title}</h1>
+                        <p className="dashboard-header-desc">{subtitle}</p>
+                    </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+                    {filteredSessoes.length > 0 ? filteredSessoes.map(sessao => (
+                        <div 
+                            key={sessao.id} 
+                            className="openai-card" 
+                            style={{ cursor: 'pointer', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
+                            onClick={() => this.props.history.push(`/admin/sessao-plenaria/${camaraId}`, { sessaoId: sessao.id })}
+                        >
+                            <div className="card-content-openai">
+                                <span className="card-date">{sessao.data} • {sessao.tipo}</span>
+                                <h3>Sessão nº {sessao.numero}</h3>
+                                <p style={{ color: '#126B5E', fontWeight: '600', marginTop: '10px' }}>Clique para visualizar</p>
+                            </div>
+                        </div>
+                    )) : (
+                        <div style={{ color: '#888', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', padding: '40px', background: '#f9f9f9', borderRadius: '8px' }}>
+                            Nenhuma sessão encontrada com o status "{status}".
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    render() {
+        const { activeTab } = this.state;
+
+        const tabStyle = { padding: '15px 25px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '500', color: '#888', borderBottom: '3px solid transparent', display: 'flex', alignItems: 'center', gap: '8px' };
+        const activeTabStyle = { ...tabStyle, fontWeight: '700', color: '#126B5E', borderBottom: '3px solid #126B5E' };
+
+        return (
+            <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
+                <MenuDashboard />
+                <div className="dashboard-content" style={{width: '100%'}}>
+                    {/* Tab Navigation */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: '30px' }}>
+                        <button onClick={() => this.setState({ activeTab: 'gerenciar' })} style={activeTab === 'gerenciar' ? activeTabStyle : tabStyle}>
+                            <FaList /> Gerenciar Sessões
+                        </button>
+                        <button onClick={() => this.setState({ activeTab: 'abertas' })} style={activeTab === 'abertas' ? activeTabStyle : tabStyle}>
+                            <FaVideo /> Sessões Abertas
+                        </button>
+                        <button onClick={() => this.setState({ activeTab: 'fechadas' })} style={activeTab === 'fechadas' ? activeTabStyle : tabStyle}>
+                            <FaCheckCircle /> Sessões Finalizadas
+                        </button>
+                    </div>
+
+                    {activeTab === 'gerenciar' && this.renderGerenciarSessoes()}
+                    {activeTab === 'abertas' && this.renderSessoesList('Aberta', 'Sessões Abertas', 'Acompanhe e participe das sessões em andamento.')}
+                    {activeTab === 'fechadas' && this.renderSessoesList('Publicada', 'Sessões Finalizadas', 'Consulte o histórico de sessões já realizadas.')}
                 </div>
             </div>
         );

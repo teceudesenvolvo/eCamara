@@ -459,6 +459,7 @@
   }
 }
 
+
 /* login */
 .Container {
   width: 100%;
@@ -600,13 +601,13 @@ h1 {
   text-align: left;
 }
 
-.profile-header-info > div {
+.profile-header-info>div {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
 
-.profile-header-info > div > p {
+.profile-header-info>div>p {
   margin-top: -25px;
 }
 
@@ -5333,7 +5334,7 @@ footer>p {
   text-align: left;
 }
 
-.card-profile-public{
+.card-profile-public {
   display: flex;
   flex-direction: row;
   align-items: left !important;
@@ -5341,7 +5342,7 @@ footer>p {
   gap: 15px;
 }
 
-.text-profile{
+.text-profile {
   display: flex;
   flex-direction: column;
   align-items: left !important;
@@ -5497,23 +5498,24 @@ footer>p {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7); /* Mas escuro */
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999 !important;
+  padding: 40px; /* Margem de segurança */
+  z-index: 10000 !important;
 }
+
 
 .modal-content {
   background: white;
   padding: 30px;
   border-radius: 16px;
-  width: 600px;
-  max-width: 90%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  text-align: left;
-  height: auto;
-  overflow-y: scroll;
+  width: 800px;
+  max-width: 95%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
 }
 
 .modal-content>h2 {

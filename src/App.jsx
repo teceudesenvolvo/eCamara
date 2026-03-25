@@ -30,6 +30,8 @@ import ComissaoDetails from './screens/comLogin/comissaoDetails.jsx';
 import PautasSessao from './screens/comLogin/pautasSessao.jsx';
 import AdminDocumentsDash from './screens/comLogin/AdminDocumentsDash.jsx';
 import AdminDocumentDetails from './screens/comLogin/AdminDocumentDetails.jsx';
+import SessaoPlenariaRestrita from './screens/comLogin/SessaoPlenariaRestrita.jsx';
+import PainelSessao from './screens/comLogin/PainelSessao.jsx';
 
 // Páginas Secundárias
 import MateriaDetails from './screens/comLogin/materiaDetails.jsx';
@@ -184,6 +186,8 @@ function App() {
           <Route path="/admin/comissao-detalhes/:camaraId" component={ComissaoDetails} />
           <Route path="/admin/reuniao-virtual/:camaraId/:comissaoId/:reuniaoId" component={VirtualMeetingPage} />
           <Route path="/admin/pautas-sessao/:camaraId" component={PautasSessao} />
+          <Route path="/admin/sessao-plenaria/:camaraId" component={SessaoPlenariaRestrita} />
+          <Route path="/admin/painel-sessao/:camaraId/:sessaoId" component={PainelSessao} />
           <Route path="/admin/configuracoes/:camaraId" component={Configuracoes} />
           <Route exact path="/admin/assistente-admin/:camaraId" component={AdminDocumentsDash} />
           <Route path="/admin/assistente-admin/novo/:camaraId" component={AdminAssistant} />
