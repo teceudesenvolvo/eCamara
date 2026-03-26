@@ -874,22 +874,22 @@ class AddProducts extends Component {
         }
 
         return (
-            <div className='App-header' style={{ background: '#f4f7f6', minHeight: '100vh', alignItems: 'flex-start' }}>
+            <div className='App-header' style={{ background: '#f4f7f6', minHeight: '100vh', alignItems: 'flex-start', flexDirection: 'row' }}>
                 <MenuDashboard />
                 
                 <Box component="main" sx={{ 
                     flexGrow: 1, 
-                    p: { xs: 2, md: 4 }, 
-                    width: '100%', 
+                    p: { xs: 2, md: 4 },
+                    ml: { xs: 0, md: '85px' }, // Respeita a largura do sidebar fixo
+                    width: { xs: '100%', md: 'calc(100% - 85px)' },
                     maxWidth: '1400px', 
-                    margin: '0 auto',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 4
                 }}>
                     {/* Header */}
                     <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-                        <Box className="header-text" sx={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left', flex: '1 1 auto', marginLeft: "50px" }}>
+                        <Box className="header-text" sx={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left', flex: '1 1 auto' }}>
                             <Typography variant="h4" sx={{ color: '#126B5E', fontWeight: 800, letterSpacing: '-0.02em', fontSize: "17px" }}>
                                 Protocolar Nova Matéria
                             </Typography>

@@ -75,7 +75,7 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
     };
 
     const isSubscribed = user && subscricoes[user.uid];
-    const canSubscribe = user && !isSubscribed && (materia.permiteSubscricao !== false);
+    const canSubscribe = user && !isSubscribed && (materia.permiteSubscricao !== false) && (materia.userId !== user.uid);
     const subscritoresList = Object.values(subscricoes);
 
     return (
