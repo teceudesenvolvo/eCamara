@@ -191,15 +191,27 @@ class PainelSessao extends Component {
 
           <footer className='hud-widget hud-footer'>
             {materiaAtiva ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', height: '100%' }}>
-                <div className='matter-badge' style={{ padding: '8px 15px', fontSize: '0.9rem' }}>Votando</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '1.2rem', fontWeight: '800' }}>{materiaAtiva.tipoMateria} {materiaAtiva.numero}</div>
-                  <div style={{ fontSize: '0.85rem', opacity: 0.8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{materiaAtiva.ementa}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', height: '100%', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div className='matter-badge' style={{ padding: '8px 15px', fontSize: '0.9rem' }}>Votando</div>
+                  <div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: '800' }}>{materiaAtiva.tipoMateria} {materiaAtiva.numero}</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{materiaAtiva.ementa}</div>
+                  </div>
+                </div>
+                
+                {/* QR Code para a matéria */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.1)', padding: '5px', borderRadius: '8px' }}>
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/materia/' + this.state.camaraId + '/' + (materiaAtiva.id || ''))}`} 
+                    alt="QR Code Matéria" 
+                    style={{ width: '60px', height: '60px', border: '2px solid #fff' }}
+                  />
+                  <div style={{ fontSize: '0.6rem', fontWeight: 'bold' }}>SCAN PARA LER</div>
                 </div>
               </div>
             ) : (
-              <div style={{ textAlign: 'center', opacity: 0.5, letterSpacing: '2px', textTransform: 'uppercase', fontSize: '0.9rem' }}>Aguardando Pauta</div>
+              <div style={{ textAlign: 'center', opacity: 0.5, letterSpacing: '2px', textTransform: 'uppercase', fontSize: '0.9rem', width: '100%' }}>Aguardando Pauta</div>
             )}
           </footer>
         </div>

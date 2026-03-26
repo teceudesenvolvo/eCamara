@@ -172,7 +172,11 @@ class Sessoes extends Component {
                             <div className="openai-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })} style={{cursor: 'pointer'}}>
                                 <div className="card-content-openai">
                                     <span className="card-date">{sessao.data} • {new Date(sessao.createdAt).getFullYear()}</span>
-                                    <h3>{sessao.tipo} nº {sessao.numero}</h3>
+                                    <h3>
+                                        {sessao.tipo.includes('Sessão Plenária') 
+                                            ? sessao.tipo 
+                                            : `${sessao.tipo} nº ${sessao.numero}`}
+                                    </h3>
                                     <p>Clique para ver os detalhes</p>
                                 </div>
                             </div>

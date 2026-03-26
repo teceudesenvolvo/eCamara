@@ -20,6 +20,8 @@ class PautasSessao extends Component {
             selectedSessaoId: null,
             novaData: '',
             novoTipo: 'Sessão Ordinária',
+            novaLegislatura: '',
+            novoNumeroPlenaria: '',
             novoTipoDeSessao: 'Presencial', // Presencial, Remota, Híbrida
             novaTransmissaoUrl: '',
             materiasDisponiveis: [],
@@ -128,7 +130,10 @@ class PautasSessao extends Component {
     };
 
     handleOpenModal = () => {
-        this.setState({ showModal: true, selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária', novaTransmissaoUrl: '', novoTipoDeSessao: 'Presencial' });
+        this.setState({ 
+            showModal: true, selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária', 
+            novaTransmissaoUrl: '', novoTipoDeSessao: 'Presencial', novaLegislatura: '', novoNumeroPlenaria: '' 
+        });
     };
 
     handleCloseModal = () => {
@@ -136,9 +141,9 @@ class PautasSessao extends Component {
     };
 
     handleCreateSessao = async () => {
-        const { novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId, novoTipoDeSessao } = this.state;
-        if (!novaData) {
-            alert("Por favor, selecione uma data.");
+        const { novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId, novoTipoDeSessao, novaLegislatura, novoNumeroPlenaria, homeConfig } = this.state;
+        if (!novaData || !novaLegislatura || !novoNumeroPlenaria) {
+            alert("Por favor, preencha a data, legislatura e o número da sessão.");
             return;
         }
         const year = new Date(novaData).getFullYear();
@@ -150,10 +155,16 @@ class PautasSessao extends Component {
             finalTransmissaoUrl = `https://meet.jit.si/${jitsiRoomName}`;
         }
 
+        const cityName = homeConfig.cidade || camaraId;
+        const nomeSessaoFormatado = `${novoNumeroPlenaria}ª Sessão Plenária da ${novaLegislatura}ª Legislatura da Câmara Municipal de ${cityName}`;
+
         const newSessao = {
             data: novaData.split('-').reverse().join('/'), // Formata para DD/MM/AAAA
-            tipo: novoTipo,
+            tipo: nomeSessaoFormatado,
+            categoria: novoTipo,
             numero: `${sessoesDoAno + 1}/${year}`,
+            legislatura: novaLegislatura,
+            numeroPlenaria: novoNumeroPlenaria,
             tipoDeSessao: novoTipoDeSessao,
             transmissaoUrl: finalTransmissaoUrl,
             status: 'Em Elaboração',
@@ -397,7 +408,7 @@ class PautasSessao extends Component {
     };
 
     renderGerenciarSessoes = () => {
-        const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novoTipoDeSessao, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl } = this.state;
+        const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novoTipoDeSessao, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl, novaLegislatura, novoNumeroPlenaria } = this.state;
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
 
         // Ordenar sessoes por data (mais recente primeiro)
@@ -656,6 +667,14 @@ class PautasSessao extends Component {
                                 <div style={{ marginBottom: '15px' }}>
                                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Data da Sessão</label>
                                     <input type="date" className="modal-input" value={novaData} onChange={(e) => this.setState({ novaData: e.target.value })} />
+                                </div>
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Legislatura (Ex: 20)</label>
+                                    <input type="number" className="modal-input" value={novaLegislatura} onChange={(e) => this.setState({ novaLegislatura: e.target.value })} placeholder="Ex: 20" />
+                                </div>
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Número da Sessão Plenária (Ex: 1959)</label>
+                                    <input type="number" className="modal-input" value={novoNumeroPlenaria} onChange={(e) => this.setState({ novoNumeroPlenaria: e.target.value })} placeholder="Ex: 1959" />
                                 </div>
                                 <div style={{ marginBottom: '20px' }}>
                                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Tipo de Sessão</label>
