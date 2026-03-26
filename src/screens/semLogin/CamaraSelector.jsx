@@ -24,7 +24,7 @@ const CamaraSelector = () => {
                         return {
                             id: id,
                             name: homeConfig?.titulo || id.replace(/-/g, ' ').replace(/(^\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase()),
-                            logo: layoutConfig?.logo || null
+                            logo: layoutConfig?.logoLight || null
                         };
                     });
                     setCamaras(camaraList);
@@ -73,22 +73,22 @@ const CamaraSelector = () => {
                 <h1 className="selector-title">Escolha sua Câmara</h1>
                 <p className="selector-subtitle">Transparência, inteligência e participação cidadã. Selecione o município para acessar.</p>
             </div>
-            
+
             <div className="camera-slider-wrapper">
                 <Splide options={splideOptions}>
-                {camaras.map(camara => (
-                    <SplideSlide key={camara.id}>
-                        <Link to={`/home/${camara.id}`} className="camera-card-link">
-                            <div className="camera-card">
-                                <div className="camera-icon-wrapper">
-                                    {camara.logo ? <img src={camara.logo} alt={camara.name} className="camera-custom-logo" /> : <FaBuilding />}
+                    {camaras.map(camara => (
+                        <SplideSlide key={camara.id}>
+                            <Link to={`/home/${camara.id}`} className="camera-card-link">
+                                <div className="camera-card">
+                                    <div className="camera-icon-wrapper">
+                                        {camara.logo ? <img src={camara.logo} alt={camara.name} className="camera-custom-logo" /> : <FaBuilding />}
+                                    </div>
+                                    <h2 className="camera-name">{camara.name}</h2>
+                                    <span className="camera-action">Acessar Portal <FaArrowRight size={12} /></span>
                                 </div>
-                                <h2 className="camera-name">{camara.name}</h2>
-                                <span className="camera-action">Acessar Portal <FaArrowRight size={12} /></span>
-                            </div>
-                        </Link>
-                    </SplideSlide>
-                ))}
+                            </Link>
+                        </SplideSlide>
+                    ))}
                 </Splide>
             </div>
         </div>
