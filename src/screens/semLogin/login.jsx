@@ -23,6 +23,22 @@ class loginClient extends Component {
         };
     }
 
+    componentDidMount() {
+        // Verifica se o usuário já está logado ao carregar o componente
+        this.unsubscribe = auth.onAuthStateChanged((user) => {
+            if (user) {
+                const { camaraId } = this.props.match.params;
+                // Redireciona para o dashboard caso já exista uma sessão ativa
+                this.props.history.push(`/admin/materias-dash/${camaraId}`);
+            }
+        });
+    }
+
+    componentWillUnmount() {
+        // Limpa o listener para evitar memory leaks
+        if (this.unsubscribe) this.unsubscribe();
+    }
+
     handleLogin = async (e) => {
         e.preventDefault();
         const { email, password } = this.state;
@@ -102,7 +118,7 @@ class loginClient extends Component {
                             {loading ? 'Entrando...' : 'Entrar'}
                         </button>
                     </form>
-                     <p>Não tem uma conta? <a href={`/register?camara=${camaraId}`} className='linkLogin'>Crie uma</a></p>
+                     
                 </div>
             </div>
         );

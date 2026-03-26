@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { db, auth } from '../../../firebaseConfig';
 import { ref, onValue, get } from 'firebase/database';
-import { FaUsers, FaVoteYea, FaClock, FaDesktop, FaMicrophone } from "react-icons/fa";
+import { FaUsers, FaVoteYea, FaClock, FaDesktop, FaMicrophone, FaVideo, FaVideoSlash } from "react-icons/fa";
 import '../../../styles/FuturisticPanel.css';
 
 class PainelSessao extends Component {
@@ -13,7 +13,8 @@ class PainelSessao extends Component {
       loading: true,
       camaraId: this.props.match.params.camaraId || 'camara-teste',
       sessaoId: this.props.match.params.sessaoId || null,
-      currentTime: new Date()
+      currentTime: new Date(),
+      showVideo: true
     };
   }
 
@@ -31,6 +32,10 @@ class PainelSessao extends Component {
     if (this.timer) clearInterval(this.timer);
     if (this.sessaoUnsubscribe) this.sessaoUnsubscribe();
   }
+
+  toggleVideo = () => {
+    this.setState(prevState => ({ showVideo: !prevState.showVideo }));
+  };
 
   fetchParlamentares = async () => {
     const { camaraId } = this.state;
@@ -74,7 +79,7 @@ class PainelSessao extends Component {
   };
 
   render() {
-    const { sessao, parlamentares, loading, currentTime } = this.state;
+    const { sessao, parlamentares, loading, currentTime, showVideo } = this.state;
 
     if (loading) return <div className='hud-container' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Sincronizando Sistema HUD...</p></div>;
     if (!sessao) return <div className='hud-container' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Sessão não disponível.</p></div>;
@@ -97,19 +102,27 @@ class PainelSessao extends Component {
     }
 
     const videoId = this.getYouTubeID(sessao.transmissaoUrl);
+    const containerBg = !videoId ? '#000' : (showVideo ? '#000' : '#0000ff'); // Azul Chroma-Key quando oculto
 
     return (
-      <div className='hud-container'>
+      <div className='hud-container' style={{ backgroundColor: containerBg }}>
         {/* Camada 1: Transmissão em Background */}
-        <div className='hud-video-bg'>
+        <div 
+          className='hud-video-bg' 
+          style={{ 
+            opacity: showVideo ? 1 : 0, 
+            transition: 'opacity 0.5s ease', 
+            pointerEvents: showVideo ? 'all' : 'none' 
+          }}
+        >
           {videoId ? (
             <iframe
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&rel=0&iv_load_policy=3&modestbranding=1`}
               allow="autoplay; encrypted-media"
               allowFullScreen
             ></iframe>
           ) : (
-            <div style={{ height: '100%', width: '100%', background: '#050a14', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ height: '100%', width: '100%', background: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <FaDesktop size={100} style={{ opacity: 0.1 }} />
             </div>
           )}
@@ -134,9 +147,18 @@ class PainelSessao extends Component {
               ) : <div style={{ opacity: 0.2 }}><FaMicrophone size={30} /></div>}
             </div>
 
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{currentTime.toLocaleDateString('pt-BR')}</div>
-              <div style={{ color: 'var(--neon-cyan)', fontSize: '1.2rem' }}><FaClock /> {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+            <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{currentTime.toLocaleDateString('pt-BR')}</div>
+                <div style={{ color: 'var(--neon-cyan)', fontSize: '1.2rem' }}><FaClock /> {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+              </div>
+              <button 
+                onClick={this.toggleVideo} 
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,255,255,0.2)', color: 'var(--neon-cyan)', padding: '8px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s' }}
+                title={showVideo ? "Ocultar Vídeo" : "Exibir Vídeo"}
+              >
+                {showVideo ? <FaVideoSlash size={16} /> : <FaVideo size={16} />}
+              </button>
             </div>
           </header>
 

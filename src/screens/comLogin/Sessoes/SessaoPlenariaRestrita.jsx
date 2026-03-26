@@ -200,14 +200,14 @@ class SessaoPlenariaRestrita extends Component {
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
-    checkAllVotings = () => {
+    checkAllVotings = async () => {
         const { camaraId, sessao } = this.state;
         if (!sessao || !sessao.itens) return;
         const presenca = sessao.presenca || {};
         const totalPresentes = Object.keys(presenca).length;
         if (totalPresentes === 0) return;
 
-        sessao.itens.forEach((materia, index) => {
+        for (const [index, materia] of sessao.itens.entries()) {
             if (materia.status === 'Em Votação') {
                 const votos = materia.votos || {};
                 const totalVotes = Object.keys(votos).length;
@@ -226,10 +226,14 @@ class SessaoPlenariaRestrita extends Component {
                         updates[`/${camaraId}/materias/${materia.id}/status`] = newStatus;
                         console.log(`Sincronizando status global final para matéria ${materia.id}: ${newStatus}`);
                     }
-                    update(ref(db), updates);
+                    try {
+                        await update(ref(db), updates);
+                    } catch (error) {
+                        console.error("Erro ao sincronizar status final:", error);
+                    }
                 }
             }
-        });
+        }
     }
 
     handleGrantWord = async (speaker) => {
@@ -317,7 +321,7 @@ class SessaoPlenariaRestrita extends Component {
                                 </button>
                             )}
                             <button className="btn-secondary" style={{ background: '#00695c', color: 'white', borderRadius: '8px' }} onClick={() => window.open(`/admin/painel-sessao/${this.state.camaraId}/${sessao.id}`, '_blank')}>
-                                <FaDesktop /> Abrir Painel LED
+                                <FaDesktop /> Abrir Painel Votação
                             </button>
                         </div>
                     </header>
