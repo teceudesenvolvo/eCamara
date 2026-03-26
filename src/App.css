@@ -103,6 +103,14 @@
   background-color: #0717ff;
 }
 
+.MuiGrid-item{
+  margin-left: 50px;
+}
+
+.admin-header{
+  text-align: left;
+}
+
 .header-home {
   margin-top: 0px;
   height: 50px;

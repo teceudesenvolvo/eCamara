@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { FaMagic, FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash } from 'react-icons/fa';
+import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash, FaInfoCircle, FaRobot, FaMagic } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -10,6 +10,22 @@ import { sendMessageToAIPrivate } from '../../../aiService';
 import { auth, db } from '../../../firebaseConfig';
 import { ref, get, push, update } from "firebase/database";
 import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import {
+    TextField,
+    Button,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    Grid,
+    Card,
+    CardContent,
+    Typography,
+    Box,
+    CircularProgress,
+    Tooltip,
+    Alert
+} from '@mui/material';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -82,6 +98,7 @@ class AddProducts extends Component {
             homeConfig: {}, // Dados da home para o timbrado
             footerConfig: {}, // Dados do footer para o timbrado
             layoutConfig: {}, // Dados de layout para o timbrado (logo)
+            aiTechnicalOpinion: '', // Novo estado para o parecer técnico da IA
             loadingConfig: true,
         };
         this.messagesEndRef = React.createRef();
@@ -107,24 +124,59 @@ class AddProducts extends Component {
 
 
 
-    fetchInitialData = async () => {
+    fetchInitialData = async (user) => {
 
         const { camaraId } = this.state;
 
         this.setState({ loadingConfig: true });
 
         try {
+            // Busca configurações e dados do perfil do usuário em paralelo
+            const [configSnapshot, userSnapshot] = await Promise.all([
+                get(ref(db, `${camaraId}/dados-config`)),
+                user ? get(ref(db, `${camaraId}/users/${user.uid}`)) : Promise.resolve(null)
+            ]);
 
-            const snapshot = await get(
-                ref(db, `${camaraId}/dados-config`)
-            );
-
-            const dados = snapshot.exists() ? snapshot.val() : {};
+            const dados = configSnapshot.exists() ? configSnapshot.val() : {};
 
             const baseConhecimento = dados["base-conhecimento"] || {};
             const layoutConfig = dados.layout || {};
             const homeConfig = dados.home || {};
             const footerConfig = dados.footer || {};
+
+            // --- Lógica de Auto-preenchimento ---
+            const currentYear = new Date().getFullYear().toString(); // Ano atual como string
+            let nextNumero = '';
+            
+            // Tenta obter o nome do banco de dados (nó /users), fallback para o displayName do Auth
+            let autorName = '';
+            if (userSnapshot && userSnapshot.exists()) {
+                autorName = userSnapshot.val().nome || userSnapshot.val().name || user?.displayName || '';
+            } else {
+                autorName = user?.displayName || '';
+            }
+
+            if (user) {
+                // Busca todas as matérias da câmara para o usuário logado no ano atual
+                const materiasRef = ref(db, `${camaraId}/materias`);
+                const materiasSnapshot = await get(materiasRef);
+                
+                let count = 0;
+                if (materiasSnapshot.exists()) {
+                    materiasSnapshot.forEach(child => {
+                        const materia = child.val();
+                        // Filtra por userId e ano atual
+                        if (materia.userId === user.uid && materia.ano === currentYear) {
+                            count++;
+                        }
+                    });
+                }
+                nextNumero = (count + 1).toString(); // O próximo número será o total + 1
+            }
+            // --- Fim da Lógica de Auto-preenchimento ---
+
+            // Busca e converte o logoLight definido no layout
+            const logoBase64 = layoutConfig.logoLight ? await this.getBase64(layoutConfig.logoLight) : null;
 
             this.setState(
                 {
@@ -132,8 +184,12 @@ class AddProducts extends Component {
                     layoutConfig,
                     homeConfig,
                     footerConfig,
-                    loadingConfig: false
-                    // O logoBase64 será definido após a busca
+                    loadingConfig: false,
+                    // Define os valores auto-preenchidos
+                    autor: autorName,
+                    ano: currentYear,
+                    numero: nextNumero,
+                    logoBase64
                 },
                 this.handleGeneratePDF
             );
@@ -148,16 +204,10 @@ class AddProducts extends Component {
 
         }
 
-        // Busca e converte o logo após a configuração inicial ser carregada
-        const layoutData = this.state.layoutConfig;
-        if (layoutData.logoLight) {
-            this.setState({ logoBase64: await this.getBase64(layoutData.logoLight) });
-        }
-
     };
 
     // Função auxiliar para converter imagem URL em Base64, agora como método de classe
-    getBase64 = async (url) => {
+    getBase64 = async (url) => { //
         if (!url) return null;
         try {
             const response = await fetch(url);
@@ -173,7 +223,7 @@ class AddProducts extends Component {
         }
     }
     async componentDidMount() {
-        try {
+        try { //
             auth.onAuthStateChanged(async (user) => {
                 if (user) {
                     const userIndexRef = ref(db, `users_index/${user.uid}`);
@@ -181,7 +231,7 @@ class AddProducts extends Component {
                     const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
 
                     this.setState({ camaraId }, () => {
-                        this.fetchInitialData();
+                        this.fetchInitialData(user); // Passa o objeto user para fetchInitialData
                         this.scrollToBottom();
                     });
                 }
@@ -326,7 +376,7 @@ class AddProducts extends Component {
             const hash = await this.generateHash(textoMateria || ''); // Hash do conteúdo principal
 
             const signatureMetadata = {
-                nome: user.displayName || 'Usuário',
+                nome: this.state.autor || user.displayName || 'Usuário',
                 email: user.email,
                 cpf: 'CPF não informado', // Firebase Auth padrão não tem CPF nativo, usando placeholder ou email validado
                 timestamp: timestamp,
@@ -335,10 +385,10 @@ class AddProducts extends Component {
                 documentHash: hash
             };
 
-            this.setState({ 
-                isSigned: true, 
+            this.setState({
+                isSigned: true,
                 signatureMetadata,
-                showPasswordModal: false 
+                showPasswordModal: false
             }, () => {
                 this.handleProtocolar();
             });
@@ -352,6 +402,70 @@ class AddProducts extends Component {
         }
     };
 
+    // Função única para gerar Título, Ementa e Redação após validação
+    generateFullMateriaWithAI = async () => {
+        const { objeto, tipoMateria, baseConhecimento } = this.state;
+        
+        if (!tipoMateria || !objeto) {
+            alert("Por favor, selecione o Tipo de Matéria e descreva o Assunto primeiro.");
+            return;
+        }
+
+        this.setState({ isGenerating: true, aiTechnicalOpinion: '' }); // Limpa parecer anterior
+
+        try {
+            const { regimentoText, materiasText } = baseConhecimento;
+            
+            // --- PASSO 1: VALIDAÇÃO TÉCNICA ---
+            const technicalOpinionPrompt = `Atue como um consultor legislativo especialista e rigoroso. Analise a viabilidade de um(a) "${tipoMateria}" sobre o assunto "${objeto}".
+            
+            CONTEXTO OBRIGATÓRIO (Regimento Interno):
+            ${regimentoText || 'Seguir normas padrão de vício de iniciativa e competência municipal.'}
+            
+            HISTÓRICO DE MATÉRIAS (para verificar duplicidade):
+            ${materiasText || 'Nenhuma matéria anterior cadastrada.'}
+            
+            Verifique impedimentos como vício de iniciativa, duplicidade ou conflito com leis superiores.
+            Se houver impedimentos, inicie sua resposta OBRIGATORIAMENTE com a palavra "BLOQUEIO:" seguida da explicação detalhada.
+            Caso contrário, inicie sua resposta OBRIGATORIAMENTE com a palavra "PARECER FAVORÁVEL:" seguida de uma breve justificativa.`;
+
+            const technicalOpinionResponse = await sendMessageToAIPrivate(technicalOpinionPrompt);
+            this.setState({ aiTechnicalOpinion: technicalOpinionResponse });
+
+            if (technicalOpinionResponse.startsWith("BLOQUEIO:")) {
+                this.setState({ isGenerating: false });
+                return;
+            }
+
+            // --- PASSO 2: GERAÇÃO DOS CAMPOS (Se parecer favorável) ---
+            const titleResponse = await sendMessageToAIPrivate(`Sugira um título formal e em caixa alta para uma matéria legislativa do tipo "${tipoMateria}" sobre o assunto "${objeto}". Responda APENAS o título sugerido.`);
+            
+            const ementaResponse = await sendMessageToAIPrivate(`Escreva uma ementa legislativa (resumo formal) para uma matéria sobre "${objeto}". Comece com verbos como "Dispõe sobre...", "Institui...", etc. Responda APENAS a ementa.`);
+            
+            const textoResponse = await sendMessageToAIPrivate(`Atue como consultor legislativo. Escreva a minuta completa de um ${tipoMateria} sobre o assunto "${objeto}".
+                
+                REGRAS:
+                - Use estrutura de artigos (Art. 1º, Art. 2º...).
+                - Formate com tags HTML (<p>, <strong>).
+                - Considere o contexto do Regimento Interno: ${regimentoText || 'Regimento Padrão'}.
+                - Inclua uma justificativa formal ao final.
+                - Responda APENAS o HTML.`);
+
+            this.setState({
+                titulo: titleResponse.trim(),
+                ementa: ementaResponse.trim(),
+                textoMateria: textoResponse.trim(),
+                isGenerating: false,
+                showEditor: true
+            }, this.handleGeneratePDF);
+
+        } catch (error) {
+            console.error("Erro na geração completa via IA:", error);
+            this.setState({ isGenerating: false });
+            alert("Erro ao processar a inteligência artificial.");
+        }
+    };
+// ...
     // Função para gerar conteúdo com IA (Real)
     handleSendMessage = async () => {
         const { currentInput, messages, chatStep, objeto, tipoMateria, fileName } = this.state;
@@ -458,13 +572,13 @@ class AddProducts extends Component {
                     nextStep = 2; // Mantém no passo 2 para o usuário tentar novamente
                 } else {
                     aiResponseText = `Perfeito! Validei o regimento e a base de dados. Estou gerando a minuta da matéria. Abrindo o editor...`;
-                    shouldOpenEditor = true;                    
+                    shouldOpenEditor = true;
                     try {
                         const jsonMatch = response.match(/\{[\s\S]*\}/);
                         if (!jsonMatch) throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
-                        
+
                         const generatedData = JSON.parse(jsonMatch[0]);
-                        
+
                         nextStateUpdates = {
                             ...nextStateUpdates,
                             titulo: (`${this.state.tipoMateria || 'Matéria'} sobre ${this.state.objeto}`).toUpperCase(),
@@ -556,8 +670,8 @@ class AddProducts extends Component {
         materiaData.anexoNome = this.state.fileName;
 
         try {
-             const camaraId  = this.props.match.params.camaraId;
-             if (!camaraId) throw new Error('camaraId não definida na URL');
+            const camaraId = this.props.match.params.camaraId;
+            if (!camaraId) throw new Error('camaraId não definida na URL');
 
             if (auth.currentUser) {
                 materiaData.camaraId = this.props.match.params.camaraId;
@@ -568,7 +682,7 @@ class AddProducts extends Component {
             this.setState({
                 protocolGenerated: newProtocol,
                 protocolo: newProtocol,
-                status: 'Aguardando Parecer'
+            status: 'Aguardando Parecer Jurídico' // Status mais específico
             }, () => {
                 this.handleGeneratePDF(); // Atualiza PDF com o protocolo
                 alert(`Documento Assinado Digitalmente e Protocolado!\nProtocolo: ${newProtocol}\nStatus: Enviado para Parecer da Presidência.`);
@@ -610,10 +724,10 @@ class AddProducts extends Component {
                 style: 'header',
                 alignment: 'center'
             },
-           
+
             { text: '\n' }, // Espaçamento
 
-            
+
             // Dados Textuais
             {
                 text: 'Dados Textuais',
@@ -647,7 +761,7 @@ class AddProducts extends Component {
         if (isSigned) {
             docContent.push(
                 { text: '\n\n' },
-                { 
+                {
                     text: [
                         { text: 'ASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
                         { text: `Assinado por: ${signatureMetadata?.nome} (${signatureMetadata?.email})\n`, fontSize: 8 },
@@ -738,190 +852,319 @@ class AddProducts extends Component {
                 footerStyle: {
                     fontSize: 8,
                     color: '#777',
-                    lineHeight: 1.3
                 }
             }
         };
 
-        // Geração do PDF
         pdfMake.createPdf(docDefinition).getBase64((data) => {
             this.setState({ pdfData: data });
         });
     };
 
     render() {
-        const { pdfData, isSigned, showPdfPopup, showPasswordModal, passwordInput, passwordError, loadingConfig } = this.state;
+        const { pdfData, isSigned, showPdfPopup, showPasswordModal, passwordInput, passwordError, loadingConfig, isGenerating, aiTechnicalOpinion } = this.state;
 
-        // Renderização Condicional: Chat ou Editor
         if (loadingConfig) {
             return (
-                <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}>
-                    <FaSpinner className="animate-spin" size={40} color="#126B5E" />
+                <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center', background: '#f4f7f6', minHeight: '100vh' }}>
+                    <CircularProgress color="primary" />
+                    <Typography ml={2} sx={{ color: '#126B5E', fontWeight: 500 }}>Carregando configurações...</Typography>
                 </div>
             );
         }
 
-        if (!this.state.showEditor) { // Se não estiver no editor, mostra o chat
-            return (
-                <div className='App-header'>
-                    <MenuDashboard />
-                    <div className='conteinar-Add-Products'>
-                        <div style={{ width: '100%' }}>
-                            {/* Chat de IA */}
-                            <div className="ai-generation-card full-screen-ai">
-                                <div className="ai-generation-header">
-                                    <h3> Criar Matéria Legislativa</h3>
-                                    <p> Assistente de Redação IA</p>
-                                </div>
-                                <div className="chat-interface-container" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                    <div className="chat-messages" ref={this.chatContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
-                                        {this.state.messages.map(msg => (
-                                            <div key={msg.id} className={`message ${msg.sender === 'user' ? 'message-user' : 'message-ai'}`}>
-                                                <div className="message-bubble" dangerouslySetInnerHTML={{ __html: msg.text }} />
-                                            </div>
-                                        ))}
-                                        {this.state.isGenerating && (
-                                            <div className="message message-ai">
-                                                <div className="message-bubble">
-                                                    <em>Digitando...</em>
-                                                </div>
-                                            </div>
-                                        )}
-                                        <div ref={this.messagesEndRef} />
-                                    </div>
-
-                                    <div className="chat-input-area" style={{ borderTop: '1px solid #eee', padding: '15px', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}>
-                                        {this.state.fileName && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 15px', backgroundColor: '#e0f2f1', borderRadius: '10px', marginBottom: '10px', fontSize: '0.85rem', color: '#126B5E', alignSelf: 'flex-start' }}>
-                                                <span>📎 {this.state.fileName}</span>
-                                                <FaTrash
-                                                    style={{ cursor: 'pointer', color: '#d32f2f' }}
-                                                    onClick={() => this.setState({ file: null, fileBase64: null, fileName: '' })}
-                                                />
-                                            </div>
-                                        )}
-                                        <div className="search-box-wrapper-chat">
-                                            <input
-                                                type="file"
-                                                id="file-attachment"
-                                                style={{ display: 'none' }}
-                                                onChange={this.handleFileChange}
-                                            />
-                                            <label htmlFor="file-attachment" className="smart-search-btn-chat" style={{ position: 'static', transform: 'none', marginRight: '10px', display: 'flex', backgroundColor: '#f0f2f5', color: '#555' }}>
-                                                <FaPaperclip />
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="smart-search-input-chat"
-                                                placeholder="Digite sua mensagem..."
-                                                value={this.state.currentInput}
-                                                onChange={(e) => this.setState({ currentInput: e.target.value })}
-                                                onKeyDown={(e) => e.key === 'Enter' && this.handleSendMessage()}
-                                            />
-                                            <button className="smart-search-btn-chat" onClick={this.handleSendMessage} disabled={this.state.isGenerating}>
-                                                <FaPaperPlane />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        // View do Editor
         return (
-            <div className='App-header'>
+            <div className='App-header' style={{ background: '#f4f7f6', minHeight: '100vh', alignItems: 'flex-start' }}>
                 <MenuDashboard />
-                <div className='conteinar-Add-Products'>
-                    <div className="editor-container">
-                        <div className="editor-header">
-                            <h2><FaEdit /> Editor de Matéria</h2>
-                            <button className="btn-back-chat" onClick={() => this.setState({ showEditor: false })}>Voltar ao Chat</button>
-                        </div>
+                
+                <Box component="main" sx={{ 
+                    flexGrow: 1, 
+                    p: { xs: 2, md: 4 }, 
+                    width: '100%', 
+                    maxWidth: '1400px', 
+                    margin: '0 auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4
+                }}>
+                    {/* Header */}
+                    <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+                        <Box className="header-text" sx={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left', flex: '1 1 auto', marginLeft: "50px" }}>
+                            <Typography variant="h4" sx={{ color: '#126B5E', fontWeight: 800, letterSpacing: '-0.02em', fontSize: "17px" }}>
+                                Protocolar Nova Matéria
+                            </Typography>
+                            <Typography variant="body1" color="textSecondary" sx={{ opacity: 0.8, fontSize: "13px" }}>
+                                Preencha os campos abaixo. Utilize nossa IA para auxiliar na redação técnica.
+                            </Typography>
+                        </Box>
+                        <Box display="flex" gap={2}>
+                            <Button 
+                                variant="outlined" 
+                                color="primary" 
+                                startIcon={<FaFileAlt />}
+                                onClick={this.openPdfPopup}
+                                sx={{ 
+                                    textTransform: 'none', 
+                                    borderRadius: '12px',
+                                    borderWidth: '2px',
+                                    '&:hover': { borderWidth: '2px' }
+                                }}
+                            >
+                                Visualizar PDF
+                            </Button>
+                            {!this.state.protocolGenerated && (
+                                <Button 
+                                    variant="contained" 
+                                    color="primary" 
+                                    startIcon={<FaCheckCircle />}
+                                    onClick={this.openPasswordModal}
+                                    sx={{ 
+                                        textTransform: 'none', 
+                                        borderRadius: '12px',
+                                        px: 3,
+                                        backgroundColor: '#126B5E',
+                                        boxShadow: '0 8px 16px rgba(18, 107, 94, 0.2)',
+                                        '&:hover': { backgroundColor: '#0e554a', boxShadow: '0 12px 20px rgba(18, 107, 94, 0.3)' }
+                                    }}
+                                >
+                                    Assinar e Protocolar
+                                </Button>
+                            )}
+                        </Box>
+                    </Box>
 
-                        <div className="editor-split-view">
-                            {/* Barra Lateral Esquerda - Formulário */}
-                            <div className="editor-sidebar">
-                                <h3>Detalhes da Matéria</h3>
-                                <div className="editor-fields-column">
-                                    <div className="editor-field">
-                                        <label>Matéria (Tipo)</label>
-                                        <input type="text" name="tipoMateria" value={this.state.tipoMateria} onChange={this.handleInputChange} />
-                                    </div>
-                                    <div className="editor-field">
-                                        <label>Autor</label>
-                                        <input type="text" name="autor" value={this.state.autor} onChange={this.handleInputChange} />
-                                    </div>
-                                    <div className="editor-field">
-                                        <label>Apresentação</label>
-                                        <select name="tipoApresentacao" value={this.state.tipoApresentacao} onChange={this.handleInputChange}>
-                                            <option value="Escrita">Escrita</option>
-                                            <option value="Oral">Oral</option>
-                                        </select>
-                                    </div>
-                                    <div className="editor-field">
-                                        <label>Tramitação</label>
-                                        <select name="regTramita" value={this.state.regTramita} onChange={this.handleInputChange}>
-                                            <option value="Ordinária">Ordinária</option>
-                                            <option value="Urgência">Urgência</option>
-                                            <option value="Especial">Especial</option>
-                                        </select>
-                                    </div>
-                                    <div className="editor-field">
-                                        <label>Exercício</label>
-                                        <input type="number" name="ano" value={this.state.ano} onChange={this.handleInputChange} />
-                                    </div>
-                                </div>
+                    {this.state.protocolGenerated && (
+                        <Alert 
+                            severity="success" 
+                            variant="filled"
+                            sx={{ borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                        >
+                            <Typography variant="subtitle1" fontWeight="bold">Protocolo Gerado com Sucesso: {this.state.protocolGenerated}</Typography>
+                            A matéria foi enviada para análise da Presidência e seguirá o rito regimental.
+                        </Alert>
+                    )}
 
-                                <div className="editor-actions">
-                                    {this.state.protocolGenerated ? (
-                                        <div className="protocol-success">
-                                            <FaCheckCircle /> Protocolo Gerado: {this.state.protocolGenerated}
-                                            <p>Enviado para Parecer da Presidência.</p>
-                                        </div>
-                                    ) : (
-                                        <button type="button" onClick={this.openPasswordModal} className="btn-protocolar-final">
-                                            Aprovar e Gerar Protocolo
-                                        </button>
+                    <Grid container spacing={4}>
+                        {/* Coluna de Dados Técnicos */}
+                        <Grid className="MuiGrid-item" item xs={11} md={4}>
+                            <Card sx={{ borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                                <CardContent sx={{ p: 3 }}>
+                                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: '#1a1a1a', fontWeight: 700 }}>
+                                        <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'rgba(18, 107, 94, 0.1)', display: 'flex' }}>
+                                            <FaInfoCircle size={18} color="#126B5E" />
+                                        </Box>
+                                        Dados de Identificação
+                                    </Typography>
+                                    
+                                    <Box display="flex" flexDirection="column" gap={3} mt={3}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Tipo de Matéria</InputLabel>
+                                            <Select
+                                                name="tipoMateria"
+                                                value={this.state.tipoMateria}
+                                                onChange={this.handleInputChange}
+                                                label="Tipo de Matéria"
+                                                sx={{ borderRadius: '10px' }}
+                                            >
+                                                <MenuItem value="Projeto de Lei">Projeto de Lei</MenuItem>
+                                                <MenuItem value="Indicação">Indicação</MenuItem>
+                                                <MenuItem value="Requerimento">Requerimento</MenuItem>
+                                                <MenuItem value="Moção">Moção</MenuItem>
+                                                <MenuItem value="Projeto de Decreto Legislativo">Projeto de Decreto Legislativo</MenuItem>
+                                            </Select>
+                                        </FormControl>
+
+                                        <TextField 
+                                            fullWidth 
+                                            size="small" 
+                                            label="Autor" 
+                                            name="autor" 
+                                            value={this.state.autor} 
+                                            onChange={this.handleInputChange}
+                                            InputProps={{ sx: { borderRadius: '10px' } }}
+                                        />
+
+                                        <Box display="flex" gap={2}>
+                                            <TextField 
+                                                fullWidth 
+                                                size="small" 
+                                                label="Ano/Exercício" 
+                                                name="ano" 
+                                                type="number" 
+                                                value={this.state.ano} 
+                                                onChange={this.handleInputChange}
+                                                InputProps={{ sx: { borderRadius: '10px' } }}
+                                            />
+                                            <TextField 
+                                                fullWidth 
+                                                size="small" 
+                                                label="Número" 
+                                                name="numero" 
+                                                value={this.state.numero} 
+                                                onChange={this.handleInputChange}
+                                                InputProps={{ sx: { borderRadius: '10px' } }}
+                                            />
+                                        </Box>
+
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Regime de Tramitação</InputLabel>
+                                            <Select
+                                                name="regTramita"
+                                                value={this.state.regTramita}
+                                                onChange={this.handleInputChange}
+                                                label="Regime de Tramitação"
+                                                sx={{ borderRadius: '10px' }}
+                                            >
+                                                <MenuItem value="Ordinária">Ordinária</MenuItem>
+                                                <MenuItem value="Urgência">Urgência</MenuItem>
+                                                <MenuItem value="Especial">Especial</MenuItem>
+                                            </Select>
+                                        </FormControl>
+
+                                        <TextField 
+                                            fullWidth 
+                                            size="small" 
+                                            label="Principal Assunto / Objeto" 
+                                            multiline
+                                            rows={2}
+                                            name="objeto" 
+                                            placeholder="Ex: Pavimentação da Rua X, Criação do Programa Y..."
+                                            value={this.state.objeto} 
+                                            onChange={this.handleInputChange} 
+                                            helperText="A IA utilizará este campo como contexto para as gerações."
+                                            InputProps={{ sx: { borderRadius: '10px' } }}
+                                        />
+                                    </Box>
+
+                                    {/* Exibição do Parecer Técnico da IA */}
+                                    {aiTechnicalOpinion && (
+                                        <Alert 
+                                            severity={aiTechnicalOpinion.startsWith("BLOQUEIO:") ? "error" : "info"} 
+                                            variant="outlined"
+                                            sx={{ borderRadius: '10px', mt: 2 }}
+                                        >
+                                            <Typography variant="body2" fontWeight="bold">Parecer Técnico da IA:</Typography>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                                {aiTechnicalOpinion}
+                                            </Typography>
+                                        </Alert>
                                     )}
-                                </div>
-                            </div>
+                                </CardContent>
+                            </Card>
+                        </Grid>
 
-                            {/* Área Principal Direita - Editor A4 */}
-                            <div className="editor-main">
-                                <div style={{ marginBottom: '15px', alignSelf: 'flex-end' }}>
-                                    <button
-                                        onClick={this.openPdfPopup}
-                                        className="btn-secondary"
-                                    >
-                                        Visualizar PDF
-                                    </button>
-                                </div>
-                                {/* Removida a simulação de página A4 que limitava a altura.
-                                    O editor agora ocupa o espaço disponível, permitindo rolagem para conteúdo longo. */}
-                                <ReactQuill
-                                    theme="snow"
-                                    value={this.state.textoMateria}
-                                    onChange={this.handleEditorChange}
-                                    modules={this.modules}
-                                    formats={this.formats}
-                                    className="full-page-quill-editor" // Classe para garantir que o editor preencha o contêiner
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                        {/* Coluna de Conteúdo e Editor */}
+                        <Grid item xs={10} md={8} className="MuiGrid-item">
+                            <Card sx={{ borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                                <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    
+                                    {/* Botão Único de Geração */}
+                                    <Box display="flex" justifyContent="flex-end">
+                                        <Button 
+                                            variant="contained"
+                                            startIcon={isGenerating ? <CircularProgress size={18} color="inherit" /> : <FaRobot />}
+                                            onClick={this.generateFullMateriaWithAI}
+                                            disabled={isGenerating}
+                                            sx={{ 
+                                                textTransform: 'none', 
+                                                borderRadius: '12px',
+                                                py: 1.5,
+                                                px: 4,
+                                                backgroundColor: '#126B5E',
+                                                boxShadow: '0 8px 16px rgba(18, 107, 94, 0.2)',
+                                                '&:hover': { backgroundColor: '#0e554a', boxShadow: '0 12px 20px rgba(18, 107, 94, 0.3)' }
+                                            }}
+                                        >
+                                            {isGenerating ? 'Validando e Gerando...' : 'Validar e Gerar Matéria Completa'}
+                                        </Button>
+                                    </Box>
 
-                {/* Popup de Preview do PDF */}
+                                    {/* Título com IA */}
+                                    <Box>
+                                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333' }}>Título da Matéria</Typography>
+                                        </Box>
+                                        <TextField 
+                                            fullWidth 
+                                            size="small" 
+                                            name="titulo" 
+                                            value={this.state.titulo} 
+                                            onChange={this.handleInputChange}
+                                            placeholder="Ex: PROJETO DE LEI Nº 123/2024..."
+                                            InputProps={{ sx: { borderRadius: '10px' } }}
+                                        />
+                                    </Box>
+
+                                    {/* Ementa com IA */}
+                                    <Box>
+                                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333' }}>Ementa (Resumo Formal)</Typography>
+                                        </Box>
+                                        <TextField 
+                                            fullWidth 
+                                            size="small" 
+                                            multiline
+                                            rows={3}
+                                            name="ementa" 
+                                            value={this.state.ementa} 
+                                            onChange={this.handleInputChange}
+                                            placeholder="Dispõe sobre..."
+                                            InputProps={{ sx: { borderRadius: '10px' } }}
+                                        />
+                                    </Box>
+
+                                    {/* Texto Integral com Editor */}
+                                    <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333' }}>Minuta / Redação Integral</Typography>
+                                        </Box>
+                                        <Box sx={{ border: '1px solid #e0e0e0', borderRadius: '12px', overflow: 'hidden' }}>
+                                            <ReactQuill
+                                                theme="snow"
+                                                value={this.state.textoMateria}
+                                                onChange={this.handleEditorChange}
+                                                modules={this.modules}
+                                                formats={this.formats}
+                                                placeholder="Prepare o texto ou gere automaticamente..."
+                                                style={{ height: '400px' }}
+                                            />
+                                        </Box>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    </Grid>
+                </Box>
+
+                {/* Preview PDF */}
                 {showPdfPopup && pdfData && (
                     <div className="pdf-popup-overlay">
-                        <div className="pdf-popup-content">
-                            <button className="pdf-popup-close-button" onClick={this.closePdfPopup}>
+                        <Box sx={{ 
+                            width: '94%', 
+                            height: '92%', 
+                            borderRadius: '32px', 
+                            overflow: 'hidden', 
+                            backgroundColor: 'white',
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                            position: 'relative'
+                        }}>
+                            <Button 
+                                onClick={this.closePdfPopup}
+                                sx={{ 
+                                    position: 'absolute', 
+                                    top: 15, 
+                                    right: 15, 
+                                    minWidth: 40, 
+                                    height: 40, 
+                                    borderRadius: '50%', 
+                                    backgroundColor: 'rgba(0,0,0,0.1)',
+                                    color: 'black',
+                                    fontWeight: 'bold',
+                                    zIndex: 10
+                                }}
+                            >
                                 X
-                            </button>
+                            </Button>
                             <iframe
                                 title="Preview PDF"
                                 src={`data:application/pdf;base64,${pdfData}`}
@@ -929,33 +1172,78 @@ class AddProducts extends Component {
                                 height="100%"
                                 frameBorder="0"
                             />
-                        </div>
+                        </Box>
                     </div>
                 )}
 
-                {/* Modal de Senha para Assinatura */}
+                {/* Assinatura Digital */}
                 {showPasswordModal && (
                     <div className="pdf-popup-overlay">
-                        <div className="pdf-popup-content" style={{ maxWidth: '400px', height: 'auto', padding: '30px', textAlign: 'center' }}>
-                            <h3>Assinatura Digital</h3>
-                            <p style={{ marginBottom: '20px' }}>Digite sua senha para assinar e protocolar o documento.</p>
-
-                            <input
+                        <Box sx={{ 
+                            backgroundColor: 'white', 
+                            p: 5, 
+                            borderRadius: '32px', 
+                            maxWidth: '480px', 
+                            width: '90%',
+                            textAlign: 'center',
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                        }}>
+                            <Box sx={{ 
+                                width: 60, 
+                                height: 60, 
+                                borderRadius: '50%', 
+                                backgroundColor: 'rgba(18, 107, 94, 0.1)', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                margin: '0 auto 20px'
+                            }}>
+                                <FaCheckCircle size={30} color="#126B5E" />
+                            </Box>
+                            <Typography variant="h5" fontWeight="800" gutterBottom sx={{ color: '#1a1a1a' }}>Assinatura Digital</Typography>
+                            <Typography variant="body2" color="textSecondary" sx={{ mb: 4, px: 2 }}>
+                                Para assinar juridicamente este documento, confirme sua senha de acesso ao ecossistema e-Câmara.
+                            </Typography>
+                            
+                            <TextField
+                                fullWidth
                                 type="password"
-                                className="smart-search-input-chat"
-                                style={{ width: '90%', marginBottom: '10px', border: '1px solid #ccc' }}
-                                placeholder="Sua senha (ex: 123456)"
+                                label="Sua Senha"
+                                variant="outlined"
                                 value={passwordInput}
                                 onChange={this.handlePasswordChange}
+                                error={!!passwordError}
+                                helperText={passwordError}
+                                sx={{ mb: 4 }}
+                                InputProps={{ sx: { borderRadius: '12px' } }}
                             />
 
-                            {passwordError && <p style={{ color: 'red', fontSize: '12px', marginBottom: '10px' }}>{passwordError}</p>}
-
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px' }}>
-                                <button className="btn-back-chat" onClick={this.closePasswordModal} style={{ backgroundColor: '#ccc', color: '#333' }}>Cancelar</button>
-                                <button className="btn-protocolar-final" onClick={this.confirmSignature}>Assinar Documento</button>
-                            </div>
-                        </div>
+                            <Box display="flex" gap={2}>
+                                <Button 
+                                    fullWidth 
+                                    variant="outlined" 
+                                    onClick={this.closePasswordModal} 
+                                    sx={{ borderRadius: '12px', py: 1.2, textTransform: 'none', fontWeight: 600 }}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button 
+                                    fullWidth 
+                                    variant="contained" 
+                                    onClick={this.confirmSignature}
+                                    sx={{ 
+                                        borderRadius: '12px', 
+                                        py: 1.2,
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                        backgroundColor: '#126B5E',
+                                        '&:hover': { backgroundColor: '#0e554a' }
+                                    }}
+                                >
+                                    Confirmar Assinatura
+                                </Button>
+                            </Box>
+                        </Box>
                     </div>
                 )}
             </div>

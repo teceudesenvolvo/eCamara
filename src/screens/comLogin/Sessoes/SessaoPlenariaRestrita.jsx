@@ -11,6 +11,7 @@ import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import { db, auth } from '../../../firebaseConfig';
 import { ref, get, onValue, update, set } from 'firebase/database';
 import '../../../styles/FuturisticPanel.css';
+import MateriaCard from '../../../componets/MateriaCard.jsx';
 
 class SessaoPlenariaRestrita extends Component {
     constructor(props) {
@@ -24,7 +25,9 @@ class SessaoPlenariaRestrita extends Component {
             user: null,
             userRole: null,
             parlamentares: [],
-            currentTime: new Date()
+            currentTime: new Date(),
+            showYieldTimeModal: false,
+            selectedVereadorToYieldTo: null,
         };
     }
 
@@ -133,16 +136,49 @@ class SessaoPlenariaRestrita extends Component {
         await set(speakerQueueRef, newQueue);
     };
 
+    handleSetMateriaEmDiscussao = async (index) => {
+        const { camaraId, sessao } = this.state;
+        if (!sessao || !sessao.itens || index === undefined) return;
+
+        const materia = sessao.itens[index];
+        const updates = {};
+
+        // 1. Encerrar qualquer matéria anterior que esteja "Em Discussão" ou "Em Votação"
+        sessao.itens.forEach((m, idx) => {
+            if (m.status === 'Em Discussão' || m.status === 'Em Votação') {
+                updates[`/${camaraId}/sessoes/${sessao.id}/itens/${idx}/status`] = 'Encerrada Discussão/Votação'; // New status for clarity
+                if (m.id) updates[`/${camaraId}/materias/${m.id}/status`] = 'Encerrada Discussão/Votação';
+            }
+        });
+
+        // 2. Definir nova matéria "Em Discussão" no nível da sessão
+        updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/status`] = 'Em Discussão';
+        updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/spokenBy`] = {}; // Initialize spokenBy for this matter
+
+        // 3. Sincronizar com o nó global de matérias
+        if (materia.id) {
+            updates[`/${camaraId}/materias/${materia.id}/status`] = 'Em Discussão';
+            updates[`/${camaraId}/materias/${materia.id}/spokenBy`] = {};
+            console.log(`Sincronizando status global para matéria ${materia.id}: Em Discussão`);
+        }
+
+        // 4. Limpar orador atual e fila de inscritos para a nova discussão
+        updates[`${camaraId}/sessoes/${sessao.id}/oradorAtual`] = null;
+        updates[`${camaraId}/sessoes/${sessao.id}/filaDeInscritos`] = [];
+
+        await update(ref(db), updates);
+    };
+
     handleSetMateriaEmVotacao = async (index) => {
         const { camaraId, sessao } = this.state;
         if (!sessao || !sessao.itens || index === undefined) return;
-        
+
         const materia = sessao.itens[index];
         const updates = {};
-        
-        // 1. Encerrar matéria anterior que esteja "Em Votação"
+
+        // 1. Encerrar matéria anterior que esteja "Em Votação" ou "Em Discussão"
         sessao.itens.forEach((m, idx) => {
-            if (m.status === 'Em Votação') {
+            if (m.status === 'Em Votação' || m.status === 'Em Discussão') {
                 updates[`/${camaraId}/sessoes/${sessao.id}/itens/${idx}/status`] = 'Encerrada';
                 if (m.id) updates[`/${camaraId}/materias/${m.id}/status`] = 'Encerrada';
             }
@@ -150,7 +186,7 @@ class SessaoPlenariaRestrita extends Component {
 
         // 2. Definir nova matéria "Em Votação" no nível da sessão
         updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/status`] = 'Em Votação';
-        
+
         // 3. Sincronizar com o nó global de matérias (para aparecer no materiasDash)
         if (materia.id) {
             updates[`/${camaraId}/materias/${materia.id}/status`] = 'Em Votação';
@@ -167,6 +203,18 @@ class SessaoPlenariaRestrita extends Component {
         await set(voteRef, { voto, nome: user.displayName, timestamp: new Date().toISOString() });
     };
 
+    handleOpenYieldTimeModal = () => {
+        this.setState({ showYieldTimeModal: true, selectedVereadorToYieldTo: null });
+    };
+
+    handleCloseYieldTimeModal = () => {
+        this.setState({ showYieldTimeModal: false, selectedVereadorToYieldTo: null });
+    };
+
+    // This function will be called by the current oradorAtual to yield their time
+    // The president can also use this to force a yield.
+    // The `yieldingSpeakerUid` is implicitly the current `user.uid` if a vereador is yielding.
+    // If the president is doing it, it's the `sessao.oradorAtual.uid`.
     checkTimeLimit = () => {
         const { sessao, userRole } = this.state;
         const isAdmin = userRole === 'presidente' || userRole === 'vice-presidente';
@@ -207,7 +255,7 @@ class SessaoPlenariaRestrita extends Component {
         const totalPresentes = Object.keys(presenca).length;
         if (totalPresentes === 0) return;
 
-        for (const [index, materia] of sessao.itens.entries()) {
+        for (const [index, materia] of sessao.itens.entries()) { // Use for...of for async operations
             if (materia.status === 'Em Votação') {
                 const votos = materia.votos || {};
                 const totalVotes = Object.keys(votos).length;
@@ -219,7 +267,7 @@ class SessaoPlenariaRestrita extends Component {
                         if (votoInfo.voto === 'abstencao') voteCounts.abstencao++;
                     });
                     const newStatus = voteCounts.sim > voteCounts.nao ? 'Aprovada' : 'Rejeitada';
-                    
+
                     const updates = {};
                     updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/status`] = newStatus;
                     if (materia.id) {
@@ -236,11 +284,57 @@ class SessaoPlenariaRestrita extends Component {
         }
     }
 
+    handleYieldTime = async () => {
+        const { camaraId, sessao, user, selectedVereadorToYieldTo, parlamentares, userRole } = this.state;
+        if (!sessao || (!user && userRole !== 'presidente') || !selectedVereadorToYieldTo) return;
+
+        const materiaEmDiscussao = sessao.itens.find(m => m.status === 'Em Discussão');
+        if (!materiaEmDiscussao) {
+            alert("Nenhuma matéria em discussão para ceder a vez.");
+            return;
+        }
+
+        const yieldingSpeakerUid = sessao.oradorAtual?.uid; // The current speaker is yielding
+        const targetVereador = parlamentares.find(p => p.id === selectedVereadorToYieldTo);
+
+        if (!targetVereador) {
+            alert("Vereador para ceder a vez não encontrado.");
+            return;
+        }
+
+        const updates = {};
+
+        // 1. Mark the yielding vereador as having spoken on this matter
+        if (yieldingSpeakerUid) {
+            updates[`/${camaraId}/sessoes/${sessao.id}/itens/${sessao.itens.indexOf(materiaEmDiscussao)}/spokenBy/${yieldingSpeakerUid}`] = true;
+            if (materiaEmDiscussao.id) {
+                updates[`/${camaraId}/materias/${materiaEmDiscussao.id}/spokenBy/${yieldingSpeakerUid}`] = true;
+            }
+        }
+
+        // 2. Set the target vereador as the new current speaker with a fresh 5 minutes
+        const oradorData = { uid: targetVereador.id, nome: targetVereador.nome, tempo: 300, inicio: Date.now() }; // 5 minutes
+        updates[`${camaraId}/sessoes/${sessao.id}/oradorAtual`] = oradorData;
+
+        // 3. Remove the target vereador from the queue if they were there
+        const currentQueue = sessao.filaDeInscritos || [];
+        updates[`${camaraId}/sessoes/${sessao.id}/filaDeInscritos`] = currentQueue.filter(s => s.uid !== targetVereador.id);
+
+        try {
+            await update(ref(db), updates);
+            this.handleCloseYieldTimeModal();
+            alert(`${sessao.oradorAtual?.nome || 'O orador anterior'} cedeu a vez para ${targetVereador.nome}.`);
+        } catch (error) {
+            console.error("Erro ao ceder a vez:", error);
+            alert("Erro ao ceder a vez.");
+        }
+    };
+
     handleGrantWord = async (speaker) => {
         const { camaraId, sessao } = this.state;
         if (!sessao) return;
         const nome = speaker.nome || speaker.name || this.state.parlamentares.find(p => p.id === speaker.uid)?.nome || 'Parlamentar';
-        const oradorData = { uid: speaker.uid, nome: nome, tempo: 300, inicio: Date.now() };
+        const oradorData = { uid: speaker.uid, nome: nome, tempo: 300, inicio: Date.now() }; // 5 minutes
         const updates = {};
         updates[`${camaraId}/sessoes/${sessao.id}/oradorAtual`] = oradorData;
         const currentQueue = sessao.filaDeInscritos || [];
@@ -269,7 +363,8 @@ class SessaoPlenariaRestrita extends Component {
         let className = 'status-badge ';
         switch (status) {
             case 'Em Votação': className += 'status-em-votacao'; break;
-            case 'Aprovada': className += 'status-aprovada'; break;
+            case 'Em Discussão': className += 'status-em-votacao'; break; // Reusing style for now
+            case 'Aprovada':
             case 'Rejeitada': className += 'status-rejeitada'; break;
             default: className += 'status-default';
         }
@@ -277,7 +372,7 @@ class SessaoPlenariaRestrita extends Component {
     };
 
     render() {
-        const { sessao, loading, showMateriaModal, selectedMateria, user, userRole, parlamentares, currentTime } = this.state;
+        const { sessao, loading, showMateriaModal, selectedMateria, user, userRole, parlamentares, currentTime, showYieldTimeModal, selectedVereadorToYieldTo } = this.state;
 
         if (loading) return <div className='admin-dashboard-container' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Carregando Painel de Controle...</p></div>;
         if (!sessao) return <div className='admin-dashboard-container' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Sessão não encontrada.</p></div>;
@@ -286,6 +381,7 @@ class SessaoPlenariaRestrita extends Component {
         const materias = sessao.itens || [];
         const presenca = sessao.presenca || {};
         const filaDeInscritos = sessao.filaDeInscritos || [];
+        const materiaEmDiscussao = materias.find(m => m.status === 'Em Discussão');
         const materiaEmVotacao = materias.find(m => m.status === 'Em Votação');
 
         let jitsiRoomName = `e-camara-sessao-${sessao.id}`;
@@ -361,6 +457,9 @@ class SessaoPlenariaRestrita extends Component {
                                 ) : <p style={{ fontSize: '0.8rem', color: '#999', textAlign: 'center', padding: '10px' }}>Ninguém na fila.</p>}
                             </div>
                             <button className="btn-secondary" style={{ marginTop: '10px', fontSize: '0.8rem' }} onClick={this.handleRequestToSpeak}><FaPlus /> Solicitar Palavra</button>
+                            {materiaEmDiscussao && (user?.uid === sessao.oradorAtual?.uid || isAdmin) && (
+                                <button className="btn-secondary" onClick={this.handleOpenYieldTimeModal} style={{ marginTop: '10px', fontSize: '0.8rem' }}>Ceder a Vez</button>
+                            )}
                         </div>
                     </aside>
 
@@ -378,9 +477,9 @@ class SessaoPlenariaRestrita extends Component {
                             <div className='admin-card-title'><FaMicrophone /> Orador na Tribuna</div>
                             {sessao.oradorAtual ? (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
-                                    <div style={{ flex: 1 }}>
+                                    <div style={{ flex: 1, textAlign: 'left' }}>
                                         <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>{sessao.oradorAtual.nome}</div>
-                                    {isAdmin && (
+                                        {isAdmin && (
                                             <button className="btn-secondary" onClick={this.handleAddTime} style={{ marginTop: '10px', fontSize: '0.8rem' }}><FaPlus /> Adicionar 1 Min</button>
                                         )}
                                     </div>
@@ -400,18 +499,19 @@ class SessaoPlenariaRestrita extends Component {
                             <div className='admin-card-title'><FaFileAlt /> Pauta e Matérias</div>
                             <div className='admin-scroll-area'>
                                 {materias.map((materia, index) => (
-                                    <div key={materia.id || index} style={{ padding: '12px', border: '1px solid #eee', borderRadius: '8px', marginBottom: '10px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                            <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{materia.tipoMateria} {materia.numero}</span>
-                                            {this.renderStatusBadge(materia.status)}
-                                            {console.log("Materia:", materia)}
-                                        </div>
-                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#666', cursor: 'pointer' }} onClick={() => this.handleOpenMateriaModal(materia)}>{materia.ementa}</p>
-
-                                        {isAdmin && materia.status !== 'Em Votação' && materia.status !== 'Aprovada' && materia.status !== 'Rejeitada' && (
-                                            <button className="btn-secondary" style={{ width: '100%', marginTop: '8px', fontSize: '0.75rem' }} onClick={() => this.handleSetMateriaEmVotacao(index)}>Colocar em Votação</button>
-                                        )}
-                                    </div>
+                                    <MateriaCard 
+                                        key={materia.id || index}
+                                        materia={materia}
+                                        user={user}
+                                        camaraId={this.state.camaraId}
+                                        sessaoId={sessao.id}
+                                        index={index}
+                                        isAdmin={isAdmin}
+                                        onOpenModal={this.handleOpenMateriaModal}
+                                        onSetDiscussao={this.handleSetMateriaEmDiscussao}
+                                        onSetVotacao={this.handleSetMateriaEmVotacao}
+                                        
+                                    />
                                 ))}
                             </div>
                         </div>
