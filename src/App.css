@@ -109,6 +109,11 @@
 
 .admin-header{
   text-align: left;
+  
+}
+
+.admin-header > div > h2{
+width: 60%;
 }
 
 .header-home {

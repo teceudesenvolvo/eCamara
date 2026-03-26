@@ -131,9 +131,9 @@ class PainelSessao extends Component {
         {/* Camada 2: Overlay HUD */}
         <div className='hud-overlay-content'>
           <header className='hud-widget hud-header'>
-            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: '10px' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--neon-cyan)', textTransform: 'uppercase' }}>{sessao.tipo} Nº {sessao.numero}</div>
-              <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Câmara Municipal - Painel Digital</div>
+            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: '10px', width: '50%' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--neon-cyan)', textTransform: 'uppercase' }}>{sessao.tipo} - Nº {sessao.numero} </div>
+              <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>CM {this.props.match.params.camaraId.toUpperCase()} - Painel Digital</div>
             </div>
 
             <div style={{ textAlign: 'center' }}>

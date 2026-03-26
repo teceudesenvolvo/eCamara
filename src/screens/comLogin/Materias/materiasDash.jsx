@@ -14,6 +14,8 @@ class loginDashboard extends Component {
             loading: true,
             searchTerm: '',
             filterStatus: 'Todos os Status',
+            activeTab: 'myMatters', // 'myMatters' ou 'subscribedMatters'
+            subscribedMaterias: [],
             camaraId: this.props.match.params.camaraId
         };
     }
@@ -41,16 +43,33 @@ class loginDashboard extends Component {
         const camaraId = camaraIdParam || this.state.camaraId;
         if (user && camaraId) {
             try {
-                const materiasRef = ref(db, `${this.props.match.params.camaraId}/materias`);
-                const q = query(materiasRef, orderByChild('userId'), equalTo(user.uid));
-                const snapshot = await get(q);
-                const materias = [];
-                if (snapshot.exists()) {
-                    snapshot.forEach((childSnapshot) => {
-                        materias.push({ id: childSnapshot.key, ...childSnapshot.val() });
+                const allMateriasRef = ref(db, `${camaraId}/materias`);
+                const allMateriasSnapshot = await get(allMateriasRef);
+                
+                const myMaterias = [];
+                const subscribedMaterias = [];
+
+                if (allMateriasSnapshot.exists()) {
+                    allMateriasSnapshot.forEach((childSnapshot) => {
+                        const materia = { id: childSnapshot.key, ...childSnapshot.val() };
+                        
+                        // Se a matéria é do usuário logado
+                        if (materia.userId === user.uid) {
+                            myMaterias.push(materia);
+                        }
+                        
+                        // Se o usuário subscreveu a matéria (e não é a própria matéria dele)
+                        if (materia.subscricoes && materia.subscricoes[user.uid] && materia.userId !== user.uid) {
+                            subscribedMaterias.push(materia);
+                        }
                     });
                 }
-                this.setState({ materias, loading: false });
+                
+                // Ordenar as matérias por data de criação (mais recente primeiro)
+                myMaterias.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                subscribedMaterias.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+                this.setState({ materias: myMaterias, subscribedMaterias, loading: false });
             } catch (error) {
                 console.error("Erro ao buscar matérias:", error);
                 this.setState({ loading: false });
@@ -59,10 +78,12 @@ class loginDashboard extends Component {
     };
 
     render() {
-        const { materias, loading, searchTerm, filterStatus } = this.state;
+        const { materias, subscribedMaterias, loading, searchTerm, filterStatus, activeTab } = this.state;
+
+        const currentMateriasList = activeTab === 'myMatters' ? materias : subscribedMaterias;
 
         // Filtragem local
-        const filteredMaterias = materias.filter(materia => {
+        const filteredMaterias = currentMateriasList.filter(materia => {
             const matchesSearch = 
                 (materia.titulo && materia.titulo.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (materia.numero && materia.numero.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -82,7 +103,7 @@ class loginDashboard extends Component {
                     {/* Header da Página */}
                     <div className="dashboard-header">
                         <div>
-                            <h1 className="dashboard-header-title">Minhas Matérias</h1>
+                            <h1 className="dashboard-header-title">Matérias</h1>
                             <p className="dashboard-header-desc">Gerencie suas proposições legislativas</p>
                         </div>
                         <button 
@@ -91,6 +112,22 @@ class loginDashboard extends Component {
                             onClick={() => this.props.history.push('/admin/protocolar-materia/' + this.state.camaraId)}
                         >
                             <FaPlus /> Nova Matéria
+                        </button>
+                    </div>
+
+                    {/* Abas de Navegação */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: '30px' }}>
+                        <button 
+                            onClick={() => this.setState({ activeTab: 'myMatters' })} 
+                            className={`tab-button ${activeTab === 'myMatters' ? 'active' : ''}`} 
+                            style={{ padding: '10px 20px', background: activeTab === 'myMatters' ? '#fff' : 'transparent', border: 'none', borderBottom: activeTab === 'myMatters' ? '3px solid #126B5E' : '3px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FaFileAlt /> Minhas Matérias
+                        </button>
+                        <button 
+                            onClick={() => this.setState({ activeTab: 'subscribedMatters' })} 
+                            className={`tab-button ${activeTab === 'subscribedMatters' ? 'active' : ''}`} 
+                            style={{ padding: '10px 20px', background: activeTab === 'subscribedMatters' ? '#fff' : 'transparent', border: 'none', borderBottom: activeTab === 'subscribedMatters' ? '3px solid #126B5E' : '3px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FaExchangeAlt /> Matérias Subscritas
                         </button>
                     </div>
 

@@ -404,7 +404,7 @@ class SessaoPlenariaRestrita extends Component {
                     {/* Cabecalho */}
                     <header className='admin-header'>
                         <div>
-                            <h2 style={{ margin: 0, color: '#126B5E' }}>{sessao.tipo} nº {sessao.numero} <span style={{ fontSize: '0.9rem', color: '#666', fontWeight: 'normal' }}>| Versão Dashboard Admin</span></h2>
+                            <h2 style={{ margin: 0, color: '#126B5E' }}>{sessao.tipo} nº {sessao.numero}</h2>
                         </div>
                         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                             <div style={{ textAlign: 'right' }}>

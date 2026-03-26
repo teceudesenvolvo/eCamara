@@ -85,7 +85,8 @@ class MateriaDetails extends Component {
                     parecer: data.parecer,
                     parecerDate: data.parecerDate,
                     publicacao: data.publicacao,
-                    isComplementar: data.isComplementar
+                    isComplementar: data.isComplementar,
+                    subscricoes: data.subscricoes ? Object.values(data.subscricoes) : []
                 };
 
                 this.setState({ materia, loading: false });
@@ -164,7 +165,7 @@ class MateriaDetails extends Component {
                                 <h1 style={{ color: '#2c3e50', margin: '0 0 15px 0', fontSize: '1.5rem', lineHeight: '1.4', fontWeight: '700' }}>
                                     {materia.titulo}
                                 </h1>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555' }}>
                                             <FaUserTie size={14} />
@@ -174,6 +175,39 @@ class MateriaDetails extends Component {
                                             <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', color: '#333' }}>{materia.autor}</p>
                                         </div>
                                      </div>
+
+                                     {materia.subscricoes && materia.subscricoes.length > 0 && (
+                                         <>
+                                            <span style={{ color: '#eee', fontSize: '1.2rem' }}>|</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                    {materia.subscricoes.slice(0, 5).map((sub, idx) => (
+                                                        <div key={idx} title={`${sub.nome} (${sub.tipo})`} style={{ 
+                                                            width: '32px', 
+                                                            height: '32px', 
+                                                            borderRadius: '50%', 
+                                                            border: `2px solid ${sub.tipo === 'Coautoria' ? '#FF740F' : '#126B5E'}`,
+                                                            overflow: 'hidden',
+                                                            background: '#fff',
+                                                            marginLeft: idx > 0 ? '-12px' : 0,
+                                                            zIndex: 10 - idx,
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                                        }}>
+                                                            {sub.avatar ? <img src={sub.avatar} alt={sub.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : 
+                                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#126B5E', background: '#e0f2f1' }}>{sub.nome.charAt(0)}</div>}
+                                                        </div>
+                                                    ))}
+                                                    {materia.subscricoes.length > 5 && <span style={{ marginLeft: '5px', fontSize: '0.8rem', color: '#888' }}>+{materia.subscricoes.length - 5}</span>}
+                                                </div>
+                                                <div style={{ textAlign: 'left' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>Subscrito por</p>
+                                                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: '#555' }}>
+                                                        {materia.subscricoes.length} parlamentar(es)
+                                                    </p>
+                                                </div>
+                                            </div>
+                                         </>
+                                     )}
                                 </div>
                             </div>
 
