@@ -117,7 +117,7 @@ width: 60%;
 }
 
 .gCuKMa{
-  flex-direction: column;
+  flex-direction: column !important;
 }
 
 .header-home {
