@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { FaUsers, FaArrowRight } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuAdmin.jsx'; // Reusing for member avatar
-import { db, auth } from '../../firebaseConfig';
+import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Reusing for member avatar
+import { db, auth } from '../../../firebaseConfig';
 import { ref, onValue, get } from 'firebase/database';
 
 class ComissoesDash extends Component {

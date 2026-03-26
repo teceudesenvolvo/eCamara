@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import { FaPlus, FaFileAlt, FaCalendarAlt, FaUserTie, FaExchangeAlt, FaSearch, FaSpinner } from 'react-icons/fa';
 import { ref, query, orderByChild, equalTo, get } from 'firebase/database';
-import { auth, db } from '../../firebaseConfig';
+import { auth, db } from '../../../firebaseConfig';
 
 // Components
-import MenuDashboard from '../../componets/menuAdmin.jsx';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 
 class loginDashboard extends Component {
     constructor(props) {

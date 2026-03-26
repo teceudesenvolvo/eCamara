@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import { db, auth } from '../../firebaseConfig';
+import { db, auth } from '../../../firebaseConfig';
 import { ref, onValue, get } from 'firebase/database';
 import { FaUsers, FaVoteYea, FaClock, FaDesktop, FaMicrophone } from "react-icons/fa";
-import '../../styles/FuturisticPanel.css';
+import '../../../styles/FuturisticPanel.css';
 
 class PainelSessao extends Component {
   constructor(props) {

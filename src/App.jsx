@@ -21,20 +21,28 @@ import Configuracoes from './screens/comLogin/FormsCreate/Configuracoes.jsx';
 import AdminAssistant from './screens/comLogin/FormsCreate/AdminAssistant.jsx';
 
 // Com Login - Dashboards e Detalhes
-import MateriasDash from './screens/comLogin/materiasDash.jsx';
-import JuizoMateria from './screens/comLogin/juizoMateria.jsx';
-import JuizoPresidente from './screens/comLogin/juizoPresidente.jsx';
-import ComissoesDash from './screens/comLogin/comissoesDash.jsx';
-import VirtualMeetingPage from './screens/comLogin/VirtualMeetingPage.jsx';
-import ComissaoDetails from './screens/comLogin/comissaoDetails.jsx';
-import PautasSessao from './screens/comLogin/pautasSessao.jsx';
-import AdminDocumentsDash from './screens/comLogin/AdminDocumentsDash.jsx';
-import AdminDocumentDetails from './screens/comLogin/AdminDocumentDetails.jsx';
-import SessaoPlenariaRestrita from './screens/comLogin/SessaoPlenariaRestrita.jsx';
-import PainelSessao from './screens/comLogin/PainelSessao.jsx';
+import MateriasDash from './screens/comLogin/Materias/materiasDash.jsx';
+import MateriaDetails from './screens/comLogin/Materias/materiaDetails.jsx';
+
+import JuizoMateria from './screens/comLogin/Juridico/juizoMateria.jsx';
+
+import JuizoPresidente from './screens/comLogin/Presidencia/juizoPresidente.jsx';
+
+import PautasSessao from './screens/comLogin/Sessoes/pautasSessao.jsx';
+import ResumoSessao from './screens/comLogin/Sessoes/ResumoSessao.jsx';
+import PainelSessao from './screens/comLogin/Sessoes/PainelSessao.jsx';
+import SessaoPlenariaRestrita from './screens/comLogin/Sessoes/SessaoPlenariaRestrita.jsx';
+
+import ComissoesDash from './screens/comLogin/Comissoes/comissoesDash.jsx';
+import ComissaoDetails from './screens/comLogin/Comissoes/comissaoDetails.jsx';
+import VirtualMeetingPage from './screens/comLogin/Comissoes/VirtualMeetingPage.jsx';
+
+import AdminDocumentsDash from './screens/comLogin/Config/AdminDocumentsDash.jsx';
+import AdminDocumentDetails from './screens/comLogin/Config/AdminDocumentDetails.jsx';
+import LayoutManager from './screens/comLogin/Config/LayoutManager.jsx';
+import AdminGeral from './screens/comLogin/Config/AdminGeral.jsx';
 
 // Páginas Secundárias
-import MateriaDetails from './screens/comLogin/materiaDetails.jsx';
 import Perfil from './screens/comLogin/Perfil.jsx';
 
 // Páginas de Login e Registro
@@ -48,10 +56,9 @@ import MateriaDetalhesPublico from './screens/semLogin/MateriaDetalhesPublico.js
 import VereadorProfile from './screens/semLogin/VereadorProfile.jsx';
 
 // Paginas Configurações e Gerenciamento
-import LayoutManager from './screens/comLogin/LayoutManager.jsx';
 import CamaraSelector from './screens/semLogin/CamaraSelector.jsx';
 
-import AdminGeral from './screens/comLogin/AdminGeral.jsx';
+
 // Navigate Components
 import ChatAI from './screens/semLogin/ChatAI.jsx';
 import TopBar from './componets/topBarSearch.jsx';
@@ -187,6 +194,7 @@ function App() {
           <Route path="/admin/reuniao-virtual/:camaraId/:comissaoId/:reuniaoId" component={VirtualMeetingPage} />
           <Route path="/admin/pautas-sessao/:camaraId" component={PautasSessao} />
           <Route path="/admin/sessao-plenaria/:camaraId" component={SessaoPlenariaRestrita} />
+          <Route path="/admin/resumo-sessao/:camaraId" component={ResumoSessao} />
           <Route path="/admin/painel-sessao/:camaraId/:sessaoId" component={PainelSessao} />
           <Route path="/admin/configuracoes/:camaraId" component={Configuracoes} />
           <Route exact path="/admin/assistente-admin/:camaraId" component={AdminDocumentsDash} />

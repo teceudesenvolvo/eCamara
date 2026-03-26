@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import { FaPlus, FaFileAlt, FaSearch, FaSpinner, FaFilePdf } from 'react-icons/fa';
 import { ref, query, orderByChild, equalTo, get } from 'firebase/database';
-import { auth, db } from '../../firebaseConfig';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
+import { auth, db } from '../../../firebaseConfig';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 
 class AdminDocumentsDash extends Component {
     constructor(props) {

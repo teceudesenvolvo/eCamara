@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
 import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { sendMessageToAIPrivate } from '../../aiService';
-import { db } from '../../firebaseConfig';
+import { sendMessageToAIPrivate } from '../../../aiService.js';
+import { db } from '../../../firebaseConfig.js';
 import { ref, onValue, push, update, get } from 'firebase/database';
-import { auth } from '../../firebaseConfig';
+import { auth } from '../../../firebaseConfig.js';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -720,7 +720,9 @@ class PautasSessao extends Component {
 
     renderSessoesList = (status, title, subtitle) => {
         const { sessoes, camaraId } = this.state;
-        const filteredSessoes = sessoes.filter(s => s.status === status);
+        const filteredSessoes = sessoes.filter(s => 
+            Array.isArray(status) ? status.includes(s.status) : s.status === status
+        );
 
         return (
             <div className="dashboard-card" style={{ animation: 'fadeIn 0.5s' }}>
@@ -736,7 +738,11 @@ class PautasSessao extends Component {
                             key={sessao.id} 
                             className="openai-card" 
                             style={{ cursor: 'pointer', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
-                            onClick={() => this.props.history.push(`/admin/sessao-plenaria/${camaraId}`, { sessaoId: sessao.id })}
+                            onClick={() => {
+                                const isClosed = ['Publicada', 'Encerrada'].includes(sessao.status);
+                                const path = isClosed ? `/admin/resumo-sessao/${camaraId}` : `/admin/sessao-plenaria/${camaraId}`;
+                                this.props.history.push(path, { sessaoId: sessao.id });
+                            }}
                         >
                             <div className="card-content-openai">
                                 <span className="card-date">{sessao.data} • {sessao.tipo}</span>
@@ -746,7 +752,7 @@ class PautasSessao extends Component {
                         </div>
                     )) : (
                         <div style={{ color: '#888', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', padding: '40px', background: '#f9f9f9', borderRadius: '8px' }}>
-                            Nenhuma sessão encontrada com o status "{status}".
+                            Nenhuma sessão encontrada com o status "{Array.isArray(status) ? status.join(' ou ') : status}".
                         </div>
                     )}
                 </div>
@@ -779,7 +785,7 @@ class PautasSessao extends Component {
 
                     {activeTab === 'gerenciar' && this.renderGerenciarSessoes()}
                     {activeTab === 'abertas' && this.renderSessoesList('Aberta', 'Sessões Abertas', 'Acompanhe e participe das sessões em andamento.')}
-                    {activeTab === 'fechadas' && this.renderSessoesList('Publicada', 'Sessões Finalizadas', 'Consulte o histórico de sessões já realizadas.')}
+                    {activeTab === 'fechadas' && this.renderSessoesList(['Publicada', 'Encerrada'], 'Sessões Finalizadas', 'Consulte o histórico de sessões já realizadas.')}
                 </div>
             </div>
         );

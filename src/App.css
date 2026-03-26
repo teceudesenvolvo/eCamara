@@ -5498,11 +5498,13 @@ footer>p {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7); /* Mas escuro */
+  background: rgba(0, 0, 0, 0.7);
+  /* Mas escuro */
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 40px; /* Margem de segurança */
+  padding: 40px;
+  /* Margem de segurança */
   z-index: 10000 !important;
 }
 
@@ -5515,7 +5517,7 @@ footer>p {
   max-width: 95%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
 
 .modal-content>h2 {
@@ -5916,6 +5918,10 @@ footer>p {
   40% {
     transform: scale(1.0);
   }
+}
+
+.MuiGrid-root-gTKQOq {
+  width: 100%;
 }
 
 /* --- Mobile Menu Responsiveness (Checkbox Hack) --- */

@@ -120,14 +120,14 @@ class HomePage extends Component {
                         </div>
                     </div>
 
-                     {/* 2. Search Bar Floating */}
+                    {/* 2. Search Bar Floating */}
                     <div className="openai-search-container">
                         <div className="search-box-wrapper-openai">
-                            <input 
-                                type="text" 
-                                className="smart-search-input-openai" 
+                            <input
+                                type="text"
+                                className="smart-search-input-openai"
                                 placeholder="Pergunte sobre leis, sessões ou vereadores..."
-                                onFocus={this.openChat} 
+                                onFocus={this.openChat}
                             />
                             <button className="smart-search-btn-openai"><FaSearch /></button>
                         </div>
@@ -161,7 +161,7 @@ class HomePage extends Component {
                             <SlideFeacures vereadores={vereadores} />
                         </div>
                     </div>
-                    
+
                 </div>
 
                 {/* Popup do Chat AI */}

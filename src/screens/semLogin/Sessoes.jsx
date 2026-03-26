@@ -14,7 +14,7 @@ import PageHeader from '../../componets/PageHeader';
 
 // Firebase
 import { db } from '../../firebaseConfig';
-import { ref, get, query, orderByChild } from 'firebase/database';
+import { ref, get } from 'firebase/database';
 
 class Sessoes extends Component {
     constructor(props) {
@@ -23,10 +23,10 @@ class Sessoes extends Component {
             sessoes: [],
             loading: true,
             filterText: {
-                sessao: '',
-                abertura: '',
+                numero: '',
+                data: '',
                 tipo: '',
-                exercicio: '',
+                legislatura: '',
             },
             showFilters: false,
             activeTab: 'todas', // 'todas' ou 'abertas'
@@ -41,15 +41,25 @@ class Sessoes extends Component {
     fetchSessoes = async () => {
         const { camaraId } = this.state;
         const sessoesRef = ref(db, `${camaraId}/sessoes`);
-        const sessoesQuery = query(sessoesRef, orderByChild('createdAt'));
-
-        const snapshot = await get(sessoesQuery);
-        const sessoes = [];
-        if (snapshot.exists()) {
-            snapshot.forEach(child => sessoes.push({ id: child.key, ...child.val() }));
+        
+        try {
+            const snapshot = await get(sessoesRef);
+            const sessoes = [];
+            if (snapshot.exists()) {
+                snapshot.forEach(child => sessoes.push({ id: child.key, ...child.val() }));
+            }
+            // Ordena manualmente: primeiro as abertas, depois por data de criação decrescente
+            const sortedSessoes = sessoes.sort((a, b) => {
+                if (a.status === 'Aberta' && b.status !== 'Aberta') return -1;
+                if (a.status !== 'Aberta' && b.status === 'Aberta') return 1;
+                return (b.createdAt || 0) - (a.createdAt || 0);
+            });
+            this.setState({ sessoes: sortedSessoes, loading: false });
+        } catch (error) {
+            console.error("Erro ao buscar sessões:", error);
+            this.setState({ loading: false });
         }
-        this.setState({ sessoes: sessoes.reverse(), loading: false }); // reverse to show newest first
-    }
+    };
 
     handleFilterChange = (event) => {
         const { name, value } = event.target;
@@ -119,11 +129,11 @@ class Sessoes extends Component {
                     {showFilters && (
                         <Box sx={{ mb: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
                             <Grid container spacing={2}>
-                                {['sessao', 'data', 'tipo', 'exercicio'].map((column) => (
+                                {['numero', 'data', 'tipo', 'legislatura'].map((column) => (
                                     <Grid item xs={12} sm={6} md={3} key={column}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                             <Typography variant="caption" style={{ fontWeight: 'bold', color: '#555' }}>
-                                                {column === 'sessao' ? 'Descrição' : column.charAt(0).toUpperCase() + column.slice(1)}
+                                                {column === 'numero' ? 'Nº da Sessão' : column.charAt(0).toUpperCase() + column.slice(1)}
                                             </Typography>
                                             {selectFields.includes(column) ? (
                                                 <TextField

@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import { FaArrowLeft, FaDownload, FaCopy, FaEye } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
-import { db } from '../../firebaseConfig';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import { db } from '../../../firebaseConfig';
 import { ref, get } from 'firebase/database';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import logo from '../../assets/logo.png';
+import logo from '../../../assets/logo.png';
 
 pdfMake.vfs = pdfFonts.vfs;
 

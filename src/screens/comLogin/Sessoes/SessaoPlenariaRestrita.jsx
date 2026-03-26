@@ -7,11 +7,10 @@ import Typography from '@mui/material/Typography';
 import { FaFileAlt, FaUserCheck, FaMicrophone, FaVoteYea, FaPlus, FaTrash, FaDesktop, FaUsers, FaClock, FaListUl } from "react-icons/fa";
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
-import HistoricoSessao from '../../componets/HistoricoSessao.jsx';
-import { db, auth } from '../../firebaseConfig';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import { db, auth } from '../../../firebaseConfig';
 import { ref, get, onValue, update, set } from 'firebase/database';
-import '../../styles/FuturisticPanel.css';
+import '../../../styles/FuturisticPanel.css';
 
 class SessaoPlenariaRestrita extends Component {
     constructor(props) {

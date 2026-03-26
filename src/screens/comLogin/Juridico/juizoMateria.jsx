@@ -1,13 +1,13 @@
 import React, { Component } from 'react';
 import { FaGavel, FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye, FaSpinner, FaHistory } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import logo from '../../assets/logo.png';
-import { sendMessageToAIPrivate } from '../../aiService';
-import { db } from '../../firebaseConfig';
+import logo from '../../../assets/logo.png';
+import { sendMessageToAIPrivate } from '../../../aiService';
+import { db } from '../../../firebaseConfig';
 import { ref, onValue, update, get } from 'firebase/database';
-import { auth } from '../../firebaseConfig';
+import { auth } from '../../../firebaseConfig';
 
 pdfMake.vfs = pdfFonts.vfs;
 

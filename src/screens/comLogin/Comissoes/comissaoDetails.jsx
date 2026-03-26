@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import { FaUsers, FaFileAlt, FaCheck, FaTimes, FaPlus, FaCalendarCheck, FaUserTag, FaPenFancy, FaRobot, FaEye, FaSpinner } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
-import { db, auth } from '../../firebaseConfig';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import { db, auth } from '../../../firebaseConfig';
 import { ref, get, onValue, update, push, set } from 'firebase/database';
 import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { sendMessageToAIPrivate } from '../../aiService';
+import { sendMessageToAIPrivate } from '../../../aiService';
 
 class ComissaoDetails extends Component {
     constructor(props) {

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { auth, db } from '../../firebaseConfig';
+import { auth, db } from '../../../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { ref, set, get, remove, push } from 'firebase/database';
 import { FaBuilding, FaPlus, FaLock, FaSignOutAlt, FaCheckCircle, FaTrash, FaExternalLinkAlt, FaUserPlus, FaUsers, FaTimes, FaCopy } from 'react-icons/fa';

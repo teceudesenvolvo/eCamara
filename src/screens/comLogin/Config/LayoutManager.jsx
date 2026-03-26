@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import { FaPalette, FaHome, FaCog, FaSave } from 'react-icons/fa';
-import { db } from '../../firebaseConfig';
+import { db } from '../../../firebaseConfig';
 import { ref, get, update } from 'firebase/database';
-import { auth } from '../../firebaseConfig';
+import { auth } from '../../../firebaseConfig';
 
 class LayoutManager extends Component {
     constructor(props) {

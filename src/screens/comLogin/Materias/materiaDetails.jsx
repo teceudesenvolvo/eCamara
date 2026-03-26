@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { FaArrowLeft, FaFilePdf, FaHistory, FaCheckCircle, FaClock, FaUserTie, FaCalendarAlt, FaPrint, FaExchangeAlt, FaDownload, FaShareAlt, FaGavel, FaInfoCircle, FaParagraph, FaBalanceScale } from 'react-icons/fa';
-import MenuDashboard from '../../componets/menuAdmin.jsx';
-import { db } from '../../firebaseConfig';
+import MenuDashboard from "../../../componets/menuAdmin.jsx";
+import { db } from '../../../firebaseConfig';
 import { ref, get } from 'firebase/database';
 
 class MateriaDetails extends Component {
