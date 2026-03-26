@@ -116,6 +116,10 @@
 width: 60%;
 }
 
+.gCuKMa{
+  flex-direction: column;
+}
+
 .header-home {
   margin-top: 0px;
   height: 50px;
