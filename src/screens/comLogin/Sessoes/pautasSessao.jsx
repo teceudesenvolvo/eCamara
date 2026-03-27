@@ -25,6 +25,8 @@ class PautasSessao extends Component {
             novoTipoDeSessao: 'Presencial', // Presencial, Remota, Híbrida
             novaTransmissaoUrl: '',
             materiasDisponiveis: [],
+            documentosAcessoriosDisponiveis: [],
+            selectedDocumentoToAdd: '',
             selectedMateriaToAdd: '',
             isGeneratingEdital: false,
             editalText: '',
@@ -49,6 +51,7 @@ class PautasSessao extends Component {
                 this.setState({ camaraId }, () => { this.fetchConfigsAndLogo();
                     this.fetchSessoes();
                     this.fetchMateriasDisponiveis();
+                    this.fetchDocumentosAcessorios();
                 });
             }
         });
@@ -86,6 +89,27 @@ class PautasSessao extends Component {
             this.setState({ materiasDisponiveis });
         } catch (error) {
             console.error("Erro ao buscar matérias disponíveis:", error);
+        }
+    };
+
+    fetchDocumentosAcessorios = async () => {
+        const { camaraId } = this.state;
+        const docsRef = ref(db, `${camaraId}/documentos_acessorios`);
+        try {
+            const snapshot = await get(docsRef);
+            const disponiveis = [];
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    const doc = child.val();
+                    // Apenas documentos protocolados e que não estão em outras pautas
+                    if (doc.status === 'Protocolado') {
+                        disponiveis.push({ id: child.key, ...doc });
+                    }
+                });
+            }
+            this.setState({ documentosAcessoriosDisponiveis: disponiveis });
+        } catch (error) {
+            console.error("Erro ao buscar documentos acessórios:", error);
         }
     };
 
@@ -230,6 +254,45 @@ class PautasSessao extends Component {
         }
     };
 
+    handleAddAcessorio = async () => {
+        const { selectedSessaoId, sessoes, selectedDocumentoToAdd, documentosAcessoriosDisponiveis, camaraId } = this.state;
+        if (!selectedDocumentoToAdd || !selectedSessaoId) return;
+
+        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
+        if (!selectedSessao) return;
+
+        const doc = documentosAcessoriosDisponiveis.find(d => d.id === selectedDocumentoToAdd);
+        if (doc) {
+            const currentItens = selectedSessao.itens || [];
+            if (currentItens.some(item => item.id === doc.id)) {
+                alert("Este requerimento já foi adicionado.");
+                return;
+            }
+
+            // Padroniza o item para o formato esperado na lista de pauta
+            const itemNormalizado = {
+                id: doc.id,
+                titulo: doc.titulo || 'Requerimento de Urgência',
+                ementa: "Requerimento de Urgência vinculado à matéria de referência.",
+                autor: doc.autorNome || 'Autor não informado',
+                tipoMateria: 'Requerimento',
+                isAcessorio: true
+            };
+
+            const updatedItens = [...currentItens, itemNormalizado];
+            const sessaoRef = ref(db, `${camaraId}/sessoes/${selectedSessaoId}`);
+            const docRef = ref(db, `${camaraId}/documentos_acessorios/${doc.id}`);
+
+            try {
+                await update(sessaoRef, { itens: updatedItens });
+                await update(docRef, { status: 'Em Pauta' });
+                this.setState({ selectedDocumentoToAdd: '' });
+            } catch (error) {
+                console.error("Erro ao adicionar acessório:", error);
+            }
+        }
+    };
+
     handleRemoveItem = async (itemId) => {
         const { selectedSessaoId, sessoes, camaraId } = this.state;
         if (!selectedSessaoId) return;
@@ -242,11 +305,15 @@ class PautasSessao extends Component {
         const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId); // Remove da lista local
 
         const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
-        const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${itemId}`);
 
         try {
             await update(sessaoRef, { itens: updatedItens });
-            // Restaura o status da matéria para que ela possa ser adicionada novamente se necessário
+            
+            // Verifica se é uma matéria ou documento acessório para restaurar o status correto
+            const isAcessorio = itemToRemove?.isAcessorio;
+            const targetPath = isAcessorio ? `documentos_acessorios/${itemId}` : `materias/${itemId}`;
+            const materiaRef = ref(db, `${this.props.match.params.camaraId}/${targetPath}`);
+            
             if (itemToRemove) {
                 await update(materiaRef, { status: 'Enviado para Plenário' });
             }
@@ -408,7 +475,7 @@ class PautasSessao extends Component {
     };
 
     renderGerenciarSessoes = () => {
-        const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novoTipoDeSessao, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl, novaLegislatura, novoNumeroPlenaria } = this.state;
+        const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novoTipoDeSessao, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl, novaLegislatura, novoNumeroPlenaria, documentosAcessoriosDisponiveis, selectedDocumentoToAdd } = this.state;
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
 
         // Ordenar sessoes por data (mais recente primeiro)
@@ -579,6 +646,25 @@ class PautasSessao extends Component {
                                             ))}
                                         </select>
                                         <button className="btn-primary" onClick={this.handleAddItem} style={{ width: 'auto' }}>
+                                            <FaPlus /> Adicionar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div style={{ background: '#fff3e0', padding: '20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #ffe0b2' }}>
+                                    <h4 style={{ marginTop: 0, color: '#e65100', fontSize: '0.9rem', fontWeight: '600',}}>Adicionar Requerimento de Urgência</h4>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <select 
+                                            className="modal-input" 
+                                            value={selectedDocumentoToAdd}
+                                            onChange={(e) => this.setState({ selectedDocumentoToAdd: e.target.value })}
+                                        >
+                                            <option value="">Selecione um requerimento...</option>
+                                            {documentosAcessoriosDisponiveis.map(d => (
+                                                <option key={d.id} value={d.id}>{d.titulo} - {d.autorNome}</option>
+                                            ))}
+                                        </select>
+                                        <button className="btn-primary" onClick={this.handleAddAcessorio} style={{ width: 'auto', background: '#e65100' }}>
                                             <FaPlus /> Adicionar
                                         </button>
                                     </div>

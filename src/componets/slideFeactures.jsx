@@ -41,13 +41,12 @@ class slideFeactures extends Component {
 
         try {
             const usersRef = ref(db, `${camaraId}/users`);
-            const q = query(usersRef, orderByChild('tipo'), equalTo('vereador'));
             const materiasRef = ref(db, `${camaraId}/materias`);
             const comissoesRef = ref(db, `${camaraId}/comissoes`);
 
             // Buscar usuários, matérias e comissões simultaneamente
             const [usersSnapshot, materiasSnapshot, comissoesSnapshot] = await Promise.all([
-                get(q),
+                get(usersRef),
                 get(materiasRef),
                 get(comissoesRef)
             ]);
@@ -80,15 +79,19 @@ class slideFeactures extends Component {
             if (usersSnapshot.exists()) {
                 usersSnapshot.forEach((child) => {
                     const val = child.val();
-                    const userId = child.key;
-                    fetchedVereadores.push({
-                        id: userId,
-                        nome: val.nome,
-                        foto: val.foto || 'https://via.placeholder.com/150',
-                        ...val,
-                        materiasCount: materiasCountByUserId[userId] || 0,
-                        comissoesCount: comissoesCountByUserId[userId] || 0
-                    });
+                    const tipo = (val.tipo || '').toLowerCase();
+
+                    if (tipo === 'vereador' || tipo === 'presidente') {
+                        const userId = child.key;
+                        fetchedVereadores.push({
+                            id: userId,
+                            nome: val.nome,
+                            foto: val.foto || 'https://via.placeholder.com/150',
+                            ...val,
+                            materiasCount: materiasCountByUserId[userId] || 0,
+                            comissoesCount: comissoesCountByUserId[userId] || 0
+                        });
+                    }
                 });
             }
             this.setState({ vereadores: fetchedVereadores, loading: false });
@@ -129,7 +132,7 @@ class slideFeactures extends Component {
                         </div>
                         <div className="representative-info">
                             <h5 className="representative-name">{vereador.nome} </h5>
-                            <p className="representative-role">Vereador(a)</p> {/* Assumindo o cargo como Vereador(a) */}
+                            <p className="representative-role" style={{ textTransform: 'capitalize' }}>{vereador.tipo}</p>
                         </div>
                     </div>
                     <div className="representative-stats">

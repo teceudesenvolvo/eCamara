@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaPlus, FaFileAlt, FaCalendarAlt, FaUserTie, FaExchangeAlt, FaSearch, FaSpinner } from 'react-icons/fa';
+import { FaPlus, FaFileAlt, FaCalendarAlt, FaUserTie, FaExchangeAlt, FaSearch, FaSpinner, FaFileSignature } from 'react-icons/fa';
 import { ref, query, orderByChild, equalTo, get } from 'firebase/database';
 import { auth, db } from '../../../firebaseConfig';
 
@@ -106,13 +106,22 @@ class loginDashboard extends Component {
                             <h1 className="dashboard-header-title">Matérias</h1>
                             <p className="dashboard-header-desc">Gerencie suas proposições legislativas</p>
                         </div>
-                        <button 
-                            className="btn-primary" 
-                            style={{ width: 'auto' }}
-                            onClick={() => this.props.history.push('/admin/protocolar-materia/' + this.state.camaraId)}
-                        >
-                            <FaPlus /> Nova Matéria
-                        </button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button 
+                                className="btn-secondary" 
+                                style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '8px', borderColor: '#126B5E', color: '#126B5E' }}
+                                onClick={() => this.props.history.push('/admin/documentos-acessorios/' + this.state.camaraId)}
+                            >
+                                <FaFileSignature /> Solicitar Urgencia de Matéria
+                            </button>
+                            <button 
+                                className="btn-primary" 
+                                style={{ width: 'auto' }}
+                                onClick={() => this.props.history.push('/admin/protocolar-materia/' + this.state.camaraId)}
+                            >
+                                <FaPlus /> Nova Matéria
+                            </button>
+                        </div>
                     </div>
 
                     {/* Abas de Navegação */}

@@ -25,6 +25,9 @@ const MenuDashboard = ({ logo: propLogo }) => {
     const location = useLocation();
     const [logo, setLogo] = useState(logoCamaraAI);
     const [camaraId, setCamaraId] = useState('pacatuba');
+    const [userType, setUserType] = useState(null);
+    const [userCargo, setUserCargo] = useState(null);
+    const [permissions, setPermissions] = useState({});
 
     // Função auxiliar para verificar se a rota está ativa
     const isActive = (path) => location.pathname.includes(path) ? 'link-desktop-active' : '';
@@ -42,6 +45,11 @@ const MenuDashboard = ({ logo: propLogo }) => {
 
             if (currentCamaraId && currentCamaraId !== 'perfil') {
                 setCamaraId(currentCamaraId);
+                // Busca dados do usuário logado para permissões
+                const user = auth.currentUser;
+                if (user) {
+                    fetchUserPermissions(user.uid, currentCamaraId);
+                }
             } else {
                 // Se não tiver na URL, busca do usuário logado
                 const user = auth.currentUser;
@@ -50,12 +58,33 @@ const MenuDashboard = ({ logo: propLogo }) => {
                         const userIndexRef = ref(db, `users_index/${user.uid}`);
                         const snapshot = await get(userIndexRef);
                         if (snapshot.exists()) {
-                            setCamaraId(snapshot.val().camaraId);
+                            const cId = snapshot.val().camaraId;
+                            setCamaraId(cId);
+                            fetchUserPermissions(user.uid, cId);
                         }
                     } catch (error) {
                         console.error("Erro ao buscar camaraId do usuário:", error);
                     }
                 }
+            }
+        };
+
+        const fetchUserPermissions = async (uid, cId) => {
+            try {
+                const userRef = ref(db, `${cId}/users/${uid}`);
+                const permRef = ref(db, `${cId}/dados-config/permissoes`);
+                
+                const [userSnap, permSnap] = await Promise.all([get(userRef), get(permRef)]);
+                
+                if (userSnap.exists()) {
+                    setUserType(userSnap.val().tipo);
+                    setUserCargo(userSnap.val().cargo);
+                }
+                if (permSnap.exists()) {
+                    setPermissions(permSnap.val());
+                }
+            } catch (error) {
+                console.error("Erro ao carregar permissões do menu:", error);
             }
         };
 
@@ -95,6 +124,12 @@ const MenuDashboard = ({ logo: propLogo }) => {
         fetchLogo();
     }, [camaraId, propLogo]);
 
+    // Validador de Acesso
+    const hasAccess = (permissionId) => {
+        if (userType === 'admin') return true;
+        return permissions[userCargo]?.[permissionId] === true;
+    };
+
     return (
         <>
             {/* Checkbox e labels para controlar o menu mobile sem JavaScript */}
@@ -118,56 +153,63 @@ const MenuDashboard = ({ logo: propLogo }) => {
                     <span className="text-desktop">Minhas Matérias</span>
                 </Link>
 
-                <Link to={`/admin/protocolar-materia/${camaraId}`} className={`aDesktop ${isActive('protocolar-materia')}`}>
-                    <FaPlusCircle className="icon-desktop" />
-                    <span className="text-desktop">Protocolar</span>
-                </Link>
+                {hasAccess('create_materia') && (
+                    <Link to={`/admin/protocolar-materia/${camaraId}`} className={`aDesktop ${isActive('protocolar-materia')}`}>
+                        <FaPlusCircle className="icon-desktop" />
+                        <span className="text-desktop">Protocolar</span>
+                    </Link>
+                )}
 
-                <Link to={`/admin/juizo-materia/${camaraId}`} className={`aDesktop ${isActive('juizo-materia')}`}>
-                    <FaPencilAlt className="icon-desktop" />
-                    <span className="text-desktop">Parecer</span>
-                </Link>
+                {hasAccess('view_parecer') && (
+                    <Link to={`/admin/juizo-materia/${camaraId}`} className={`aDesktop ${isActive('juizo-materia')}`}>
+                        <FaPencilAlt className="icon-desktop" />
+                        <span className="text-desktop">Parecer</span>
+                    </Link>
+                )}
 
-                <Link to={`/admin/juizo-presidente/${camaraId}`} className={`aDesktop ${isActive('juizo-presidente')}`}>
-                    <FaBalanceScale className="icon-desktop" />
-                    <span className="text-desktop">Presidência</span>
-                </Link>
+                {hasAccess('sign_despacho') && (
+                    <Link to={`/admin/juizo-presidente/${camaraId}`} className={`aDesktop ${isActive('juizo-presidente')}`}>
+                        <FaBalanceScale className="icon-desktop" />
+                        <span className="text-desktop">Presidência</span>
+                    </Link>
+                )}
 
                 <Link to={`/admin/comissoes-dash/${camaraId}`} className={`aDesktop ${isActive('comissoes-dash')}`}>
                     <FaUsers className="icon-desktop" />
                     <span className="text-desktop">Comissões</span>
                 </Link>
 
-                <Link to={`/admin/pautas-sessao/${camaraId}`} className={`aDesktop ${isActive('pautas-sessao')}`}>
-                    <FaList className="icon-desktop" />
-                    <span className="text-desktop">Sessões</span>
-                </Link>
+                {hasAccess('manage_sessions') && (
+                    <Link to={`/admin/pautas-sessao/${camaraId}`} className={`aDesktop ${isActive('pautas-sessao')}`}>
+                        <FaList className="icon-desktop" />
+                        <span className="text-desktop">Sessões</span>
+                    </Link>
+                )}
 
-                <Link to={`/admin/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
-                    <FaCog className="icon-desktop" />
-                    <span className="text-desktop">Configurações</span>
-                </Link>
+                {hasAccess('admin_config') && (
+                    <>
+                        <Link to={`/admin/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
+                            <FaCog className="icon-desktop" />
+                            <span className="text-desktop">Configurações</span>
+                        </Link>
 
-                <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
-                    <FaRobot className="icon-desktop" />
-                    <span className="text-desktop">Assistente</span>
-                </Link>
+                        <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
+                            <FaRobot className="icon-desktop" />
+                            <span className="text-desktop">Assistente</span>
+                        </Link>
 
-                <Link to={`/admin/layout-manager/${camaraId}`} className={`aDesktop ${isActive('layout-manager')}`}>
-                    <FaPalette className="icon-desktop" />
-                    <span className="text-desktop">Layouts</span>
-                </Link>
+                        <Link to={`/admin/layout-manager/${camaraId}`} className={`aDesktop ${isActive('layout-manager')}`}>
+                            <FaPalette className="icon-desktop" />
+                            <span className="text-desktop">Layouts</span>
+                        </Link>
+                    </>
+                )}
 
                 <Link to={`/admin/perfil/${camaraId}`} className={`aDesktop ${isActive('/perfil')}`}>
                     <FaRegUser className="icon-desktop" />
                     <span className="text-desktop">Minha Conta</span>
                 </Link>
                 
-                
-                <Link to="/" className={`aDesktop`}>
-                    <FaHome className="icon-desktop" />
-                    <span className="text-desktop">Sair da Conta</span>
-                </Link>
             </nav>
         </div>
         </>

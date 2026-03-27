@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
-import { FaUser, FaEdit, FaChartPie, FaSave, FaCamera, FaSpinner, FaSignOutAlt } from 'react-icons/fa';
+import { FaUsers, FaUser, FaCalendarAlt, FaEdit, FaChartPie, FaSave, FaCamera, FaSpinner, FaSignOutAlt, FaTrophy, FaBriefcase, FaFileSignature, FaEnvelope, FaFolder, FaStickyNote, FaApple, FaFilePdf, FaFileAlt, FaFileWord } from 'react-icons/fa';
 
-import ProfileImage from '../../assets/vereador.jpg';
+import ProfileImage from '../../assets/vereador.jpg'; // Imagem padrão para perfil
 import MenuDashboard from '../../componets/menuAdmin.jsx';
 
 import { auth, db } from '../../firebaseConfig';
@@ -40,6 +40,8 @@ class Perfil extends Component {
             activeTab: 'overview',
             user: null,
             materias: [],
+            comissoesUsuario: [],
+            sessoesParticipadas: [],
             loading: true,
 
             editNome: '',
@@ -82,21 +84,55 @@ class Perfil extends Component {
                     userData = snapshot.val();
                 }
 
+                // Queries e Referências
                 const materiasRef = ref(db, `${camaraId}/materias`);
                 const q = query(materiasRef, orderByChild('userId'), equalTo(userAuth.uid));
+                const comissoesRef = ref(db, `${camaraId}/comissoes`);
+                const sessoesRef = ref(db, `${camaraId}/sessoes`);
 
-                const materiasSnap = await get(q);
+                // Busca todos os dados necessários em paralelo
+                const [materiasSnap, comissoesSnap, sessoesSnap] = await Promise.all([
+                    get(q),
+                    get(comissoesRef),
+                    get(sessoesRef)
+                ]);
 
+                // Processa Matérias
                 let materias = [];
-
                 if (materiasSnap.exists()) {
                     materiasSnap.forEach(item => {
-                        materias.push({
-                            id: item.key,
-                            ...item.val()
-                        });
+                        materias.push({ id: item.key, ...item.val() });
                     });
                 }
+                materias.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+                // Processa Comissões (onde o usuário é membro)
+                let comissoesUsuario = [];
+                if (comissoesSnap.exists()) {
+                    comissoesSnap.forEach(item => {
+                        const com = item.val();
+                        if (com.membros && com.membros[userAuth.uid]) {
+                            comissoesUsuario.push({ id: item.key, ...com });
+                        }
+                    });
+                }
+
+                // Processa Sessões (onde o usuário registrou presença)
+                let sessoesParticipadas = [];
+                if (sessoesSnap.exists()) {
+                    sessoesSnap.forEach(item => {
+                        const sessao = item.val();
+                        if (sessao.presenca && sessao.presenca[userAuth.uid]) {
+                            sessoesParticipadas.push({ id: item.key, ...sessao });
+                        }
+                    });
+                }
+                // Ordena por data (DD/MM/YYYY) decrescente
+                sessoesParticipadas.sort((a, b) => {
+                    const dateA = a.data.split('/').reverse().join('');
+                    const dateB = b.data.split('/').reverse().join('');
+                    return dateB.localeCompare(dateA);
+                });
 
                 const stats = this.calculateStats(materias);
 
@@ -110,6 +146,8 @@ class Perfil extends Component {
                     editBio: userData.bio || '',
                     editFoto: userData.foto || '',
                     materias,
+                    comissoesUsuario,
+                    sessoesParticipadas,
                     stats,
                     loading: false
                 });
@@ -175,7 +213,6 @@ class Perfil extends Component {
             reader.readAsDataURL(file);
         }
     };
-
     handleSaveProfile = async () => {
         const { user, editNome, editCargo, editBio, editFoto } = this.state;
         const camaraId = this.props.match.params.camaraId;
@@ -188,7 +225,6 @@ class Perfil extends Component {
             const userRef = ref(db, `${camaraId}/users/${user.uid}`);
             await update(userRef, {
                 nome: editNome,
-                cargo: editCargo,
                 bio: editBio,
                 foto: editFoto
             });
@@ -198,7 +234,6 @@ class Perfil extends Component {
                 user: {
                     ...prevState.user,
                     nome: editNome,
-                    cargo: editCargo,
                     bio: editBio,
                     foto: editFoto
                 },
@@ -212,157 +247,89 @@ class Perfil extends Component {
             this.setState({ loading: false });
         }
     };
-
     renderOverview = () => {
-
-        const { stats, materias } = this.state;
-
-        const barChartData = {
-            labels: Object.keys(stats.byType),
-            datasets: [
-                {
-                    label: 'Quantidade',
-                    data: Object.values(stats.byType),
-                    backgroundColor: ['#4CAF50', '#FF9800', '#2196F3', '#F44336', '#9C27B0', '#00BCD4'],
-                    borderWidth: 1
-                }
-            ]
-        };
-
-        const pieChartData = {
-            labels: ['Aprovadas', 'Em Tramitação', 'Arquivadas'],
-            datasets: [
-                {
-                    data: [stats.aprovadas, stats.tramitacao, stats.arquivadas],
-                    backgroundColor: ['#4CAF50', '#FF9800', '#F44336']
-                }
-            ]
-        };
-
+        const { materias, comissoesUsuario, sessoesParticipadas } = this.state;
+        
         return (
             <>
-                <div className='profile-data-cards-container'>
-                    <div className='profile-section-header'>
-                        <h3>Últimas Matérias</h3>
-                    </div>
-
-                    <div className='matters-list-container'>
-
-                        {materias.length > 0 ?
-
-                            materias.slice(0, 5).map(materia => (
-
-                                <div className='matter-item' key={materia.id}>
-
-                                    <div className='matter-title-date'>
-                                        <p className='matter-type'>{materia.tipoMateria} - {materia.numero}</p>
-                                        <p className='matter-description'>{materia.ementa}</p>
-                                    </div>
-
-                                    <div className='matter-status-button'>
-
-                                        <span className='matter-date'>{materia.dataApresenta}</span>
-
-                                        <button
-                                            className='matter-view-button'
-                                            onClick={() =>
-                                                this.props.history.push(`/admin/materia-detalhes/${this.props.match.params.camaraId}`, { materiaId: materia.id })
-                                            }
-                                        >
-                                            Ver
-                                        </button>
-
-                                    </div>
-
-                                </div>
-
-                            ))
-
-                            :
-
-                            <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                                Nenhuma matéria cadastrada.
-                            </p>
-
-                        }
-
-                    </div>
-
-                    <div className='profile-data-card'>
-                        <h3>Resumo da Atuação</h3>
-
-                        <div className='progress-item'>
-                            <p>Proposições Totais: <span>{stats.total}</span></p>
-
-                            <div className='progress-bar-container'>
-                                <div className='progress-bar-fill' style={{ width: '100%' }}></div>
+                    {/* Cartão de Matérias (Antigo Mail) */}
+                    <div className='profile-widget-card' style={{ gridColumn: 'span 2', width: '90%', marginLeft: '10%' }}>
+                        <div className='widget-header'>
+                            <div className='widget-icon-wrapper' style={{ backgroundColor: '#fff3e0', color: '#FF740F' }}>
+                                <FaFileAlt />
                             </div>
+                            <h3 className='widget-title'>Proposições</h3>
                         </div>
+                        <p className='widget-summary'>Recentes • {materias.length} matérias protocoladas</p>
+                        <ul className='widget-list'>
+                            {materias.slice(0, 3).map(m => (
+                                <li key={m.id} className='widget-list-item' onClick={() => this.props.history.push(`/admin/materia-detalhes/${this.props.match.params.camaraId}`, { materiaId: m.id })} style={{ cursor: 'pointer' }}>
+                                    <div className='item-details'>
+                                        <p className='item-title'>{m.tipoMateria} {m.numero}</p>
+                                        <p className='item-subtitle' style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{m.ementa}</p>
+                                    </div>
+                                    <span className='item-date'>{m.dataApresenta}</span>
+                                </li>
+                            ))}
+                            {materias.length === 0 && <p style={{ color: '#86868b', fontSize: '0.9rem' }}>Nenhuma matéria protocolada.</p>}
+                        </ul>
+                    </div>
 
-                        <div className='progress-item'>
-                            <p>Projetos Aprovados:
-                                <span>
-                                    {stats.aprovadas}
-                                    ({stats.total > 0 ? ((stats.aprovadas / stats.total) * 100).toFixed(1) : 0}%)
-                                </span>
-                            </p>
-
-                            <div className='progress-bar-container'>
-                                <div
-                                    className='progress-bar-fill'
-                                    style={{
-                                        width: `${stats.total > 0 ? (stats.aprovadas / stats.total) * 100 : 0}%`,
-                                        backgroundColor: '#4CAF50'
-                                    }}
-                                ></div>
+                    {/* Cartão de Comissões (Antigo Drive) */}
+                    <div className='profile-widget-card' style={{ gridColumn: 'span 2', width: '90%', marginLeft: '10%' }}>
+                        <div className='widget-header'>
+                            <div className='widget-icon-wrapper' style={{ backgroundColor: '#e3f2fd', color: '#2196F3' }}>
+                                <FaUsers />
                             </div>
-
+                            <h3 className='widget-title'>Comissões</h3>
                         </div>
-
+                        <p className='widget-summary'>Membro em {comissoesUsuario.length} comissões</p>
+                        <ul className='widget-list'>
+                            {comissoesUsuario.slice(0, 3).map(c => (
+                                <li key={c.id} className='widget-list-item'>
+                                    <div className='item-icon' style={{ color: '#126B5E' }}>
+                                        <FaFolder />
+                                    </div>
+                                    <div className='item-details'>
+                                        <p className='item-title'>{c.nome}</p>
+                                        <p className='item-subtitle'>Membro Ativo</p>
+                                    </div>
+                                </li>
+                            ))}
+                            {comissoesUsuario.length === 0 && <p style={{ color: '#86868b', fontSize: '0.9rem' }}>Não vinculado a comissões.</p>}
+                        </ul>
                     </div>
 
-                    <div className='profile-data-card'>
-                        <h3>Status das Matérias</h3>
-
-                        <div style={{ height: '200px' }}>
-                            <Pie data={pieChartData} />
+                    {/* Cartão de Sessões (Antigo Notas) */}
+                    <div className='profile-widget-card' style={{ gridColumn: 'span 3' }}>
+                        <div className='widget-header'>
+                            <div className='widget-icon-wrapper' style={{ backgroundColor: '#fffde7', color: '#FFD700' }}>
+                                <FaCalendarAlt />
+                            </div>
+                            <h3 className='widget-title'>Sessões</h3>
                         </div>
-
+                        <ul className='widget-list'>
+                            {sessoesParticipadas.slice(0, 4).map(s => (
+                                <li key={s.id} className='widget-list-item'>
+                                    <div className='item-details'>
+                                        <p className='item-title' style={{ fontSize: '0.85rem' }}>{s.tipo.split('da')[0]}</p>
+                                    </div>
+                                    <span className='item-date' style={{ fontSize: '0.75rem' }}>{s.data}</span>
+                                </li>
+                            ))}
+                            {sessoesParticipadas.length === 0 && <p style={{ color: '#86868b', fontSize: '0.9rem' }}>Sem histórico de presença.</p>}
+                        </ul>
                     </div>
-
-                </div>
-
-                <div className='profile-section-header'>
-                    <h3>Produtividade por Tipo</h3>
-                </div>
-
-                <div className='charts-container'>
-                    <div className='chart-card' style={{ flex: 1 }}>
-                        <Bar data={barChartData} />
-                    </div>
-                </div>
-
-
-
             </>
         );
-
     };
-
     renderEditProfile = () => {
-
         const { editNome, editCargo, editBio, editFoto, loading } = this.state;
-
         return (
-
-            <div className="dashboard-card" style={{ margin: '0 auto', width: '90%' }}>
-
-                <div style={{ display: 'grid', gap: '20px' }}>
-
+            <div className="dashboard-card" style={{ gridColumn: 'span 2', width: '90%', marginLeft: '10%', height: '95%' }}>
+                <div style={{ display: 'grid', gap: '30px' }}>
                     <div>
-
-                        <label className="label-form">Foto de Perfil</label>
-
+                        <label className="label-form" style={{ fontWeight: 700, marginBottom: '15px', display: 'block' }}>Foto de Perfil</label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
                             <div style={{ position: 'relative', width: '100px', height: '100px' }}>
                                 <img
@@ -394,12 +361,11 @@ class Perfil extends Component {
                             </div>
                             <span style={{ fontSize: '0.9rem', color: '#666' }}>Clique na câmera para alterar a foto.</span>
                         </div>
-
                     </div>
 
                     <div>
 
-                        <label className="label-form">Nome Completo</label>
+                        <label className="label-form" style={{ fontWeight: 700 }}>Nome Completo</label>
 
                         <input
                             type="text"
@@ -407,25 +373,10 @@ class Perfil extends Component {
                             value={editNome}
                             onChange={(e) => this.setState({ editNome: e.target.value })}
                         />
-
                     </div>
 
                     <div>
-
-                        <label className="label-form">Cargo</label>
-
-                        <input
-                            type="text"
-                            className="modal-input"
-                            value={editCargo}
-                            onChange={(e) => this.setState({ editCargo: e.target.value })}
-                        />
-
-                    </div>
-
-                    <div>
-
-                        <label className="label-form">Biografia</label>
+                        <label className="label-form" style={{ fontWeight: 700 }}>Biografia</label>
 
                         <textarea
                             rows="4"
@@ -433,7 +384,6 @@ class Perfil extends Component {
                             value={editBio}
                             onChange={(e) => this.setState({ editBio: e.target.value })}
                         />
-
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -441,97 +391,119 @@ class Perfil extends Component {
                         <button className="btn-primary" disabled={loading} onClick={this.handleSaveProfile}>
                             <FaSave /> Salvar Alterações
                         </button>
-
                     </div>
-
                 </div>
-
             </div>
-
         );
-
     };
-
     render() {
-
         const { loading, user, activeTab } = this.state;
-
         if (loading) {
-
             return (
-
                 <div className='App-header' style={{ justifyContent: 'center' }}>
                     <FaSpinner className="animate-spin" size={40} color="#126B5E" />
                 </div>
-
             );
-
         }
-
         return (
-
             <div className='profile-page-wrapper'>
-
                 <MenuDashboard />
-
                 <div className='profile-main-content'>
-
-
-
-                    <div className='profile-header-card'>
-
-                        <div className='profile-header-info'>
-
-                            <img
-                                className='profile-header-img'
-                                src={user?.foto}
-                                alt='Imagem de Perfil'
-                                onError={(e) => e.target.src = ProfileImage}
-                            />
-
-                            <div>
-
-                                <h2>{user?.nome}</h2>
-                                <p>{user?.tipo}</p>
-
+                    {/* Grid principal para os widgets */}
+                    <div className='profile-grid-widgets' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                        
+                        {/* Cartão de Perfil (Esquerda Superior) - Agora contém a navegação */}
+                        <div className='profile-widget-card' style={{ gridColumn: 'span 1', gridRow: 'span 2', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+                            <div style={{ position: 'relative', marginBottom: '25px' }}>
+                                <img
+                                    className='profile-header-img'
+                                    src={user?.foto || ProfileImage}
+                                    alt='Imagem de Perfil'
+                                    onError={(e) => e.target.src = ProfileImage}
+                                    style={{ width: '150px', height: '150px', border: 'none', boxShadow: '0 8px 20px rgba(0,0,0,0.1)' }}
+                                />
+                                <div style={{ position: 'absolute', bottom: '0', right: '0', background: '#00ff2a', color: 'white', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', border: '2px solid #fff' }}>
+                                    <FaUser />
+                                </div>
                             </div>
+                            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: '0 0 5px 0', color: '#1d1d1f' }}>{user?.nome || 'Usuário'}</h2>
+                            <p style={{ fontSize: '0.95rem', color: '#86868b', margin: '0 0 15px 0' }}>{user?.email || 'email@example.com'}</p>
+                            <span style={{ background: '#e0e0e0', color: '#555', padding: '5px 15px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, marginBottom: '30px' }}>{user?.tipo || 'Cargo não informado'}</span>
 
+                            {/* Navegação entre abas integrada ao card */}
+                            <div style={{ 
+                                display: 'flex', 
+                                flexDirection: 'column',
+                                gap: '10px', 
+                                width: '100%',
+                                marginTop: 'auto'
+                            }}>
+                                <button 
+                                    onClick={() => this.setState({ activeTab: 'overview' })}
+                                    style={{
+                                        padding: '12px 20px',
+                                        borderRadius: '14px',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        backgroundColor: activeTab === 'overview' ? '#126B5E' : 'rgba(0,0,0,0.03)',
+                                        color: activeTab === 'overview' ? '#fff' : '#86868b',
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <FaChartPie /> Visão Geral
+                                </button>
+
+                                <button 
+                                    onClick={() => this.setState({ activeTab: 'edit' })}
+                                    style={{
+                                        padding: '12px 20px',
+                                        borderRadius: '14px',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        backgroundColor: activeTab === 'edit' ? '#126B5E' : 'rgba(0,0,0,0.03)',
+                                        color: activeTab === 'edit' ? '#fff' : '#86868b',
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <FaEdit /> Editar Perfil
+                                </button>
+
+                                <button
+                                    onClick={this.handleLogout}
+                                    style={{ 
+                                        marginTop: '10px',
+                                        padding: '12px 20px',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#d32f2f',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px'
+                                    }}
+                                >
+                                    <FaSignOutAlt /> Sair
+                                </button>
+                            </div>
                         </div>
 
+                        {activeTab === 'overview'
+                            ? this.renderOverview()
+                            : this.renderEditProfile()
+                        }
                     </div>
-
-                    <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: '20px', width: '93%' }}>
-
-                        <button onClick={() => this.setState({ activeTab: 'overview' })}>
-                            <FaChartPie /> Visão Geral
-                        </button>
-
-                        <button onClick={() => this.setState({ activeTab: 'edit' })}>
-                            <FaEdit /> Editar Perfil
-                        </button>
-
-                        <button
-                            onClick={this.handleLogout}
-                            style={{ marginLeft: 'auto', color: '#d32f2f' }}
-                        >
-                            <FaSignOutAlt /> Sair
-                        </button>
-
-                    </div>
-
-                    {activeTab === 'overview'
-                        ? this.renderOverview()
-                        : this.renderEditProfile()
-                    }
-
                 </div>
-
             </div>
-
         );
-
     }
-
 }
-
 export default Perfil;

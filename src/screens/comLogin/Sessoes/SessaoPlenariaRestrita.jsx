@@ -147,7 +147,10 @@ class SessaoPlenariaRestrita extends Component {
         sessao.itens.forEach((m, idx) => {
             if (m.status === 'Em Discussão' || m.status === 'Em Votação') {
                 updates[`/${camaraId}/sessoes/${sessao.id}/itens/${idx}/status`] = 'Encerrada Discussão/Votação'; // New status for clarity
-                if (m.id) updates[`/${camaraId}/materias/${m.id}/status`] = 'Encerrada Discussão/Votação';
+                if (m.id) {
+                    const path = m.isAcessorio ? `documentos_acessorios/${m.id}` : `materias/${m.id}`;
+                    updates[`/${camaraId}/${path}/status`] = 'Encerrada Discussão/Votação';
+                }
             }
         });
 
@@ -157,9 +160,10 @@ class SessaoPlenariaRestrita extends Component {
 
         // 3. Sincronizar com o nó global de matérias
         if (materia.id) {
-            updates[`/${camaraId}/materias/${materia.id}/status`] = 'Em Discussão';
-            updates[`/${camaraId}/materias/${materia.id}/spokenBy`] = {};
-            console.log(`Sincronizando status global para matéria ${materia.id}: Em Discussão`);
+            const path = materia.isAcessorio ? `documentos_acessorios/${materia.id}` : `materias/${materia.id}`;
+            updates[`/${camaraId}/${path}/status`] = 'Em Discussão';
+            updates[`/${camaraId}/${path}/spokenBy`] = {};
+            console.log(`Sincronizando status global para ${materia.isAcessorio ? 'acessório' : 'matéria'} ${materia.id}: Em Discussão`);
         }
 
         // 4. Limpar orador atual e fila de inscritos para a nova discussão
@@ -180,7 +184,10 @@ class SessaoPlenariaRestrita extends Component {
         sessao.itens.forEach((m, idx) => {
             if (m.status === 'Em Votação' || m.status === 'Em Discussão') {
                 updates[`/${camaraId}/sessoes/${sessao.id}/itens/${idx}/status`] = 'Encerrada';
-                if (m.id) updates[`/${camaraId}/materias/${m.id}/status`] = 'Encerrada';
+                if (m.id) {
+                    const path = m.isAcessorio ? `documentos_acessorios/${m.id}` : `materias/${m.id}`;
+                    updates[`/${camaraId}/${path}/status`] = 'Encerrada';
+                }
             }
         });
 
@@ -189,8 +196,9 @@ class SessaoPlenariaRestrita extends Component {
 
         // 3. Sincronizar com o nó global de matérias (para aparecer no materiasDash)
         if (materia.id) {
-            updates[`/${camaraId}/materias/${materia.id}/status`] = 'Em Votação';
-            console.log(`Sincronizando status global para matéria ${materia.id}: Em Votação`);
+            const path = materia.isAcessorio ? `documentos_acessorios/${materia.id}` : `materias/${materia.id}`;
+            updates[`/${camaraId}/${path}/status`] = 'Em Votação';
+            console.log(`Sincronizando status global para ${materia.isAcessorio ? 'acessório' : 'matéria'} ${materia.id}: Em Votação`);
         }
 
         await update(ref(db), updates);
@@ -271,8 +279,9 @@ class SessaoPlenariaRestrita extends Component {
                     const updates = {};
                     updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/status`] = newStatus;
                     if (materia.id) {
-                        updates[`/${camaraId}/materias/${materia.id}/status`] = newStatus;
-                        console.log(`Sincronizando status global final para matéria ${materia.id}: ${newStatus}`);
+                        const path = materia.isAcessorio ? `documentos_acessorios/${materia.id}` : `materias/${materia.id}`;
+                        updates[`/${camaraId}/${path}/status`] = newStatus;
+                        console.log(`Sincronizando status global final para ${materia.isAcessorio ? 'acessório' : 'matéria'} ${materia.id}: ${newStatus}`);
                     }
                     try {
                         await update(ref(db), updates);
@@ -308,7 +317,8 @@ class SessaoPlenariaRestrita extends Component {
         if (yieldingSpeakerUid) {
             updates[`/${camaraId}/sessoes/${sessao.id}/itens/${sessao.itens.indexOf(materiaEmDiscussao)}/spokenBy/${yieldingSpeakerUid}`] = true;
             if (materiaEmDiscussao.id) {
-                updates[`/${camaraId}/materias/${materiaEmDiscussao.id}/spokenBy/${yieldingSpeakerUid}`] = true;
+                const path = materiaEmDiscussao.isAcessorio ? `documentos_acessorios/${materiaEmDiscussao.id}` : `materias/${materiaEmDiscussao.id}`;
+                updates[`/${camaraId}/${path}/spokenBy/${yieldingSpeakerUid}`] = true;
             }
         }
 

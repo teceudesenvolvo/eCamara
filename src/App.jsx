@@ -23,6 +23,8 @@ import AdminAssistant from './screens/comLogin/FormsCreate/AdminAssistant.jsx';
 // Com Login - Dashboards e Detalhes
 import MateriasDash from './screens/comLogin/Materias/materiasDash.jsx';
 import MateriaDetails from './screens/comLogin/Materias/materiaDetails.jsx';
+import CreateAccessoryDocument from './screens/comLogin/Materias/CreateAccessoryDocument.jsx';
+import AccessoryDocumentsDash from './screens/comLogin/Materias/AccessoryDocumentsDash.jsx';
 
 import JuizoMateria from './screens/comLogin/Juridico/juizoMateria.jsx';
 
@@ -184,6 +186,8 @@ function App() {
           <Route path="/admin/materias-dash/:camaraId" component={MateriasDash} />
 
           <Route path="/admin/materia-detalhes/:camaraId" component={MateriaDetails} />
+          <Route path="/admin/criar-documento-acessorio/:camaraId" component={CreateAccessoryDocument} />
+          <Route path="/admin/documentos-acessorios/:camaraId" component={AccessoryDocumentsDash} />
 
           {/* Páginas de Formulários */}
           <Route path="/admin/protocolar-materia/:camaraId" component={AddMateria} />

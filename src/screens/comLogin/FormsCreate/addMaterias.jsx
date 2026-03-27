@@ -4,7 +4,6 @@ import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash, FaInfoCircle, FaRobot, FaMagic } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
 import { sendMessageToAIPrivate } from '../../../aiService';
 import { auth, db } from '../../../firebaseConfig';
@@ -34,7 +33,7 @@ class AddProducts extends Component {
         super(props);
         this.state = {
             // Identificação Básica
-            tipoMateria: '',
+            tipoMateria: '', // Será sugerido pela IA ou definido pelo usuário
             ano: '',
             numero: '',
             dataApresenta: '',
@@ -48,7 +47,7 @@ class AddProducts extends Component {
             prazo: '',
             materiaPolemica: '',
             objeto: '',
-            regTramita: '',
+            regTramita: 'Ordinária', // Padrão Ordinária
             status: '',
             dataPrazo: '',
             publicacao: '',
@@ -100,6 +99,7 @@ class AddProducts extends Component {
             layoutConfig: {}, // Dados de layout para o timbrado (logo)
             aiTechnicalOpinion: '', // Novo estado para o parecer técnico da IA
             loadingConfig: true,
+            vereadores: [], // Lista de vereadores para o select de autor
         };
         this.messagesEndRef = React.createRef();
         this.chatContainerRef = React.createRef();
@@ -132,9 +132,10 @@ class AddProducts extends Component {
 
         try {
             // Busca configurações e dados do perfil do usuário em paralelo
-            const [configSnapshot, userSnapshot] = await Promise.all([
+            const [configSnapshot, userSnapshot, allUsersSnapshot] = await Promise.all([
                 get(ref(db, `${camaraId}/dados-config`)),
-                user ? get(ref(db, `${camaraId}/users/${user.uid}`)) : Promise.resolve(null)
+                user ? get(ref(db, `${camaraId}/users/${user.uid}`)) : Promise.resolve(null),
+                get(ref(db, `${camaraId}/users`))
             ]);
 
             const dados = configSnapshot.exists() ? configSnapshot.val() : {};
@@ -144,17 +145,24 @@ class AddProducts extends Component {
             const homeConfig = dados.home || {};
             const footerConfig = dados.footer || {};
 
+            // Carrega lista de parlamentares (Vereador e Presidente)
+            const vereadores = [];
+            if (allUsersSnapshot.exists()) {
+                allUsersSnapshot.forEach(child => {
+                    const u = child.val();
+                    if (u.tipo?.toLowerCase() === 'vereador' || u.tipo?.toLowerCase() === 'presidente') {
+                        vereadores.push({ id: child.key, ...u });
+                    }
+                });
+            }
+
             // --- Lógica de Auto-preenchimento ---
             const currentYear = new Date().getFullYear().toString(); // Ano atual como string
             let nextNumero = '';
-            
-            // Tenta obter o nome do banco de dados (nó /users), fallback para o displayName do Auth
-            let autorName = '';
-            if (userSnapshot && userSnapshot.exists()) {
-                autorName = userSnapshot.val().nome || userSnapshot.val().name || user?.displayName || '';
-            } else {
-                autorName = user?.displayName || '';
-            }
+
+            const userData = userSnapshot?.exists() ? userSnapshot.val() : null;
+            const isVereador = userData?.tipo?.toLowerCase() === 'vereador' || userData?.tipo?.toLowerCase() === 'presidente';
+            const autorName = isVereador ? (userData.nome || userData.name || user?.displayName || '') : '';
 
             if (user) {
                 // Busca todas as matérias da câmara para o usuário logado no ano atual
@@ -189,7 +197,8 @@ class AddProducts extends Component {
                     autor: autorName,
                     ano: currentYear,
                     numero: nextNumero,
-                    logoBase64
+                    logoBase64,
+                    vereadores
                 },
                 this.handleGeneratePDF
             );
@@ -240,7 +249,6 @@ class AddProducts extends Component {
             console.error("Erro no componentDidMount:", error);
         }
     }
-
 
     handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -406,8 +414,8 @@ class AddProducts extends Component {
     generateFullMateriaWithAI = async () => {
         const { objeto, tipoMateria, baseConhecimento } = this.state;
         
-        if (!tipoMateria || !objeto) {
-            alert("Por favor, selecione o Tipo de Matéria e descreva o Assunto primeiro.");
+        if (!objeto) {
+            alert("Por favor, descreva o Assunto primeiro para que a IA possa validar e sugerir o melhor formato.");
             return;
         }
 
@@ -417,7 +425,8 @@ class AddProducts extends Component {
             const { regimentoText, materiasText } = baseConhecimento;
             
             // --- PASSO 1: VALIDAÇÃO TÉCNICA ---
-            const technicalOpinionPrompt = `Atue como um consultor legislativo especialista e rigoroso. Analise a viabilidade de um(a) "${tipoMateria}" sobre o assunto "${objeto}".
+            const technicalOpinionPrompt = `Atue como um consultor legislativo especialista e rigoroso. Analise o assunto "${objeto}".
+            ${tipoMateria ? `O usuário já selecionou o tipo "${tipoMateria}".` : 'Identifique qual o melhor tipo de matéria (Projeto de Lei, Indicação, Requerimento, Moção, Projeto de Decreto Legislativo) para este caso.'}
             
             CONTEXTO OBRIGATÓRIO (Regimento Interno):
             ${regimentoText || 'Seguir normas padrão de vício de iniciativa e competência municipal.'}
@@ -426,23 +435,34 @@ class AddProducts extends Component {
             ${materiasText || 'Nenhuma matéria anterior cadastrada.'}
             
             Verifique impedimentos como vício de iniciativa, duplicidade ou conflito com leis superiores.
-            Se houver impedimentos, inicie sua resposta OBRIGATORIAMENTE com a palavra "BLOQUEIO:" seguida da explicação detalhada.
-            Caso contrário, inicie sua resposta OBRIGATORIAMENTE com a palavra "PARECER FAVORÁVEL:" seguida de uma breve justificativa.`;
+            
+            Responda EXATAMENTE neste formato:
+            TIPO: [Nome do Tipo Sugerido/Confirmado]
+            PARECER: [BLOQUEIO ou PARECER FAVORÁVEL] seguido da justificativa técnica.`;
 
             const technicalOpinionResponse = await sendMessageToAIPrivate(technicalOpinionPrompt);
-            this.setState({ aiTechnicalOpinion: technicalOpinionResponse });
+            
+            // Extrair tipo sugerido e status do parecer
+            const typeMatch = technicalOpinionResponse.match(/TIPO:\s*(.*)/i);
+            const suggestedType = typeMatch ? typeMatch[1].split('\n')[0].trim() : tipoMateria;
+            
+            this.setState({ 
+                aiTechnicalOpinion: technicalOpinionResponse,
+                tipoMateria: suggestedType || tipoMateria 
+            });
 
-            if (technicalOpinionResponse.startsWith("BLOQUEIO:")) {
+            if (technicalOpinionResponse.toUpperCase().includes("BLOQUEIO:")) {
                 this.setState({ isGenerating: false });
                 return;
             }
 
             // --- PASSO 2: GERAÇÃO DOS CAMPOS (Se parecer favorável) ---
-            const titleResponse = await sendMessageToAIPrivate(`Sugira um título formal e em caixa alta para uma matéria legislativa do tipo "${tipoMateria}" sobre o assunto "${objeto}". Responda APENAS o título sugerido.`);
+            const finalType = suggestedType || tipoMateria || 'Matéria';
+            const titleResponse = await sendMessageToAIPrivate(`Sugira um título formal e em caixa alta para uma matéria legislativa do tipo "${finalType}" sobre o assunto "${objeto}". Responda APENAS o título sugerido.`);
             
-            const ementaResponse = await sendMessageToAIPrivate(`Escreva uma ementa legislativa (resumo formal) para uma matéria sobre "${objeto}". Comece com verbos como "Dispõe sobre...", "Institui...", etc. Responda APENAS a ementa.`);
+            const ementaResponse = await sendMessageToAIPrivate(`Escreva uma ementa legislativa (resumo formal) para uma matéria do tipo "${finalType}" sobre "${objeto}". Comece com verbos como "Dispõe sobre...", "Institui...", etc. Responda APENAS a ementa.`);
             
-            const textoResponse = await sendMessageToAIPrivate(`Atue como consultor legislativo. Escreva a minuta completa de um ${tipoMateria} sobre o assunto "${objeto}".
+            const textoResponse = await sendMessageToAIPrivate(`Atue como consultor legislativo. Escreva a minuta completa de um ${finalType} sobre o assunto "${objeto}".
                 
                 REGRAS:
                 - Use estrutura de artigos (Art. 1º, Art. 2º...).
@@ -958,31 +978,22 @@ class AddProducts extends Component {
                                     
                                     <Box display="flex" flexDirection="column" gap={3} mt={3}>
                                         <FormControl fullWidth size="small">
-                                            <InputLabel>Tipo de Matéria</InputLabel>
+                                            <InputLabel>Autor</InputLabel>
                                             <Select
-                                                name="tipoMateria"
-                                                value={this.state.tipoMateria}
+                                                name="autor"
+                                                value={this.state.autor}
                                                 onChange={this.handleInputChange}
-                                                label="Tipo de Matéria"
+                                                label="Autor"
                                                 sx={{ borderRadius: '10px' }}
                                             >
-                                                <MenuItem value="Projeto de Lei">Projeto de Lei</MenuItem>
-                                                <MenuItem value="Indicação">Indicação</MenuItem>
-                                                <MenuItem value="Requerimento">Requerimento</MenuItem>
-                                                <MenuItem value="Moção">Moção</MenuItem>
-                                                <MenuItem value="Projeto de Decreto Legislativo">Projeto de Decreto Legislativo</MenuItem>
+                                                <MenuItem value=""><em>Selecione o Autor...</em></MenuItem>
+                                                {this.state.vereadores.map((v) => (
+                                                    <MenuItem key={v.id} value={v.nome || v.name}>
+                                                        {v.nome || v.name}
+                                                    </MenuItem>
+                                                ))}
                                             </Select>
                                         </FormControl>
-
-                                        <TextField 
-                                            fullWidth 
-                                            size="small" 
-                                            label="Autor" 
-                                            name="autor" 
-                                            value={this.state.autor} 
-                                            onChange={this.handleInputChange}
-                                            InputProps={{ sx: { borderRadius: '10px' } }}
-                                        />
 
                                         <Box display="flex" gap={2}>
                                             <TextField 
@@ -1043,8 +1054,8 @@ class AddProducts extends Component {
                                             variant="outlined"
                                             sx={{ borderRadius: '10px', mt: 2 }}
                                         >
-                                            <Typography variant="body2" fontWeight="bold">Parecer Técnico da IA:</Typography>
-                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                            <Typography variant="body2" fontWeight="bold" textAlign={"left"}>Parecer Técnico da IA:</Typography>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', textAlign: 'justify', marginTop: 1 }}>
                                                 {aiTechnicalOpinion}
                                             </Typography>
                                         </Alert>
@@ -1077,6 +1088,25 @@ class AddProducts extends Component {
                                         >
                                             {isGenerating ? 'Validando e Gerando...' : 'Validar e Gerar Matéria Completa'}
                                         </Button>
+                                    </Box>
+
+                                    {/* Tipo de Matéria (Preenchido pela IA ou Manual) */}
+                                    <Box>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333', mb: 1.5 }}>Tipo de Matéria</Typography>
+                                        <FormControl fullWidth size="small">
+                                            <Select
+                                                name="tipoMateria"
+                                                value={this.state.tipoMateria}
+                                                onChange={this.handleInputChange}
+                                                sx={{ borderRadius: '10px' }}
+                                            >
+                                                <MenuItem value="Projeto de Lei">Projeto de Lei</MenuItem>
+                                                <MenuItem value="Indicação">Indicação</MenuItem>
+                                                <MenuItem value="Requerimento">Requerimento</MenuItem>
+                                                <MenuItem value="Moção">Moção</MenuItem>
+                                                <MenuItem value="Projeto de Decreto Legislativo">Projeto de Decreto Legislativo</MenuItem>
+                                            </Select>
+                                        </FormControl>
                                     </Box>
 
                                     {/* Título com IA */}

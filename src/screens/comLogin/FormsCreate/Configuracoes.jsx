@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel, FaSpinner, FaUsers, FaUserShield, FaPlus, FaPencilAlt, FaTimes, FaUserPlus, FaPalette, FaImage } from 'react-icons/fa';
+import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel, FaSpinner, FaUsers, FaUserShield, FaPlus, FaPencilAlt, FaTimes, FaUserPlus, FaPalette, FaImage, FaLock } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import { db } from '../../../firebaseConfig';
 import { query, orderByChild, equalTo, ref, get, update, push, set, remove } from 'firebase/database';
@@ -32,6 +32,7 @@ class Configuracoes extends Component {
             // State for User Invite
             showInviteModal: false,
             inviteType: 'vereador',
+            permissoes: {}, // Armazena a matriz de permissões
             // Layout Config
             layoutConfig: {
                 logoLight: '',
@@ -76,12 +77,14 @@ class Configuracoes extends Component {
             const usersRef = ref(db, `${camaraId}/users`);
             const comissoesRef = ref(db, `${camaraId}/comissoes`);
             const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
+            const permissoesRef = ref(db, `${camaraId}/dados-config/permissoes`);
 
-            const [baseSnapshot, usersSnapshot, comissoesSnapshot, layoutSnapshot] = await Promise.all([
+            const [baseSnapshot, usersSnapshot, comissoesSnapshot, layoutSnapshot, permissoesSnapshot] = await Promise.all([
                 get(baseRef),
                 get(usersRef),
                 get(comissoesRef),
-                get(layoutRef)
+                get(layoutRef),
+                get(permissoesRef)
             ]);
 
             let baseData = {};
@@ -127,6 +130,7 @@ class Configuracoes extends Component {
                 users: usersList,
                 comissoes: comissoesList,
                 layoutConfig: layoutData,
+                permissoes: permissoesSnapshot.val() || {},
                 loading: false
             });
 
@@ -143,25 +147,27 @@ class Configuracoes extends Component {
     };
 
     handleSave = async () => {
-        const { camaraId, regimentoText, regimentoFile, leiOrganicaText, leiOrganicaFile, materiasText, materiasFile, atasText, atasFile, layoutConfig } = this.state;
+        const { camaraId, regimentoText, regimentoFile, leiOrganicaText, leiOrganicaFile, materiasText, materiasFile, atasText, atasFile, layoutConfig, permissoes } = this.state;
         this.setState({ isSaving: true });
-        const { camaraId: camaraIdUrl } = this.props.match.params.camaraId;
+
         const camaraIdParaSalvar = this.props.match.params.camaraId;// Prioriza o camaraId da URL, mas cai para o estado se não tiver
 
         const baseRef = ref(db, `${camaraIdParaSalvar}/dados-config/base-conhecimento`);
         const layoutRef = ref(db, `${camaraIdParaSalvar}/dados-config/layout`);
+        const permissoesRef = ref(db, `${camaraIdParaSalvar}/dados-config/permissoes`);
 
-        const baseConfig = { 
+        const baseConfig = {
             regimentoText, regimentoFile: regimentoFile || null,
             leiOrganicaText, leiOrganicaFile: leiOrganicaFile || null,
-            materiasText, materiasFile:materiasFile || null,
+            materiasText, materiasFile: materiasFile || null,
             atasText, atasFile: atasFile || null,
-            camaraId 
+            camaraId
         };
 
         try {
             await update(baseRef, baseConfig);
             await update(layoutRef, layoutConfig);
+            await set(permissoesRef, permissoes);
             alert('Base de Conhecimento atualizada com sucesso! A IA agora utilizará estas informações para gerar documentos mais precisos.');
         } catch (error) {
             console.error("Erro ao salvar base de conhecimento:", error);
@@ -182,6 +188,26 @@ class Configuracoes extends Component {
         } catch (error) {
             console.error("Erro ao atualizar tipo de usuário:", error);
         }
+    };
+
+    handleUpdateUserCargo = async (userId, newCargo) => {
+        const { camaraId } = this.state;
+        try {
+            const userRef = ref(db, `${camaraId}/users/${userId}`);
+            await update(userRef, { cargo: newCargo });
+            this.fetchConfig();
+        } catch (error) {
+            console.error("Erro ao atualizar cargo do usuário:", error);
+        }
+    };
+
+    togglePermission = (roleId, actionId, value) => {
+        this.setState(prevState => ({
+            permissoes: {
+                ...prevState.permissoes,
+                [roleId]: { ...(prevState.permissoes[roleId] || {}), [actionId]: value }
+            }
+        }));
     };
 
     handleGenerateAndCopyInviteLink = () => {
@@ -213,8 +239,8 @@ class Configuracoes extends Component {
             this.setState({
                 showComissaoModal: true,
                 editingComissao: comissao,
-                comissaoFormData: { 
-                    nome: comissao.nome, 
+                comissaoFormData: {
+                    nome: comissao.nome,
                     descricao: comissao.descricao,
                     tipo: comissao.tipo || 'Permanente'
                 }
@@ -261,8 +287,8 @@ class Configuracoes extends Component {
     };
 
     handleOpenAddMemberModal = (comissao) => this.setState({ showAddMemberModal: true, commissionToUpdateMembers: comissao });
-    handleCloseAddMemberModal = () => this.setState({ 
-        showAddMemberModal: false, 
+    handleCloseAddMemberModal = () => this.setState({
+        showAddMemberModal: false,
         commissionToUpdateMembers: null,
         newUserForCommission: '',
         newRoleForCommission: 'Membro'
@@ -354,13 +380,14 @@ class Configuracoes extends Component {
                     <button className="btn-primary" style={{ width: 'auto' }} onClick={this.handleOpenInviteModal}><FaUserPlus /> Convidar Membro</button>
                 </div>
                 <div className="matters-list-container" style={{ width: '100%', boxShadow: 'none', border: '1px solid #eee' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', padding: '10px 20px', background: '#f8f9fa', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1fr', padding: '10px 20px', background: '#f8f9fa', fontWeight: 'bold', fontSize: '0.9rem' }}>
                         <span>Nome / Email</span>
                         <span>Tipo de Acesso</span>
+                        <span>Cargo Institucional</span>
                         <span style={{ textAlign: 'right' }}>Ações</span>
                     </div>
                     {users && users.length > 0 ? users.map(user => (
-                        <div key={user.id} className="matter-item" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', alignItems: 'center' }}>
+                        <div key={user.id} className="matter-item" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1fr', alignItems: 'center' }}>
                             <div style={{ textAlign: 'left' }}>
                                 <p style={{ margin: 0, fontWeight: 'bold', color: '#333' }}>{user.nome || 'Usuário sem nome'}</p>
                                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>{user.email}</p>
@@ -374,11 +401,112 @@ class Configuracoes extends Component {
                                     <option value="admin">Administrador</option>
                                 </select>
                             </div>
+                            <div>
+                                <select
+                                    className="modal-input"
+                                    style={{ padding: '5px', fontSize: '0.85rem' }}
+                                    value={user.cargo || ''}
+                                    onChange={(e) => this.handleUpdateUserCargo(user.id, e.target.value)}
+                                >
+                                    <option value="">Selecione um Cargo...</option>
+                                    <optgroup label="Agentes Políticos">
+                                        <option value="Vereador">Vereador</option>
+                                        <option value="Presidente">Presidente</option>
+                                        <option value="Vice-Presidente">Vice-Presidente</option>
+                                        <option value="1º Secretário">1º Secretário</option>
+                                        <option value="2º Secretário">2º Secretário</option>
+                                    </optgroup>
+                                    <optgroup label="Apoio Legislativo">
+                                        <option value="Chefe de Gabinete">Chefe de Gabinete</option>
+                                        <option value="Assessor Parlamentar">Assessor Parlamentar</option>
+                                        <option value="Assessor de Comunicação">Assessor de Comunicação</option>
+                                    </optgroup>
+                                    <optgroup label="Administrativos e Técnicos">
+                                        <option value="Diretor Geral">Diretor Geral</option>
+                                        <option value="Procurador Jurídico">Procurador Jurídico</option>
+                                        <option value="Contador">Contador</option>
+                                        <option value="Agente Legislativo">Agente Legislativo</option>
+                                        <option value="Controlador Interno">Controlador Interno</option>
+                                        <option value="Operador de Painel">Operador de Painel</option>
+                                        <option value="Taquígrafo">Taquígrafo</option>
+                                    </optgroup>
+                                </select>
+                            </div>
                             <div style={{ textAlign: 'right' }}>
                                 <span style={{ fontSize: '0.8rem', color: '#666' }}>Ativo</span>
                             </div>
                         </div>
                     )) : <p style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Nenhum usuário encontrado nesta câmara.</p>}
+                </div>
+            </div>
+        );
+    };
+
+    renderPermissionsManager = () => {
+        const { permissoes, isSaving } = this.state;
+
+        const roles = [
+            { id: 'admin', label: 'Admin' },
+            { id: 'Presidente', label: 'Presidência' },
+            { id: 'Vereador', label: 'Vereadores' },
+            { id: 'Procurador Jurídico', label: 'Procuradoria' },
+            { id: 'Secretário', label: 'Secretaria' },
+            { id: 'Operador de Painel', label: 'Painelista' }
+        ];
+
+        const actions = [
+            { id: 'create_materia', label: 'Protocolar Matérias' },
+            { id: 'view_parecer', label: 'Emitir Parecer Jurídico' },
+            { id: 'sign_despacho', label: 'Assinar Despachos' },
+            { id: 'manage_sessions', label: 'Gerenciar Pautas' },
+            { id: 'control_panel', label: 'Controlar Painel de Votos' },
+            { id: 'admin_config', label: 'Configurações do Sistema' }
+        ];
+
+        return (
+            <div className="dashboard-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+                    <h3 style={{ color: 'var(--primary-color, #126B5E)', margin: 0 }}>Matriz de Permissões</h3>
+                    <button className="btn-primary" onClick={this.handleSave} disabled={isSaving}>
+                        {isSaving ? <FaSpinner className="animate-spin" /> : <FaSave />} Salvar Alterações
+                    </button>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                        <thead>
+                            <tr style={{ background: '#f8f9fa' }}>
+                                <th style={{ padding: '12px', borderBottom: '2px solid #dee2e6' }}>Módulo / Funcionalidade</th>
+                                {roles.map(role => (
+                                    <th key={role.id} style={{ padding: '12px', borderBottom: '2px solid #dee2e6', textAlign: 'center' }}>{role.label}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {actions.map(action => (
+                                <tr key={action.id} style={{ borderBottom: '1px solid #eee' }}>
+                                    <td style={{ padding: '12px', fontWeight: '600', color: '#555' }}>{action.label}</td>
+                                    {roles.map(role => (
+                                        <td key={`${role.id}-${action.id}`} style={{ padding: '12px', textAlign: 'center' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={role.id === 'admin' ? true : (permissoes[role.id]?.[action.id] || false)}
+                                                disabled={role.id === 'admin'}
+                                                onChange={(e) => this.togglePermission(role.id, action.id, e.target.checked)}
+                                                style={{ width: '18px', height: '18px', cursor: role.id === 'admin' ? 'default' : 'pointer' }}
+                                            />
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <div style={{ marginTop: '20px', padding: '15px', background: '#e0f2f1', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <FaLock color="#126B5E" />
+                    <p style={{ margin: 0, color: '#004d40', fontSize: '0.8rem' }}>
+                        <strong>Dica de Segurança:</strong> As alterações de permissão entram em vigor no próximo login do usuário. Cargos de tipo 'Admin' possuem acesso irrestrito por padrão.
+                    </p>
                 </div>
             </div>
         );
@@ -397,11 +525,11 @@ class Configuracoes extends Component {
                         <div key={comissao.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <h4 style={{ margin: 0, color: '#333' }}>{comissao.nome}</h4>
-                                        <span className="tag tag-neutral" style={{padding: '3px 8px', fontSize: '0.7rem'}}>{comissao.tipo || 'Não definido'}</span>
+                                        <span className="tag tag-neutral" style={{ padding: '3px 8px', fontSize: '0.7rem' }}>{comissao.tipo || 'Não definido'}</span>
                                     </div>
-                                    
+
                                     <p style={{ margin: '8px 0 0 0', fontSize: '0.9rem', color: '#666' }}>{comissao.descricao}</p>
                                 </div>
                                 <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: '0.8rem' }} onClick={() => this.handleOpenComissaoModal(comissao)}><FaPencilAlt /> Editar</button>
@@ -447,16 +575,16 @@ class Configuracoes extends Component {
                         {isSaving ? <FaSpinner className="animate-spin" /> : <FaSave />} {isSaving ? 'Salvando...' : 'Salvar'}
                     </button>
                 </div>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
                     <div style={{ padding: '20px', border: '1px solid #eee', borderRadius: '12px', textAlign: 'center' }}>
                         <h4 style={{ color: '#333' }}>Logo (Fundo Claro)</h4>
                         <p style={{ fontSize: '0.8rem', color: '#666' }}>Usada em cabeçalhos e fundos brancos. Formato PNG.</p>
-                        
+
                         <div style={{ margin: '20px 0', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px dashed #ccc' }}>
                             {layoutConfig.logoLight ? <img src={layoutConfig.logoLight} alt="Logo Light" style={{ maxHeight: '80px' }} /> : <FaImage size={30} color="#ccc" />}
                         </div>
-                        
+
                         <input type="file" accept="image/png" id="logoLight" style={{ display: 'none' }} onChange={(e) => this.handleLogoUpload(e, 'logoLight')} />
                         <label htmlFor="logoLight" className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-block' }}><FaUpload /> Carregar Logo</label>
                     </div>
@@ -464,11 +592,11 @@ class Configuracoes extends Component {
                     <div style={{ padding: '20px', border: '1px solid #eee', borderRadius: '12px', textAlign: 'center', background: '#333' }}>
                         <h4 style={{ color: '#fff' }}>Logo (Fundo Escuro)</h4>
                         <p style={{ fontSize: '0.8rem', color: '#ccc' }}>Usada em menus laterais e fundos escuros. Formato PNG.</p>
-                        
+
                         <div style={{ margin: '20px 0', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #666' }}>
                             {layoutConfig.logoDark ? <img src={layoutConfig.logoDark} alt="Logo Dark" style={{ maxHeight: '80px' }} /> : <FaImage size={30} color="#666" />}
                         </div>
-                        
+
                         <input type="file" accept="image/png" id="logoDark" style={{ display: 'none' }} onChange={(e) => this.handleLogoUpload(e, 'logoDark')} />
                         <label htmlFor="logoDark" className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-block', background: '#555', color: '#fff', border: 'none' }}><FaUpload /> Carregar Logo</label>
                     </div>
@@ -519,6 +647,8 @@ class Configuracoes extends Component {
                 break;
             case 'layout':
                 return this.renderLayoutManager();
+            case 'permissoes':
+                return this.renderPermissionsManager();
             default:
                 return null;
         }
@@ -561,9 +691,9 @@ class Configuracoes extends Component {
                     <div style={{ border: '2px dashed #ccc', borderRadius: '12px', padding: '40px', textAlign: 'center', color: '#888', cursor: 'pointer', backgroundColor: '#fcfcfc', transition: 'all 0.2s', position: 'relative' }}
                         onMouseOver={(e) => e.currentTarget.style.borderColor = '#126B5E'}
                         onMouseOut={(e) => e.currentTarget.style.borderColor = '#ccc'}>
-                        
+
                         <input type="file" accept=".json,.pdf" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} onChange={(e) => this.handleBaseFileChange(e, fileKey)} />
-                        
+
                         <FaUpload size={30} style={{ marginBottom: '10px', color: '#126B5E' }} />
                         <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{fileValue ? 'Arquivo carregado (Pronto para salvar)' : 'Arraste arquivos aqui ou clique para selecionar'}</p>
                         <p style={{ fontSize: '0.8rem', margin: '8px 0 0 0' }}>
@@ -611,6 +741,7 @@ class Configuracoes extends Component {
                                 { id: 'usuarios', label: 'Gestão de Usuários', icon: <FaUserShield /> },
                                 { id: 'comissoes', label: 'Gestão de Comissões', icon: <FaUsers /> },
                                 { id: 'layout', label: 'Identidade Visual', icon: <FaPalette /> },
+                                { id: 'permissoes', label: 'Níveis de Acesso', icon: <FaLock /> },
                             ].map(item => (
                                 <div
                                     key={item.id}
@@ -713,10 +844,10 @@ class Configuracoes extends Component {
                                 <h2 style={{ margin: 0 }}>Adicionar Membro a "{this.state.commissionToUpdateMembers.nome}"</h2>
                                 <button onClick={this.handleCloseAddMemberModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}><FaTimes /></button>
                             </div>
-                            <div style={{padding: '20px 0'}}>
+                            <div style={{ padding: '20px 0' }}>
                                 <div style={{ marginBottom: '20px' }}>
                                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' }}>Selecionar Membro</label>
-                                    <select 
+                                    <select
                                         className="modal-input"
                                         value={this.state.newUserForCommission}
                                         onChange={(e) => this.setState({ newUserForCommission: e.target.value })}
@@ -730,7 +861,7 @@ class Configuracoes extends Component {
                                 </div>
                                 <div style={{ marginBottom: '25px' }}>
                                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' }}>Cargo na Comissão</label>
-                                    <select 
+                                    <select
                                         className="modal-input"
                                         value={this.state.newRoleForCommission}
                                         onChange={(e) => this.setState({ newRoleForCommission: e.target.value })}
