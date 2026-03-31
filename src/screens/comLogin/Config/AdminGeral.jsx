@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import { auth, db } from '../../../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { ref, set, get, remove, push } from 'firebase/database';
-import { FaBuilding, FaPlus, FaLock, FaSignOutAlt, FaCheckCircle, FaTrash, FaExternalLinkAlt, FaUserPlus, FaUsers, FaTimes, FaCopy } from 'react-icons/fa';
+import { ref, set, get, remove, push, update } from 'firebase/database';
+import { FaBuilding, FaPlus, FaLock, FaSignOutAlt, FaCheckCircle, FaTrash, FaExternalLinkAlt, FaUserPlus, FaUsers, FaTimes, FaCopy, FaCogs } from 'react-icons/fa';
 
 class AdminGeral extends Component {
     constructor(props) {
@@ -39,7 +39,11 @@ class AdminGeral extends Component {
             loadingUsers: false,
             modalAdminName: '',
             modalAdminEmail: '',
-            modalInviteLink: ''
+            modalInviteLink: '',
+
+            // Modal de Módulos (Páginas de Serviço)
+            showModulesModal: false,
+            modulesConfig: {}
         };
     }
 
@@ -361,6 +365,57 @@ class AdminGeral extends Component {
         });
     }
 
+    handleOpenModulesModal = async (camaraId) => {
+        this.setState({ 
+            showModulesModal: true, 
+            selectedCamaraForModules: camaraId,
+            loadingModules: true 
+        });
+
+        try {
+            const modulesRef = ref(db, `${camaraId}/dados-config/modulos_ativos`);
+            const snapshot = await get(modulesRef);
+            const modulesConfig = snapshot.exists() ? snapshot.val() : {
+                agendamentos: false,
+                assistenciaJuridica: false,
+                balcaoCidadao: false,
+                escolaLegislativo: false,
+                falarComVereador: false,
+                ouvidoria: false,
+                procon: false,
+                procuradoriaMulher: false,
+                salaEmpreendedor: false,
+                tvCamara: false
+            };
+            this.setState({ modulesConfig, loadingModules: false });
+        } catch (error) {
+            console.error("Erro ao carregar módulos:", error);
+            this.setState({ loadingModules: false });
+        }
+    }
+
+    handleToggleModule = (moduleId) => {
+        this.setState(prevState => ({
+            modulesConfig: {
+                ...prevState.modulesConfig,
+                [moduleId]: !prevState.modulesConfig[moduleId]
+            }
+        }));
+    }
+
+    handleSaveModules = async () => {
+        const { selectedCamaraForModules, modulesConfig } = this.state;
+        try {
+            const modulesRef = ref(db, `${selectedCamaraForModules}/dados-config/modulos_ativos`);
+            await set(modulesRef, modulesConfig);
+            alert("Configurações de módulos salvas com sucesso!");
+            this.setState({ showModulesModal: false });
+        } catch (error) {
+            console.error("Erro ao salvar módulos:", error);
+            alert("Erro ao salvar configurações.");
+        }
+    }
+
     handleCloseUserModal = () => {
         this.setState({ showUserModal: false, selectedCamaraForUsers: null });
     }
@@ -533,6 +588,13 @@ class AdminGeral extends Component {
                                         <FaUsers /> Usuários
                                     </button>
                                     <button 
+                                        onClick={() => this.handleOpenModulesModal(camara.id)}
+                                        className="btn-secondary" 
+                                        style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', background: '#e3f2fd', color: '#1565c0', borderColor: '#bbdefb' }}
+                                    >
+                                        <FaCogs /> Módulos
+                                    </button>
+                                    <button 
                                         onClick={() => this.handleDeleteCamara(camara.id)} 
                                         className="btn-danger" 
                                         style={{ padding: '5px 10px', fontSize: '0.8rem' }}
@@ -601,6 +663,77 @@ class AdminGeral extends Component {
                                         <p style={{ color: '#999', fontStyle: 'italic', textAlign: 'center' }}>Nenhum usuário encontrado.</p>
                                     )
                                 )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal de Configuração de Módulos (Serviços) */}
+                {this.state.showModulesModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content" style={{ maxWidth: '500px', width: '90%' }}>
+                            <div className="modal-header">
+                                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <FaCogs /> Módulos de Serviço: {this.state.selectedCamaraForModules}
+                                </h2>
+                                <button onClick={() => this.setState({ showModulesModal: false })} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}><FaTimes /></button>
+                            </div>
+                            
+                            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '20px', textAlign: 'left' }}>
+                                Selecione quais páginas do módulo de <strong>Serviços</strong> estarão disponíveis para esta câmara:
+                            </p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left', marginBottom: '30px' }}>
+                                <h4 style={{ margin: '10px 0 5px 0', fontSize: '0.9rem', color: '#126B5E', textTransform: 'uppercase' }}>Legislativo</h4>
+                                {[
+                                    { id: 'protocolar', label: 'Protocolar Matéria' },
+                                    { id: 'parecer', label: 'Parecer Jurídico (Procuradoria)' },
+                                    { id: 'presidencia', label: 'Juízo da Presidência' },
+                                    { id: 'comissoes', label: 'Gestão de Comissões' },
+                                    { id: 'sessoes', label: 'Gestão de Sessões' },
+                                    { id: 'assistente', label: 'Assistente Legislativo IA' },
+                                ].map(module => (
+                                    <label key={module.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '10px', cursor: 'pointer' }}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={this.state.modulesConfig[module.id] || false}
+                                            onChange={() => this.handleToggleModule(module.id)}
+                                            style={{ width: '18px', height: '18px' }}
+                                        />
+                                        <span style={{ fontWeight: '500', color: '#333' }}>{module.label}</span>
+                                    </label>
+                                ))}
+
+                                <h4 style={{ margin: '20px 0 5px 0', fontSize: '0.9rem', color: '#126B5E', textTransform: 'uppercase' }}>Serviços ao Cidadão</h4>
+                                {[
+                                    { id: 'agendamentos', label: 'Agendamentos' },
+                                    { id: 'assistenciaJuridica', label: 'Assistência Jurídica' },
+                                    { id: 'balcaoCidadao', label: 'Balcão-Cidadão' },
+                                    { id: 'escolaLegislativo', label: 'Escola do Legislativo' },
+                                    { id: 'falarComVereador', label: 'Falar com Vereador' },
+                                    { id: 'ouvidoria', label: 'Ouvidoria' },
+                                    { id: 'procon', label: 'Procon' },
+                                    { id: 'procuradoriaMulher', label: 'Procuradoria da Mulher' },
+                                    { id: 'salaEmpreendedor', label: 'Sala do Empreendedor' },
+                                    { id: 'tvCamara', label: 'TV Câmara' }
+                                ].map(module => (
+                                    <label key={module.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '10px', cursor: 'pointer' }}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={this.state.modulesConfig[module.id] || false}
+                                            onChange={() => this.handleToggleModule(module.id)}
+                                            style={{ width: '18px', height: '18px' }}
+                                        />
+                                        <span style={{ fontWeight: '500', color: '#333' }}>{module.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button className="btn-secondary" onClick={() => this.setState({ showModulesModal: false })} style={{ flex: 1 }}>Cancelar</button>
+                                <button className="btn-primary" onClick={this.handleSaveModules} style={{ flex: 1, justifyContent: 'center' }}>
+                                    Salvar Configuração
+                                </button>
                             </div>
                         </div>
                     </div>

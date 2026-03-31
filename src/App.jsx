@@ -44,6 +44,18 @@ import AdminDocumentDetails from './screens/comLogin/Config/AdminDocumentDetails
 import LayoutManager from './screens/comLogin/Config/LayoutManager.jsx';
 import AdminGeral from './screens/comLogin/Config/AdminGeral.jsx';
 
+// Servicos (Requerem Autenticação)
+import Agendamentos from './screens/comLogin/Servicos/Agendamentos.jsx';
+import AssistenciaJuridica from './screens/comLogin/Servicos/AssistenciaJuridica.jsx';
+import BalcaoCidadao from './screens/comLogin/Servicos/BalcaoCidadao.jsx';
+import EscolaLegislativo from './screens/comLogin/Servicos/EscolaLegislativo.jsx';
+import FalarComVereador from './screens/comLogin/Servicos/FalarComVereador.jsx';
+import Ouvidoria from './screens/comLogin/Servicos/Ouvidoria.jsx';
+import Procon from './screens/comLogin/Servicos/Procon.jsx';
+import ProcuradoriaMulher from './screens/comLogin/Servicos/ProcuradoriaMulher.jsx';
+import SalaEmpreendedor from './screens/comLogin/Servicos/SalaEmpreendedor.jsx';
+import TvCamara from './screens/comLogin/Servicos/TvCamara.jsx';
+
 // Páginas Secundárias
 import Perfil from './screens/comLogin/Perfil.jsx';
 
@@ -204,6 +216,18 @@ function App() {
           <Route exact path="/admin/assistente-admin/:camaraId" component={AdminDocumentsDash} />
           <Route path="/admin/assistente-admin/novo/:camaraId" component={AdminAssistant} />
           <Route path="/admin/assistente-admin/detalhes/:camaraId" component={AdminDocumentDetails} />
+
+          {/* Páginas de Serviços */}
+          <Route path="/admin/servicos/agendamentos/:camaraId" component={Agendamentos} />
+          <Route path="/admin/servicos/assistencia-juridica/:camaraId" component={AssistenciaJuridica} />
+          <Route path="/admin/servicos/balcao-cidadao/:camaraId" component={BalcaoCidadao} />
+          <Route path="/admin/servicos/escola-legislativo/:camaraId" component={EscolaLegislativo} />
+          <Route path="/admin/servicos/falar-com-vereador/:camaraId" component={FalarComVereador} />
+          <Route path="/admin/servicos/ouvidoria/:camaraId" component={Ouvidoria} />
+          <Route path="/admin/servicos/procon/:camaraId" component={Procon} />
+          <Route path="/admin/servicos/procuradoria-mulher/:camaraId" component={ProcuradoriaMulher} />
+          <Route path="/admin/servicos/sala-empreendedor/:camaraId" component={SalaEmpreendedor} />
+          <Route path="/admin/servicos/tv-camara/:camaraId" component={TvCamara} />
 
           {/* Paginas de Gerenciamento */}
           <Route path="/admin/layout-manager/:camaraId" component={LayoutManager} />

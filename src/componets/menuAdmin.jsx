@@ -13,7 +13,15 @@ import {
     FaRobot,
     FaPalette,
     FaBars,
-    FaTimes
+    FaTimes,
+    FaCalendarCheck,
+    FaIdCard,
+    FaGraduationCap,
+    FaCommentDots,
+    FaBullhorn,
+    FaFemale,
+    FaBriefcase,
+    FaTv
 } from "react-icons/fa";
 import logoCamaraAI from '../assets/logo-camara-ai-vertical.png';
 import '../App.css';
@@ -28,6 +36,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
     const [userType, setUserType] = useState(null);
     const [userCargo, setUserCargo] = useState(null);
     const [permissions, setPermissions] = useState({});
+    const [activeModules, setActiveModules] = useState({});
 
     // Função auxiliar para verificar se a rota está ativa
     const isActive = (path) => location.pathname.includes(path) ? 'link-desktop-active' : '';
@@ -73,8 +82,9 @@ const MenuDashboard = ({ logo: propLogo }) => {
             try {
                 const userRef = ref(db, `${cId}/users/${uid}`);
                 const permRef = ref(db, `${cId}/dados-config/permissoes`);
+                const modulesRef = ref(db, `${cId}/dados-config/modulos_ativos`);
                 
-                const [userSnap, permSnap] = await Promise.all([get(userRef), get(permRef)]);
+                const [userSnap, permSnap, modulesSnap] = await Promise.all([get(userRef), get(permRef), get(modulesRef)]);
                 
                 if (userSnap.exists()) {
                     setUserType(userSnap.val().tipo);
@@ -82,6 +92,9 @@ const MenuDashboard = ({ logo: propLogo }) => {
                 }
                 if (permSnap.exists()) {
                     setPermissions(permSnap.val());
+                }
+                if (modulesSnap.exists()) {
+                    setActiveModules(modulesSnap.val());
                 }
             } catch (error) {
                 console.error("Erro ao carregar permissões do menu:", error);
@@ -130,6 +143,20 @@ const MenuDashboard = ({ logo: propLogo }) => {
         return permissions[userCargo]?.[permissionId] === true;
     };
 
+    // Configuração dos Serviços para iteração
+    const servicesList = [
+        { id: 'agendamentos', label: 'Agendamentos', path: 'agendamentos', icon: <FaCalendarCheck className="icon-desktop" /> },
+        { id: 'assistenciaJuridica', label: 'Assist. Jurídica', path: 'assistencia-juridica', icon: <FaBalanceScale className="icon-desktop" /> },
+        { id: 'balcaoCidadao', label: 'Balcão Cidadão', path: 'balcao-cidadao', icon: <FaIdCard className="icon-desktop" /> },
+        { id: 'escolaLegislativo', label: 'Escola Legislativo', path: 'escola-legislativo', icon: <FaGraduationCap className="icon-desktop" /> },
+        { id: 'falarComVereador', label: 'Falar c/ Vereador', path: 'falar-com-vereador', icon: <FaCommentDots className="icon-desktop" /> },
+        { id: 'ouvidoria', label: 'Ouvidoria', path: 'ouvidoria', icon: <FaBullhorn className="icon-desktop" /> },
+        { id: 'procon', label: 'Procon', path: 'procon', icon: <FaBalanceScale className="icon-desktop" /> },
+        { id: 'procuradoriaMulher', label: 'Proc. da Mulher', path: 'procuradoria-mulher', icon: <FaFemale className="icon-desktop" /> },
+        { id: 'salaEmpreendedor', label: 'Sala Empreendedor', path: 'sala-empreendedor', icon: <FaBriefcase className="icon-desktop" /> },
+        { id: 'tvCamara', label: 'TV Câmara', path: 'tv-camara', icon: <FaTv className="icon-desktop" /> },
+    ];
+
     return (
         <>
             {/* Checkbox e labels para controlar o menu mobile sem JavaScript */}
@@ -153,38 +180,54 @@ const MenuDashboard = ({ logo: propLogo }) => {
                     <span className="text-desktop">Minhas Matérias</span>
                 </Link>
 
-                {hasAccess('create_materia') && (
+                {activeModules['protocolar'] && hasAccess('create_materia') && (
                     <Link to={`/admin/protocolar-materia/${camaraId}`} className={`aDesktop ${isActive('protocolar-materia')}`}>
                         <FaPlusCircle className="icon-desktop" />
                         <span className="text-desktop">Protocolar</span>
                     </Link>
                 )}
 
-                {hasAccess('view_parecer') && (
+                {activeModules['parecer'] && hasAccess('view_parecer') && (
                     <Link to={`/admin/juizo-materia/${camaraId}`} className={`aDesktop ${isActive('juizo-materia')}`}>
                         <FaPencilAlt className="icon-desktop" />
                         <span className="text-desktop">Parecer</span>
                     </Link>
                 )}
 
-                {hasAccess('sign_despacho') && (
+                {activeModules['presidencia'] && hasAccess('sign_despacho') && (
                     <Link to={`/admin/juizo-presidente/${camaraId}`} className={`aDesktop ${isActive('juizo-presidente')}`}>
                         <FaBalanceScale className="icon-desktop" />
                         <span className="text-desktop">Presidência</span>
                     </Link>
                 )}
 
-                <Link to={`/admin/comissoes-dash/${camaraId}`} className={`aDesktop ${isActive('comissoes-dash')}`}>
-                    <FaUsers className="icon-desktop" />
-                    <span className="text-desktop">Comissões</span>
-                </Link>
+                {activeModules['comissoes'] && (
+                    <Link to={`/admin/comissoes-dash/${camaraId}`} className={`aDesktop ${isActive('comissoes-dash')}`}>
+                        <FaUsers className="icon-desktop" />
+                        <span className="text-desktop">Comissões</span>
+                    </Link>
+                )}
 
-                {hasAccess('manage_sessions') && (
+                {activeModules['sessoes'] && hasAccess('manage_sessions') && (
                     <Link to={`/admin/pautas-sessao/${camaraId}`} className={`aDesktop ${isActive('pautas-sessao')}`}>
                         <FaList className="icon-desktop" />
                         <span className="text-desktop">Sessões</span>
                     </Link>
                 )}
+
+                {servicesList.some(s => activeModules[s.id]) && (
+                    <div className="divider-desktop">Serviços</div>
+                )}
+                {servicesList.map(service => activeModules[service.id] && (
+                    <Link 
+                        key={service.id} 
+                        to={`/admin/servicos/${service.path}/${camaraId}`} 
+                        className={`aDesktop ${isActive(service.path)}`}
+                    >
+                        {service.icon}
+                        <span className="text-desktop">{service.label}</span>
+                    </Link>
+                ))}
 
                 {hasAccess('admin_config') && (
                     <>
@@ -193,10 +236,12 @@ const MenuDashboard = ({ logo: propLogo }) => {
                             <span className="text-desktop">Configurações</span>
                         </Link>
 
-                        <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
-                            <FaRobot className="icon-desktop" />
-                            <span className="text-desktop">Assistente</span>
-                        </Link>
+                        {activeModules['assistente'] && (
+                            <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
+                                <FaRobot className="icon-desktop" />
+                                <span className="text-desktop">Assistente</span>
+                            </Link>
+                        )}
 
                         <Link to={`/admin/layout-manager/${camaraId}`} className={`aDesktop ${isActive('layout-manager')}`}>
                             <FaPalette className="icon-desktop" />
