@@ -6,6 +6,8 @@ import '../../App.css';
 import ChatAI from './ChatAI.jsx';
 import { db } from '../../firebaseConfig';
 import { ref, get, query, orderByChild, equalTo, limitToLast } from 'firebase/database';
+import SlideSessoes from '../../componets/SlideSessoes';
+
 
 class HomePage extends Component {
     constructor(props) {
@@ -14,6 +16,7 @@ class HomePage extends Component {
             homeConfig: {},
             vereadores: [],
             agenda: [],
+            sessoes: [],
             isChatOpen: false,
             loading: true,
             camaraId: this.props.match.params.camaraId || 'camara-teste',
@@ -23,6 +26,13 @@ class HomePage extends Component {
     componentDidMount() {
         this.fetchData();
     }
+
+    getYouTubeID = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
 
     fetchData = async () => {
         const { camaraId } = this.state;
@@ -72,10 +82,23 @@ class HomePage extends Component {
                 });
             }
 
+            // 4. Buscar sessões recentes
+            const sessoesRef = ref(db, `${camaraId}/sessoes`);
+            const sessoesSnapshot = await get(sessoesRef);
+            const sessoes = [];
+            if (sessoesSnapshot.exists()) {
+                sessoesSnapshot.forEach(child => {
+                    sessoes.push({ id: child.key, ...child.val() });
+                });
+                // Ordenar por data de criação (mais recentes primeiro)
+                sessoes.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            }
+
             this.setState({
                 homeConfig,
                 vereadores,
                 agenda: agenda.reverse(), // Reverse to show newest first
+                sessoes: sessoes.slice(0, 3), // Mostra apenas as 3 mais recentes no grid
                 loading: false,
             });
 
@@ -94,7 +117,7 @@ class HomePage extends Component {
     }
 
     render() {
-        const { homeConfig, agenda, vereadores, isChatOpen, loading, camaraId } = this.state;
+        const { homeConfig, agenda, vereadores, sessoes, isChatOpen, loading, camaraId } = this.state;
 
         if (loading) {
             return (
@@ -152,7 +175,34 @@ class HomePage extends Component {
                         </div>
                     </div>
 
-                    {/* 4. Representatives Section */}
+                    {/* 4. Sessoes Plenarias */}
+                    <div className="openai-section">
+                        <div className="section-header-openai">
+                            <h2>Sessões Plenárias</h2>
+                            <Link to={`/sessoes/${camaraId}`} className="view-all-link">Ver tudo <FaArrowRight /></Link>
+                        </div>
+                        <div className="openai-grid">
+                            {sessoes.length > 0 ? sessoes.map(sessao => {
+                                const videoId = this.getYouTubeID(sessao.transmissaoUrl);
+                                const thumbUrl = videoId 
+                                    ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                                    : 'https://via.placeholder.com/480x270?text=Sessão+Sem+Vídeo';
+                                
+                                return (
+                                    <div className="openai-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })} style={{ cursor: 'pointer' }}>
+                                        <img src={thumbUrl} alt={sessao.tipo} className="card-image" />
+                                        <div className="card-content-openai">
+                                            <span className="card-date">{sessao.data} • {sessao.status}</span>
+                                            <h3>{sessao.tipo} nº {sessao.numero}</h3>
+                                            <p>Clique para acompanhar os detalhes</p>
+                                        </div>
+                                    </div>
+                                );
+                            }) : <p>Nenhuma sessão plenária registrada recentemente.</p>}
+                        </div>
+                    </div>
+
+                    {/* 5. Representatives Section */}
                     <div className="openai-section">
                         <div className="section-header-openai">
                             <h2>Nossos Representantes</h2>
