@@ -42,42 +42,6 @@ const MenuDashboard = ({ logo: propLogo }) => {
     const isActive = (path) => location.pathname.includes(path) ? 'link-desktop-active' : '';
 
     useEffect(() => {
-        const fetchUserCamara = async () => {
-            // Tenta pegar da URL primeiro
-            const pathParts = location.pathname.split('/').filter(Boolean);
-            let currentCamaraId = pathParts[pathParts.length - 1];
-            
-            // Se parecer um ID de recurso (muito longo ou numérico) ou for uma rota conhecida sem ID no final
-            if (currentCamaraId === 'perfil' || currentCamaraId === 'admin') {
-                currentCamaraId = null;
-            }
-
-            if (currentCamaraId && currentCamaraId !== 'perfil') {
-                setCamaraId(currentCamaraId);
-                // Busca dados do usuário logado para permissões
-                const user = auth.currentUser;
-                if (user) {
-                    fetchUserPermissions(user.uid, currentCamaraId);
-                }
-            } else {
-                // Se não tiver na URL, busca do usuário logado
-                const user = auth.currentUser;
-                if (user) {
-                    try {
-                        const userIndexRef = ref(db, `users_index/${user.uid}`);
-                        const snapshot = await get(userIndexRef);
-                        if (snapshot.exists()) {
-                            const cId = snapshot.val().camaraId;
-                            setCamaraId(cId);
-                            fetchUserPermissions(user.uid, cId);
-                        }
-                    } catch (error) {
-                        console.error("Erro ao buscar camaraId do usuário:", error);
-                    }
-                }
-            }
-        };
-
         const fetchUserPermissions = async (uid, cId) => {
             try {
                 const userRef = ref(db, `${cId}/users/${uid}`);
@@ -101,25 +65,44 @@ const MenuDashboard = ({ logo: propLogo }) => {
             }
         };
 
-        fetchUserCamara();
+        const unsubscribe = auth.onAuthStateChanged(async (user) => {
+            // Tenta pegar da URL primeiro
+            const pathParts = location.pathname.split('/').filter(Boolean);
+            let currentCamaraId = pathParts[pathParts.length - 1];
+            
+            // Se parecer um ID de recurso (muito longo ou numérico) ou for uma rota conhecida sem ID no final
+            if (currentCamaraId === 'perfil' || currentCamaraId === 'admin') {
+                currentCamaraId = null;
+            }
+
+            if (currentCamaraId && currentCamaraId !== 'perfil') {
+                setCamaraId(currentCamaraId);
+                if (user) {
+                    fetchUserPermissions(user.uid, currentCamaraId);
+                }
+            } else {
+                // Se não tiver na URL, busca do usuário logado
+                if (user) {
+                    try {
+                        const userIndexRef = ref(db, `users_index/${user.uid}`);
+                        const snapshot = await get(userIndexRef);
+                        if (snapshot.exists()) {
+                            const cId = snapshot.val().camaraId;
+                            setCamaraId(cId);
+                            fetchUserPermissions(user.uid, cId);
+                        }
+                    } catch (error) {
+                        console.error("Erro ao buscar camaraId do usuário:", error);
+                    }
+                }
+            }
+        });
 
         if (propLogo) {
             setLogo(propLogo);
-            return;
         }
 
-        const fetchLogo = async () => {
-            try {
-                // Usa o estado camaraId ou o que acabamos de determinar se o estado ainda não atualizou
-                // Nota: dentro do useEffect, o estado camaraId pode ser o antigo na primeira execução
-                // mas o fetchLogo depende dele.
-                // Melhor estratégia: buscar o logo APÓS definir o camaraId.
-                // Separando fetchLogo para rodar quando camaraId mudar.
-            } catch (e) {
-                console.error("Erro ao carregar logo do dashboard", e);
-            }
-        };
-        // fetchLogo(); Movido para outro useEffect dependente de camaraId
+        return () => unsubscribe();
     }, [location.pathname, propLogo]);
 
     // Novo useEffect para carregar o logo quando o camaraId for definido
