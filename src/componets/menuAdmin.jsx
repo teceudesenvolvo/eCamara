@@ -198,9 +198,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
                     </Link>
                 )}
 
-                {servicesList.some(s => activeModules[s.id]) && (
-                    <div className="divider-desktop">Serviços</div>
-                )}
+                
                 {servicesList.map(service => activeModules[service.id] && (
                     <Link 
                         key={service.id} 
