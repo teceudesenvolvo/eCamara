@@ -4088,9 +4088,11 @@ footer>p {
   border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.menuDesktop:hover {
-  width: 240px;
-  /* Largura expandida */
+@media (min-width: 769px) {
+  .menuDesktop:hover {
+    width: 240px;
+    /* Largura expandida */
+  }
 }
 
 /* Área do Logo */
@@ -4114,9 +4116,11 @@ footer>p {
   transform: translateX(10px);
 }
 
-.menuDesktop:hover .h1-logo {
-  opacity: 1;
-  transform: translateX(0);
+@media (min-width: 769px) {
+  .menuDesktop:hover .h1-logo {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Estilo para o logo na sidebar */
@@ -4129,9 +4133,11 @@ footer>p {
   box-sizing: border-box;
 }
 
-.menuDesktop:hover .logo-sidebar {
-  opacity: 1;
-  transform: scale(1) translateX(0);
+@media (min-width: 769px) {
+  .menuDesktop:hover .logo-sidebar {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
 }
 
 /* Container de Navegação */
@@ -4162,7 +4168,9 @@ footer>p {
 .aDesktop:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: #fff;
-  transform: translateX(4px);
+  @media (min-width: 769px) {
+    transform: translateX(4px);
+  }
 }
 
 .link-desktop-active {
@@ -4189,8 +4197,10 @@ footer>p {
   font-weight: 500;
 }
 
-.menuDesktop:hover .text-desktop {
-  opacity: 1;
+@media (min-width: 769px) {
+  .menuDesktop:hover .text-desktop {
+    opacity: 1;
+  }
 }
 
 /* Divisores de Seção */
@@ -4206,8 +4216,10 @@ footer>p {
   letter-spacing: 0.5px;
 }
 
-.menuDesktop:hover .divider-desktop {
-  opacity: 1;
+@media (min-width: 769px) {
+  .menuDesktop:hover .divider-desktop {
+    opacity: 1;
+  }
 }
 
 /* --- Nova Home Page (Camara AI) --- */
@@ -6567,7 +6579,7 @@ footer>p {
     display: flex;
     position: fixed;
     top: 1%;
-    left: 90%;
+    left: 87%;
     z-index: 1001;
     /* Acima de tudo */
     background: var(--primary-color, #126B5E);
@@ -6623,6 +6635,15 @@ footer>p {
     transform: translateX(0);
     width: 240px;
     /* Garante que ele abra com a largura total */
+  }
+
+  /* Garante que o conteúdo fique visível quando o menu mobile estiver aberto */
+  .mobile-menu-toggle-checkbox:checked ~ .menuDesktop .logo-sidebar,
+  .mobile-menu-toggle-checkbox:checked ~ .menuDesktop .text-desktop,
+  .mobile-menu-toggle-checkbox:checked ~ .menuDesktop .divider-desktop,
+  .mobile-menu-toggle-checkbox:checked ~ .menuDesktop .h1-logo {
+    opacity: 1;
+    transform: scale(1) translateX(0);
   }
 }
 
