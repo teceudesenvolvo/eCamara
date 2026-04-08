@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash, FaInfoCircle, FaRobot, FaMagic } from 'react-icons/fa';
+import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash, FaInfoCircle, FaRobot, FaMagic, FaTimes, FaCommentDots, FaArrowLeft } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
@@ -86,6 +86,7 @@ class AddProducts extends Component {
             isGenerating: false,
             chatStep: 0, // 0: Tema, 1: Tipo, 2: Detalhes
             showEditor: false, // Controla a exibição do editor
+            showAiChat: false, // Controla o modal de chat
             protocolGenerated: null, // Armazena o protocolo gerado
             showPasswordModal: false, // Modal de senha
             passwordInput: '',
@@ -335,6 +336,10 @@ class AddProducts extends Component {
         this.setState({ showPdfPopup: true });
     };
 
+    toggleAiChat = () => {
+        this.setState({ showAiChat: !this.state.showAiChat });
+    };
+
     // Fecha o popup do PDF
     closePdfPopup = () => {
         this.setState({ showPdfPopup: false });
@@ -515,7 +520,7 @@ class AddProducts extends Component {
             let shouldOpenEditor = false;
 
             // --- CONTEXTO LEGISLATIVO (BUSCADO DO FIREBASE) ---
-            const { regimentoText, materiasText, leiOrganicaText, atasText } = this.state.baseConhecimento;
+            const { regimentoText, materiasText } = baseConhecimento;
 
             const REGIMENTO_INTERNO_RESUMO = regimentoText || `REGRAS FUNDAMENTAIS DA CÂMARA:
             1. É vedado ao Vereador apresentar projetos que gerem despesa direta ao Executivo (Vício de Iniciativa), exceto se indicar a fonte de custeio.
@@ -568,16 +573,15 @@ class AddProducts extends Component {
                 PASSO 2 - GERAÇÃO (Apenas se passou na validação):
                 Se NÃO houver impedimentos, NÃO use a palavra "BLOQUEIO". Apenas escreva a minuta seguindo estritamente a estrutura padrão de lei municipal.
                 
-                IMPORTANTE: Formate a resposta utilizando tags HTML para garantir a formatação correta no editor:
-                - Envolva cada parágrafo em tags <p>.
-                - Use <strong> para negrito em títulos e destaques.
-                - Adicione espaçamento adequado entre as seções.
+                IMPORTANTE: Responda EXCLUSIVAMENTE em formato JSON estruturado para que eu possa preencher o formulário automaticamente.
                 
-                Estrutura:
-                1. Título (em caixa alta e negrito).
-                2. Ementa (resumo do que trata a lei).
-                3. Texto da lei articulado (Art. 1º, Art. 2º, etc) em parágrafos separados.
-                4. Justificativa formal ao final.`;
+                Estrutura do JSON:
+                {
+                    "titulo": "TÍTULO EM CAIXA ALTA",
+                    "ementa": "Ementa formal começando com verbo",
+                    "textoMateria": "HTML com tags <p> e <strong> para a redação integral e justificativa",
+                    "tipoMateria": "O tipo confirmado"
+                }`;
                 nextStep = 3;
             }
 
@@ -591,21 +595,22 @@ class AddProducts extends Component {
                     aiResponseText = response;
                     nextStep = 2; // Mantém no passo 2 para o usuário tentar novamente
                 } else {
-                    aiResponseText = `Perfeito! Validei o regimento e a base de dados. Estou gerando a minuta da matéria. Abrindo o editor...`;
-                    shouldOpenEditor = true;
                     try {
                         const jsonMatch = response.match(/\{[\s\S]*\}/);
                         if (!jsonMatch) throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
 
                         const generatedData = JSON.parse(jsonMatch[0]);
+                        aiResponseText = `Perfeito! Validei o regimento e gerei a minuta técnica para você. Clique no botão abaixo para preencher o formulário automaticamente.`;
+                        shouldOpenEditor = true;
 
                         nextStateUpdates = {
                             ...nextStateUpdates,
-                            titulo: (`${this.state.tipoMateria || 'Matéria'} sobre ${this.state.objeto}`).toUpperCase(),
+                            titulo: generatedData.titulo || (`${this.state.tipoMateria || 'Matéria'} sobre ${this.state.objeto}`).toUpperCase(),
                             ementa: generatedData.ementa || `Dispõe sobre ${this.state.objeto} e dá outras providências.`,
+                            tipoMateria: generatedData.tipoMateria || this.state.tipoMateria,
                             indexacao: generatedData.indexacao || '',
                             observacao: generatedData.observacao || '',
-                            textoMateria: generatedData.textoMateria || '<p>Erro ao gerar o texto da matéria.</p>',
+                            textoMateria: generatedData.textoMateria || '<p>Erro ao gerar o texto da matéria.</p>'
                         };
                     } catch (e) {
                         console.error("Falha ao analisar JSON da IA:", e, "Resposta recebida:", response);
@@ -626,13 +631,6 @@ class AddProducts extends Component {
                 chatStep: nextStep,
                 ...nextStateUpdates
             }));
-
-            // Se a geração da minuta foi um sucesso, abre o editor após um breve delay
-            if (shouldOpenEditor) {
-                setTimeout(() => {
-                    this.setState({ showEditor: true });
-                }, 1500); // Delay para o usuário ler a mensagem "Abrindo o editor..."
-            }
 
         } catch (error) {
             console.error("Erro ao processar IA:", error);
@@ -882,7 +880,7 @@ class AddProducts extends Component {
     };
 
     render() {
-        const { pdfData, isSigned, showPdfPopup, showPasswordModal, passwordInput, passwordError, loadingConfig, isGenerating, aiTechnicalOpinion } = this.state;
+        const { pdfData, isSigned, showPdfPopup, showPasswordModal, passwordInput, passwordError, loadingConfig, isGenerating, aiTechnicalOpinion, showAiChat, messages, currentInput } = this.state;
 
         if (loadingConfig) {
             return (
@@ -1165,6 +1163,112 @@ class AddProducts extends Component {
                         </Grid>
                     </Grid>
                 </Box>
+
+                {/* Botão Flutuante de Chat AI */}
+                <Button 
+                    variant="contained" 
+                    onClick={this.toggleAiChat}
+                    sx={{ 
+                        position: 'fixed', 
+                        bottom: 30, 
+                        right: 30, 
+                        width: 65, 
+                        height: 65, 
+                        borderRadius: '50%', 
+                        minWidth: 0,
+                        p: 0,
+                        backgroundColor: '#FF740F',
+                        boxShadow: '0 8px 24px rgba(255, 116, 15, 0.4)',
+                        zIndex: 5001,
+                        '&:hover': { backgroundColor: '#e6680d', transform: 'scale(1.05)' },
+                        transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                    }}
+                >
+                    {showAiChat ? <FaTimes size={24} /> : <FaRobot size={30} />}
+                </Button>
+
+                {/* Janela de Chat AI (Widget no Canto Inferior Direito) */}
+                {showAiChat && (
+                    <div className="chat-popup-overlay" style={{ background: 'transparent', pointerEvents: 'none' }}>
+                        <div className="chat-ai-container" style={{ 
+                            position: 'fixed',
+                            bottom: 110,
+                            right: 30,
+                            width: '420px',
+                            maxWidth: '90vw',
+                            height: '650px',
+                            maxHeight: '75vh',
+                            borderRadius: '24px',
+                            boxShadow: '0 15px 50px rgba(0,0,0,0.2)',
+                            pointerEvents: 'auto',
+                            margin: 0,
+                            zIndex: 5000,
+                            border: '1px solid rgba(0,0,0,0.05)'
+                        }}>
+                            <div className="chat-header">
+                                <div className="chat-header-info">
+                                    <h2><FaRobot /> Assistente Legislativo</h2>
+                                    <p>IA treinada com o seu Regimento Interno</p>
+                                </div>
+                                <button className="back-button" onClick={this.toggleAiChat} style={{ left: 'auto', right: '20px' }}>
+                                    <FaTimes />
+                                </button>
+                            </div>
+
+                            <div className="chat-messages" ref={this.chatContainerRef}>
+                                {messages.map((msg) => (
+                                    <div key={msg.id} className={`message ${msg.sender === 'ai' ? 'message-ai' : 'message-user'}`}>
+                                        <div className="message-icon">
+                                            {msg.sender === 'ai' ? <FaRobot /> : <FaEdit />}
+                                        </div>
+                                        <div className="message-bubble">
+                                            <div dangerouslySetInnerHTML={{ __html: msg.text }} />
+                                            {msg.sender === 'ai' && this.state.chatStep === 3 && (
+                                                <Button 
+                                                    variant="contained" 
+                                                    size="small" 
+                                                    startIcon={<FaCheckCircle />}
+                                                    onClick={() => this.setState({ showAiChat: false, showEditor: true }, this.handleGeneratePDF)}
+                                                    sx={{ mt: 2, textTransform: 'none', borderRadius: '8px', backgroundColor: '#126B5E' }}
+                                                >
+                                                    Aplicar ao Formulário
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                {isGenerating && (
+                                    <div className="message message-ai">
+                                        <div className="message-icon"><FaSpinner className="animate-spin" /></div>
+                                        <div className="message-bubble">Analisando regimento e redigindo...</div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="chat-input-area" style={{ padding: '15px' }}>
+                                <div className="search-box-wrapper-chat">
+                                    <input 
+                                        type="text"
+                                        className="smart-search-input-chat"
+                                        placeholder="Digite aqui..."
+                                        value={currentInput}
+                                        onChange={(e) => this.setState({ currentInput: e.target.value })}
+                                        onKeyPress={(e) => e.key === 'Enter' && this.handleSendMessage()}
+                                        disabled={isGenerating}
+                                        style={{ width: '100%' }}
+                                    />
+                                    <button 
+                                        className="smart-search-btn-chat" 
+                                        onClick={this.handleSendMessage}
+                                        disabled={isGenerating}
+                                    >
+                                        <FaPaperPlane />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Preview PDF */}
                 {showPdfPopup && pdfData && (

@@ -719,57 +719,49 @@ class Configuracoes extends Component {
         return (
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
-                <div className="dashboard-content" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
-
-                    {/* Sidebar de Navegação */}
-                    <div style={{ flex: 1, maxWidth: '300px' }}>
-                        <div className="dashboard-header" style={{ marginBottom: '20px' }}>
-                            <div>
-                                <h1 className="dashboard-header-title">
-                                    <FaCog className="icon-primary" /> Configurações Gerais
-                                </h1>
-                                <p className="dashboard-header-desc">Base de Conhecimento da IA.</p>
-                            </div>
-                        </div>
-
-                        <div className="dashboard-card" style={{ padding: '0', overflow: 'hidden' }}>
-                            {[
-                                { id: 'regimento', label: 'Regimento Interno', icon: <FaBook /> },
-                                { id: 'lei_organica', label: 'Lei Orgânica', icon: <FaGavel /> },
-                                { id: 'materias', label: 'Matérias Antigas', icon: <FaHistory /> },
-                                { id: 'atas', label: 'Atas e Sessões', icon: <FaFileAlt /> },
-                                { id: 'usuarios', label: 'Gestão de Usuários', icon: <FaUserShield /> },
-                                { id: 'comissoes', label: 'Gestão de Comissões', icon: <FaUsers /> },
-                                { id: 'layout', label: 'Identidade Visual', icon: <FaPalette /> },
-                                { id: 'permissoes', label: 'Níveis de Acesso', icon: <FaLock /> },
-                            ].map(item => (
-                                <div
-                                    key={item.id}
-                                    className="list-item"
-                                    style={{
-                                        margin: 0,
-                                        borderRadius: 0,
-                                        borderBottom: '1px solid #eee',
-                                        cursor: 'pointer',
-                                        background: activeTab === item.id ? '#e0f2f1' : 'white',
-                                        borderLeft: activeTab === item.id ? '4px solid #126B5E' : '4px solid transparent',
-                                        height: '20px',
-                                    }}
-                                    onClick={() => this.setState({ activeTab: item.id })}
-                                >
-                                    <div className="list-item-content" style={{ padding: '15px 20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                        <span className={activeTab === item.id ? 'icon-primary' : ''} style={{ color: activeTab === item.id ? '#126B5E' : '#888' }}>
-                                            {item.icon}
-                                        </span>
-                                        <span style={{ fontWeight: '600', color: activeTab === item.id ? '#126B5E' : '#333' }}>{item.label}</span>
-                                    </div>
-                                </div>
-                            ))}
+                <div className="dashboard-content">
+                    <div className="dashboard-header" style={{ marginBottom: '30px' }}>
+                        <div>
+                            <h1 className="dashboard-header-title" style={{ fontSize: '1.5rem' }}>
+                                <FaCog style={{ color: 'var(--primary-color)' }} /> Configurações Gerais
+                            </h1>
+                            <p className="dashboard-header-desc">Base de Conhecimento, Usuários e Parâmetros do Sistema.</p>
                         </div>
                     </div>
 
-                    {/* Área de Conteúdo */}
-                    <div style={{ flex: 2 }}>
+                    {/* --- Navegação por Abas Superior --- */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #eee', marginBottom: '30px', overflowX: 'auto', whiteSpace: 'nowrap', scrollbarWidth: 'none' }}>
+                        {[
+                            { id: 'regimento', label: 'Regimento', icon: <FaBook /> },
+                            { id: 'lei_organica', label: 'Lei Orgânica', icon: <FaGavel /> },
+                            { id: 'materias', label: 'Matérias Antigas', icon: <FaHistory /> },
+                            { id: 'atas', label: 'Atas e Sessões', icon: <FaFileAlt /> },
+                            { id: 'usuarios', label: 'Usuários', icon: <FaUserShield /> },
+                            { id: 'comissoes', label: 'Comissões', icon: <FaUsers /> },
+                            { id: 'layout', label: 'Identidade Visual', icon: <FaPalette /> },
+                            { id: 'permissoes', label: 'Níveis de Acesso', icon: <FaLock /> },
+                        ].map(item => (
+                            <button 
+                                key={item.id} 
+                                onClick={() => this.setState({ activeTab: item.id })}
+                                style={{
+                                    padding: '12px 20px',
+                                    border: 'none',
+                                    background: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    fontWeight: activeTab === item.id ? '700' : '500',
+                                    color: activeTab === item.id ? '#126B5E' : '#888',
+                                    borderBottom: activeTab === item.id ? '3px solid #126B5E' : '3px solid transparent',
+                                    display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s'
+                                }}
+                            >
+                                {item.icon} {item.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ animation: 'fadeIn 0.5s' }}>
                         {this.renderContent()}
                     </div>
                 </div>

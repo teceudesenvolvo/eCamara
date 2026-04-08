@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt, FaTimes, FaSearch, FaEye, FaArrowLeft, FaInfoCircle, FaGavel } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
+import GerenciarSessao from './GerenciarSessao.jsx'; // Importa o novo componente
 import { sendMessageToAIPrivate } from '../../../aiService.js';
 import { db } from '../../../firebaseConfig.js';
 import { ref, onValue, push, update, get } from 'firebase/database';
@@ -38,7 +39,9 @@ class PautasSessao extends Component {
             homeConfig: {},
             footerConfig: {},
             logoBase64: null,
-            camaraId: this.props.match.params.camaraId
+            camaraId: this.props.match.params.camaraId,
+            viewingMateriaForDetail: null, // Mantido aqui para o modal ser controlado pelo pai
+            materiaSearchTerm: ''
         };
     }
 
@@ -161,7 +164,7 @@ class PautasSessao extends Component {
     };
 
     handleCloseModal = () => {
-        this.setState({ showModal: false, selectedSessaoId: null });
+        this.setState({ showModal: false });
     };
 
     handleCreateSessao = async () => {
@@ -206,6 +209,10 @@ class PautasSessao extends Component {
         }
     };
 
+    handleCloseDetails = () => {
+        this.setState({ selectedSessaoId: null, roteiroPdfUrl: null });
+    };
+
     handleSelectSessao = (sessao) => {
         this.setState({
             selectedSessaoId: sessao.id,
@@ -216,14 +223,15 @@ class PautasSessao extends Component {
         });
     };
 
-    handleAddItem = async () => {
-        const { selectedSessaoId, sessoes, selectedMateriaToAdd, materiasDisponiveis, camaraId } = this.state;
-        if (!selectedMateriaToAdd || !selectedSessaoId) return;
+    handleAddItem = async (materiaIdFromParam = null) => { // Agora recebe materiaId como parâmetro
+        const { selectedSessaoId, sessoes, selectedMateriaToAdd, materiasDisponiveis } = this.state;
+        const materiaId = materiaIdFromParam || selectedMateriaToAdd;
+        if (!materiaId || !selectedSessaoId) return;
 
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!selectedSessao) return;
 
-        const materia = materiasDisponiveis.find(m => m.id.toString() === selectedMateriaToAdd);
+        const materia = materiasDisponiveis.find(m => m.id.toString() === materiaId.toString());
         if (materia) {
             // Verifica se a matéria já está nesta pauta
             const currentItens = selectedSessao.itens || [];
@@ -245,7 +253,8 @@ class PautasSessao extends Component {
 
                 // O listener onValue atualizará o estado, mas podemos atualizar localmente para feedback imediato
                 this.setState(prevState => ({
-                    selectedMateriaToAdd: '' // Limpa a seleção
+                    selectedMateriaToAdd: '', // Limpa a seleção
+                    materiaSearchTerm: ''
                 }));
             } catch (error) {
                 console.error("Erro ao adicionar item:", error);
@@ -474,278 +483,124 @@ class PautasSessao extends Component {
         }
     };
 
-    renderGerenciarSessoes = () => {
-        const { sessoes, showModal, selectedSessaoId, novaData, novoTipo, novoTipoDeSessao, novaTransmissaoUrl, materiasDisponiveis, selectedMateriaToAdd, editalText, isGeneratingEdital, isFinalizing, selectedMonth, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl, novaLegislatura, novoNumeroPlenaria, documentosAcessoriosDisponiveis, selectedDocumentoToAdd } = this.state;
-        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
+    // Método para atualizar o estado do componente pai a partir do filho
+    setParentState = (newState) => {
+        this.setState(newState);
+    };
 
-        // Ordenar sessoes por data (mais recente primeiro)
+    renderGerenciarSessoes = () => {
+        const {
+            sessoes, selectedSessaoId, selectedMonth, showModal,
+            novaData, novaLegislatura, novoNumeroPlenaria, novoTipo, novoTipoDeSessao, novaTransmissaoUrl,
+            materiasDisponiveis, documentosAcessoriosDisponiveis, editalText, isGeneratingEdital, isFinalizing, roteiroPdfUrl,
+            isEditingUrl, editedTransmissaoUrl, materiaSearchTerm, viewingMateriaForDetail
+        } = this.state;
+
+        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
+        if (selectedSessaoId) {
+            return (
+                <GerenciarSessao
+                    sessao={selectedSessao}
+                    materiasDisponiveis={materiasDisponiveis}
+                    documentosAcessoriosDisponiveis={documentosAcessoriosDisponiveis}
+                    editalText={editalText}
+                    isGeneratingEdital={isGeneratingEdital}
+                    isFinalizing={isFinalizing}
+                    roteiroPdfUrl={roteiroPdfUrl}
+                    isEditingUrl={isEditingUrl}
+                    editedTransmissaoUrl={editedTransmissaoUrl}
+                    materiaSearchTerm={materiaSearchTerm}
+                    viewingMateriaForDetail={viewingMateriaForDetail}
+                    handleCloseDetails={this.handleCloseDetails}
+                    handleOpenSessao={this.handleOpenSessao}
+                    handleFinalizeSessao={this.handleFinalizeSessao}
+                    handleGenerateEditalWithAI={this.handleGenerateEditalWithAI}
+                    handleUrlInputChange={this.handleUrlInputChange}
+                    handleSaveUrl={this.handleSaveUrl}
+                    handleAddItem={this.handleAddItem}
+                    handleAddAcessorio={this.handleAddAcessorio}
+                    handleRemoveItem={this.handleRemoveItem}
+                    setParentState={this.setParentState} // Passa o método para o filho atualizar o estado do pai
+                />
+            );
+        }
+
         const sortedSessoes = [...sessoes].sort((a, b) => {
             const [dayA, monthA, yearA] = a.data.split('/');
             const [dayB, monthB, yearB] = b.data.split('/');
             return new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA);
         });
 
-        // Agrupar por mês
         const groupedSessoes = [];
         sortedSessoes.forEach(sessao => {
             const [day, month, year] = sessao.data.split('/');
-            const date = new Date(year, month - 1, day);
-            const monthYear = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-            const key = monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
-
-            let group = groupedSessoes.find(g => g.month === key);
-            if (!group) {
-                group = { month: key, sessoes: [] };
-                groupedSessoes.push(group);
-            }
+            const key = new Date(year, month - 1, day).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
+            let group = groupedSessoes.find(g => g.month === formattedKey);
+            if (!group) { group = { month: formattedKey, sessoes: [] }; groupedSessoes.push(group); }
             group.sessoes.push(sessao);
         });
 
         const availableMonths = groupedSessoes.map(g => g.month);
-        const currentMonth = selectedMonth && availableMonths.includes(selectedMonth) ? selectedMonth : (availableMonths.length > 0 ? availableMonths[0] : '');
-        const displayedGroups = groupedSessoes.filter(g => g.month === currentMonth);
+        const currentMonth = selectedMonth || (availableMonths[0] || '');
+        const displayedSessoes = groupedSessoes.find(g => g.month === currentMonth)?.sessoes || [];
 
         return (
-            <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', animation: 'fadeIn 0.5s' }}>
-                
-                {/* Coluna Esquerda: Lista de Sessões */}
-                    {/* Coluna Esquerda: Lista de Sessões */}
-                    <div style={{ flex: 1, maxWidth: '400px' }}>
-                        <div className="dashboard-header" style={{ marginBottom: '20px' }}>
-                            <div>
-                                <h1 className="dashboard-header-title">
-                                    <FaCalendarAlt className="icon-primary" /> Sessões
-                                </h1>
-                                <p className="dashboard-header-desc">Gestão das sessões plenárias.</p>
-                            </div>
-                            <button className="btn-primary" onClick={this.handleOpenModal} style={{ width: 'auto', padding: '8px 15px' }}>
-                                <FaPlus /> Nova
+            <div style={{ animation: 'fadeIn 0.5s' }}>
+                <div className="dashboard-header" style={{ marginBottom: '30px' }}>
+                    <div>
+                        <h1 className="dashboard-header-title"><FaCalendarAlt /> Gerenciar Sessões</h1>
+                        <p className="dashboard-header-desc">Selecione uma sessão para organizar a ordem do dia e gerar o roteiro.</p>
+                    </div>
+                    <button className="btn-primary" onClick={this.handleOpenModal}><FaPlus /> Nova Sessão</button>
+                </div>
+
+                <div className="dashboard-card" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '30px', padding: '15px 25px' }}>
+                    <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#666' }}>Filtrar Mês:</span>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {availableMonths.map(m => (
+                            <button 
+                                key={m} 
+                                onClick={() => this.setState({ selectedMonth: m })}
+                                style={{ 
+                                    padding: '8px 15px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+                                    background: currentMonth === m ? 'var(--primary-color)' : '#f0f2f5',
+                                    color: currentMonth === m ? '#fff' : '#666',
+                                    fontWeight: '600', transition: '0.3s'
+                                }}
+                            >
+                                {m}
                             </button>
-                        </div>
+                        ))}
+                    </div>
+                </div>
 
-                        {availableMonths.length > 0 && (
-                            <div style={{ marginBottom: '15px' }}>
-                                <select 
-                                    className="modal-input" 
-                                    style={{ padding: '10px', fontSize: '0.95rem', backgroundColor: '#fff', cursor: 'pointer' }}
-                                    value={currentMonth}
-                                    onChange={(e) => this.setState({ selectedMonth: e.target.value })}
-                                >
-                                    {availableMonths.map(month => (
-                                        <option key={month} value={month}>{month}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', paddingRight: '5px' }}>
-                            {displayedGroups.map(group => (
-                                <div key={group.month}>
-                                    <h4 style={{ color: '#126B5E', margin: '15px 0 10px 0', borderBottom: '1px solid #eee', paddingBottom: '5px', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>{group.month}</h4>
-                                    {group.sessoes.map(sessao => (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
+                    {displayedSessoes.map(sessao => (
                                         <div 
                                             key={sessao.id} 
-                                            className="list-item dashboard-card-hover" 
+                                            className="dashboard-card dashboard-card-hover" 
                                             style={{ 
-                                                cursor: 'pointer', 
-                                                borderLeft: `4px solid ${selectedSessaoId === sessao.id ? '#FF740F' : '#126B5E'}`,
-                                                marginBottom: '10px'
+                                                cursor: 'pointer', margin: 0, padding: '25px', borderRadius: '20px',
+                                                borderLeft: `6px solid ${sessao.status === 'Aberta' ? '#2e7d32' : (sessao.status === 'Em Elaboração' ? '#ef6c00' : '#126B5E')}`
                                             }}
                                             onClick={() => this.handleSelectSessao(sessao)}
                                         >
-                                            <div className="list-item-content">
-                                                <div className="list-item-header">
-                                                    <span className="tag tag-primary">{sessao.numero}</span>
-                                                    <span className={`tag ${sessao.status === 'Publicada' ? 'tag-success' : 'tag-warning'}`} style={{fontSize: '0.7rem'}}>{sessao.status}</span>
-                                                </div>
-                                                <h3 className="list-item-title" style={{fontSize: '1rem', fontWeight: '600', marginBottom: '5px'}}>{sessao.tipo}</h3>
-                                                <div className="list-item-meta">
-                                                    <FaCalendarAlt size={12} style={{color: 'var(--primary-color)'}} /> <span style={{fontSize: '0.85rem', color: '#666'}}>{sessao.data}</span>
-                                                </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+                                                <span className="tag tag-primary">Sessão {sessao.numero}</span>
+                                                <span className={`tag ${sessao.status === 'Aberta' ? 'tag-success' : 'tag-warning'}`}>{sessao.status}</span>
+                                            </div>
+                                            <h3 style={{ fontSize: '1rem', color: '#1a1a1a', fontWeight: '700', marginBottom: '15px', height: '3.5em', overflow: 'hidden' }}>{sessao.tipo}</h3>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                                <span style={{ color: '#666' }}><FaCalendarAlt /> {sessao.data}</span>
+                                                <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Gerenciar <FaArrowLeft style={{ transform: 'rotate(180deg)' }} /></span>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            ))}
-                            {sessoes.length === 0 && <p style={{color: '#666', textAlign: 'center', marginTop: '20px'}}>Nenhuma sessão cadastrada.</p>}
-                        </div>
-                    </div>
+                    ))}
+                    {sessoes.length === 0 && <p style={{ gridColumn: '1/-1', color: '#666', textAlign: 'center' }}>Nenhuma sessão cadastrada.</p>}
+                </div>
 
-                    {/* Coluna Direita: Detalhes e Itens */}
-                    <div style={{ flex: 1.5 }}>
-                        {selectedSessao ? (
-                            <div className="dashboard-card">
-                                <div className="modal-header" style={{ justifyContent: 'space-between' }}>
-                                    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <FaList className="icon-primary" /> Detalhes da Sessão {selectedSessao.numero}
-                                    </h2>
-                                    <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: '0.8rem' }}>
-                                        <FaPrint style={{color: '#126b5e'}} /> Imprimir
-                                    </button>
-                                </div>
-
-                                <div style={{ marginBottom: '25px', display: 'flex', gap: '30px', flexWrap: 'wrap', background: '#f8f9fa', padding: '15px', borderRadius: '8px', borderLeft: '4px solid var(--primary-color)' }}>
-                                    <div>
-                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Data</label>
-                                        <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.data}</span>
-                                    </div>
-                                    <div>
-                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Tipo</label>
-                                        <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.tipo}</span>
-                                    </div>
-                                    <div>
-                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Status</label>
-                                        <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.status}</span>
-                                    </div>
-                                    <div>
-                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Formato</label>
-                                        <span style={{fontWeight: '600', fontSize: '0.9rem'}}>{selectedSessao.tipoDeSessao || 'Presencial'}</span>
-                                    </div>
-                                    <div style={{ width: '100%', marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
-                                        <label style={{display: 'block', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase'}}>Link da Transmissão</label>
-                                        {isEditingUrl ? (
-                                            <div style={{display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px'}}>
-                                                <input 
-                                                    type="text" 
-                                                    className="modal-input" 
-                                                    value={editedTransmissaoUrl} 
-                                                    onChange={this.handleUrlInputChange}
-                                                    placeholder="https://youtube.com/..."
-                                                />
-                                                <button className="btn-primary" onClick={this.handleSaveUrl} style={{padding: '8px 12px', fontSize: '0.8rem'}}>Salvar</button>
-                                                <button className="btn-secondary" onClick={() => this.setState({ isEditingUrl: false })} style={{padding: '8px 12px', fontSize: '0.8rem'}}>Cancelar</button>
-                                            </div>
-                                        ) : (
-                                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px'}}>
-                                                {selectedSessao.transmissaoUrl ? (
-                                                    <a href={selectedSessao.transmissaoUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', textDecoration: 'none', fontWeight: '500' }}>
-                                                        <FaVideo size={14} /> {selectedSessao.transmissaoUrl}
-                                                    </a>
-                                                ) : (
-                                                    <p style={{margin: 0, color: '#999', fontStyle: 'italic', fontSize: '0.9rem'}}>Nenhum link cadastrado.</p>
-                                                )}
-                                                <button className="btn-secondary" onClick={() => this.setState({ isEditingUrl: true, editedTransmissaoUrl: selectedSessao.transmissaoUrl || '' })} style={{padding: '5px 10px', fontSize: '0.8rem'}}>
-                                                    <FaPencilAlt size={12} />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div style={{ background: '#f9f9f9', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-                                    <h4 style={{ marginTop: 0, color: '#555', fontSize: '0.9rem', fontWeight: '600',}}>Adicionar Matéria à Ordem do Dia</h4>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <select 
-                                            className="modal-input" 
-                                            value={selectedMateriaToAdd}
-                                            onChange={(e) => this.setState({ selectedMateriaToAdd: e.target.value })}
-                                        >
-                                            <option value="">Selecione uma matéria apta...</option>
-                                            {materiasDisponiveis.map(m => (
-                                                <option key={m.id} value={m.id}>{m.titulo}</option>
-                                            ))}
-                                        </select>
-                                        <button className="btn-primary" onClick={this.handleAddItem} style={{ width: 'auto' }}>
-                                            <FaPlus /> Adicionar
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div style={{ background: '#fff3e0', padding: '20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #ffe0b2' }}>
-                                    <h4 style={{ marginTop: 0, color: '#e65100', fontSize: '0.9rem', fontWeight: '600',}}>Adicionar Requerimento de Urgência</h4>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <select 
-                                            className="modal-input" 
-                                            value={selectedDocumentoToAdd}
-                                            onChange={(e) => this.setState({ selectedDocumentoToAdd: e.target.value })}
-                                        >
-                                            <option value="">Selecione um requerimento...</option>
-                                            {documentosAcessoriosDisponiveis.map(d => (
-                                                <option key={d.id} value={d.id}>{d.titulo} - {d.autorNome}</option>
-                                            ))}
-                                        </select>
-                                        <button className="btn-primary" onClick={this.handleAddAcessorio} style={{ width: 'auto', background: '#e65100' }}>
-                                            <FaPlus /> Adicionar
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 style={{ color: '#126B5E', borderBottom: '1px solid #eee', paddingBottom: '10px', fontSize: '0.9rem', marginTop: '20px'}}>Ordem do Dia</h4>
-                                    {selectedSessao.itens && selectedSessao.itens.length > 0 ? (
-                                        <ul style={{ listStyle: 'none', padding: 0 }}>
-                                            {(selectedSessao.itens || []).map((item, index) => (
-                                                <li key={item.id} style={{ background: 'white', border: '1px solid #eee', padding: '15px', marginBottom: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                                        <span style={{ fontWeight: 'bold', color: '#126B5E' }}>{index + 1}º</span>
-                                                        <div>
-                                                            <div style={{ textAlign: 'left', fontWeight: 'bold', color: '#333', fontSize: '0.9rem'}}>{item.titulo}</div>
-                                                            <div style={{  textAlign: 'left', fontSize: '0.85rem', color: '#666' }}>{item.autor}</div>
-                                                        </div>
-                                                    </div>
-                                                    <button onClick={() => this.handleRemoveItem(item.id)} style={{ background: 'none', border: 'none', color: '#d32f2f', cursor: 'pointer' }}>
-                                                        <FaTrash />
-                                                    </button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <p style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '20px' }}>Nenhum item adicionado à ordem do dia ainda.</p>
-                                    )}
-                                </div>
-
-                                {/* Seção de Edital com IA */}
-                                <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                        <h4 style={{ margin: 0, color: '#126B5E', fontSize: '0.9rem', fontWeight: '600'}}>Edital de Convocação</h4>
-                                        <button 
-                                            onClick={this.handleGenerateEditalWithAI}
-                                            disabled={isGeneratingEdital}
-                                            className="btn-secondary"
-                                            style={{ padding: '8px 15px', color: '#126B5E', borderColor: '#126B5E', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                        >
-                                            <FaMagic className="icon-primary" /> {isGeneratingEdital ? 'Gerando...' : 'Gerar Edital com IA'}
-                                        </button>
-                                    </div>
-                                    <textarea 
-                                        rows="12" 
-                                        className="modal-textarea"
-                                        style={{ color: '#000', backgroundColor: isGeneratingEdital ? '#f5f5f5' : '#fff' }}
-                                        placeholder={isGeneratingEdital ? "Aguarde, a IA está redigindo o edital..." : "O texto do edital aparecerá aqui..."}
-                                        value={editalText}
-                                        onChange={(e) => this.setState({ editalText: e.target.value })}
-                                        readOnly={isGeneratingEdital}
-                                    ></textarea>
-                                </div>
-
-                                <div className="modal-footer" style={{ borderTop: '1px solid #eee', marginTop: '20px', paddingTop: '20px' }}>
-                                    {selectedSessao.status !== 'Aberta' && (
-                                        <button onClick={this.handleOpenSessao} className="btn-success">
-                                            <FaVideo /> Abrir Sessão
-                                        </button>
-                                    )}
-                                    <button 
-                                        onClick={this.handleFinalizeSessao}
-                                        disabled={isFinalizing}
-                                        className="btn-primary"
-                                    >
-                                        <FaCheckCircle /> {isFinalizing ? 'Gerando Roteiro...' : 'Finalizar e Gerar Roteiro'}
-                                    </button>
-                                    {roteiroPdfUrl &&
-                                        <button onClick={() => window.open(this.state.roteiroPdfUrl)} className="btn-success" style={{ marginLeft: '10px' }}>
-                                            Visualizar Roteiro Gerado
-                                        </button>}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="dashboard-card" style={{ textAlign: 'center', padding: '50px', color: '#888' }}>
-                                <FaList size={50} style={{ marginBottom: '20px', color: '#ddd' }} />
-                                <h3>Selecione uma sessão para gerenciar</h3>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Modal Create */}
+                {/* Modal Create Permanecido conforme original mas com z-index alto */}
                     {showModal && (
                         <div className="modal-overlay">
                             <div className="modal-content" style={{ width: '400px' }}>
@@ -858,13 +713,13 @@ class PautasSessao extends Component {
                 <div className="dashboard-content" style={{width: '100%'}}>
                     {/* Tab Navigation */}
                     <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: '30px' }}>
-                        <button onClick={() => this.setState({ activeTab: 'gerenciar' })} style={activeTab === 'gerenciar' ? activeTabStyle : tabStyle}>
+                        <button className='btgManagerSection' onClick={() => this.setState({ activeTab: 'gerenciar' })} style={activeTab === 'gerenciar' ? activeTabStyle : tabStyle}>
                             <FaList /> Gerenciar Sessões
                         </button>
-                        <button onClick={() => this.setState({ activeTab: 'abertas' })} style={activeTab === 'abertas' ? activeTabStyle : tabStyle}>
+                        <button className='btgManagerSection' onClick={() => this.setState({ activeTab: 'abertas' })} style={activeTab === 'abertas' ? activeTabStyle : tabStyle}>
                             <FaVideo /> Sessões Abertas
                         </button>
-                        <button onClick={() => this.setState({ activeTab: 'fechadas' })} style={activeTab === 'fechadas' ? activeTabStyle : tabStyle}>
+                        <button className='btgManagerSection' onClick={() => this.setState({ activeTab: 'fechadas' })} style={activeTab === 'fechadas' ? activeTabStyle : tabStyle}>
                             <FaCheckCircle /> Sessões Finalizadas
                         </button>
                     </div>

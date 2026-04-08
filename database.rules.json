@@ -1,19 +1,44 @@
 {
   "rules": {
-    // Permite leitura pública para que a lista de câmaras possa ser carregada.
-    ".read": "true",
-    // Regra genérica para todas as câmaras usando uma variável wildcard
+    "camaras_public_index": {
+      ".read": true,
+      // Apenas usuários autenticados podem escrever neste índice (gerenciado pelo AdminGeral)
+      ".write": "auth != null" 
+    },
+
     "$camaraId": {
-      // Apenas usuários autenticados podem escrever.
-      ".write": "auth != null",
+      // Configurações de layout e home precisam ser públicas para o portal carregar
+      "dados-config": {
+        ".read": true,
+        ".write": "auth != null"
+      },
+      
+      // Matérias legislativas são públicas para transparência cidadã
       "materias": {
+        ".read": true,
+        ".write": "auth != null",
         ".indexOn": ["userId", "status", "createdAt"]
       },
+      
+      // Dados de usuários devem ser protegidos (apenas autenticados podem ler)
       "users": {
+        ".read": "auth != null",
+        ".write": "auth != null",
         ".indexOn": "tipo"
       },
+      
+      // Sessões plenárias são públicas
       "sessoes": {
+        ".read": true,
+        ".write": "auth != null",
         ".indexOn": "createdAt"
+      },
+
+      // Documentos internos administrativos requerem login
+      "documentos_administrativos": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".indexOn": ["userId"]
       }
     }
   }

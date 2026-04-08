@@ -506,106 +506,149 @@ class AdminGeral extends Component {
                     </h1>
                     <p style={{ color: '#666', marginBottom: '40px', textAlign: 'left' }}>Gerenciamento de Câmaras Municipais</p>
 
-                    <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '25px', color: '#333', textAlign: 'left' }}>Criar Nova Câmara</h3>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px', textAlign: 'left' }}>
-                        <div style={{ gridColumn: '1 / -1' }}>
-                            <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Nome da Câmara</label>
-                            <input 
-                                type="text" 
-                                className="modal-input" 
-                                placeholder="Ex: Câmara Municipal de Salvador" 
-                                value={camaraName}
-                                onChange={this.handleNameChange}
-                            />
-                        </div>
-                        
-                        <div>
-                            <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Cidade</label>
-                            <input 
-                                type="text" 
-                                className="modal-input" 
-                                placeholder="Salvador" 
-                                value={camaraCity}
-                                onChange={(e) => this.setState({ camaraCity: e.target.value })}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Estado (UF)</label>
-                            <input 
-                                type="text" 
-                                className="modal-input" 
-                                placeholder="BA" 
-                                value={camaraState}
-                                onChange={(e) => this.setState({ camaraState: e.target.value })}
-                                maxLength={2}
-                            />
-                        </div>
-
-                        <div style={{ gridColumn: '1 / -1' }}>
-                            <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>ID do Sistema (Slug)</label>
-                            <input 
-                                type="text" 
-                                className="modal-input" 
-                                value={camaraId}
-                                readOnly
-                                style={{ background: '#f5f5f5', color: '#666' }}
-                            />
-                            <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '5px' }}>Este ID será usado na URL (ex: e-camara.com/home/<strong>{camaraId || '...'}</strong>)</p>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="btn-primary" onClick={this.handleCreateCamara} disabled={creating} style={{ padding: '12px 25px' }}>
-                            {creating ? 'Processando...' : <><FaCheckCircle /> Criar Câmara</>}
+                    {/* --- Navegação por Abas Superior --- */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #eee', marginBottom: '30px' }}>
+                        <button 
+                            onClick={() => this.setState({ activeTab: 'camaras' })}
+                            style={{
+                                padding: '12px 25px',
+                                border: 'none',
+                                background: 'none',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                fontWeight: activeTab === 'camaras' ? '700' : '500',
+                                color: activeTab === 'camaras' ? '#126B5E' : '#888',
+                                borderBottom: activeTab === 'camaras' ? '3px solid #126B5E' : '3px solid transparent',
+                                display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s'
+                            }}
+                        >
+                            <FaBuilding /> Câmaras
+                        </button>
+                        <button 
+                            onClick={() => this.setState({ activeTab: 'admins' })}
+                            style={{
+                                padding: '12px 25px',
+                                border: 'none',
+                                background: 'none',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                fontWeight: activeTab === 'admins' ? '700' : '500',
+                                color: activeTab === 'admins' ? '#126B5E' : '#888',
+                                borderBottom: activeTab === 'admins' ? '3px solid #126B5E' : '3px solid transparent',
+                                display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s'
+                            }}
+                        >
+                            <FaUserPlus /> Administradores
                         </button>
                     </div>
 
-                    <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '25px', marginTop: '50px', color: '#333', textAlign: 'left' }}>Câmaras Gerenciadas ({existingCamaras.length})</h3>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                        {existingCamaras.map(camara => (
-                            <div key={camara.id} className="dashboard-card" style={{ padding: '20px', margin: 0, borderLeft: '4px solid #126B5E' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <h4 style={{ margin: '0 0 5px 0', color: '#333', fontSize: '1.1rem' }}>{camara.name}</h4>
-                                    <a href={`/home/${camara.id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#126B5E' }} title="Acessar Portal">
-                                        <FaExternalLinkAlt />
-                                    </a>
+                    {activeTab === 'camaras' ? (
+                        <div style={{ animation: 'fadeIn 0.5s' }}>
+                            <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '25px', color: '#333', textAlign: 'left' }}>Criar Nova Câmara</h3>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px', textAlign: 'left' }}>
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Nome da Câmara</label>
+                                    <input 
+                                        type="text" 
+                                        className="modal-input" 
+                                        placeholder="Ex: Câmara Municipal de Salvador" 
+                                        value={camaraName}
+                                        onChange={this.handleNameChange}
+                                    />
                                 </div>
-                                <p style={{ fontSize: '0.9rem', color: '#666', margin: '0 0 5px 0' }}>ID: <strong>{camara.id}</strong></p>
-                                <p style={{ fontSize: '0.9rem', color: '#666', margin: '0 0 15px 0' }}>
-                                    {camara.city && `${camara.city} - ${camara.state}`}
-                                    {camara.createdAt && <span style={{display: 'block', fontSize: '0.8rem', color: '#999', marginTop: '5px'}}>Criada em: {new Date(camara.createdAt).toLocaleDateString()}</span>}
-                                </p>
                                 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '10px' }}>
-                                    <button 
-                                        onClick={() => this.handleOpenUserModal(camara.id)}
-                                        className="btn-secondary" 
-                                        style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}
-                                    >
-                                        <FaUsers /> Usuários
-                                    </button>
-                                    <button 
-                                        onClick={() => this.handleOpenModulesModal(camara.id)}
-                                        className="btn-secondary" 
-                                        style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', background: '#e3f2fd', color: '#1565c0', borderColor: '#bbdefb' }}
-                                    >
-                                        <FaCogs /> Módulos
-                                    </button>
-                                    <button 
-                                        onClick={() => this.handleDeleteCamara(camara.id)} 
-                                        className="btn-danger" 
-                                        style={{ padding: '5px 10px', fontSize: '0.8rem' }}
-                                    >
-                                        <FaTrash /> Excluir
-                                    </button>
+                                <div>
+                                    <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Cidade</label>
+                                    <input 
+                                        type="text" 
+                                        className="modal-input" 
+                                        placeholder="Salvador" 
+                                        value={camaraCity}
+                                        onChange={(e) => this.setState({ camaraCity: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Estado (UF)</label>
+                                    <input 
+                                        type="text" 
+                                        className="modal-input" 
+                                        placeholder="BA" 
+                                        value={camaraState}
+                                        onChange={(e) => this.setState({ camaraState: e.target.value })}
+                                        maxLength={2}
+                                    />
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>ID do Sistema (Slug)</label>
+                                    <input 
+                                        type="text" 
+                                        className="modal-input" 
+                                        value={camaraId}
+                                        readOnly
+                                        style={{ background: '#f5f5f5', color: '#666' }}
+                                    />
+                                    <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '5px' }}>Este ID será usado na URL (ex: e-camara.com/home/<strong>{camaraId || '...'}</strong>)</p>
                                 </div>
                             </div>
-                        ))}
-                        {existingCamaras.length === 0 && <p style={{ color: '#666', fontStyle: 'italic' }}>Nenhuma câmara encontrada.</p>}
-                    </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <button className="btn-primary" onClick={this.handleCreateCamara} disabled={creating} style={{ padding: '12px 25px' }}>
+                                    {creating ? 'Processando...' : <><FaCheckCircle /> Criar Câmara</>}
+                                </button>
+                            </div>
+
+                            <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '25px', marginTop: '50px', color: '#333', textAlign: 'left' }}>Câmaras Gerenciadas ({existingCamaras.length})</h3>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                                {existingCamaras.map(camara => (
+                                    <div key={camara.id} className="dashboard-card" style={{ padding: '20px', margin: 0, borderLeft: '4px solid #126B5E' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <h4 style={{ margin: '0 0 5px 0', color: '#333', fontSize: '1.1rem' }}>{camara.name}</h4>
+                                            <a href={`/home/${camara.id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#126B5E' }} title="Acessar Portal">
+                                                <FaExternalLinkAlt />
+                                            </a>
+                                        </div>
+                                        <p style={{ fontSize: '0.9rem', color: '#666', margin: '0 0 5px 0' }}>ID: <strong>{camara.id}</strong></p>
+                                        <p style={{ fontSize: '0.9rem', color: '#666', margin: '0 0 15px 0' }}>
+                                            {camara.city && `${camara.city} - ${camara.state}`}
+                                            {camara.createdAt && <span style={{display: 'block', fontSize: '0.8rem', color: '#999', marginTop: '5px'}}>Criada em: {new Date(camara.createdAt).toLocaleDateString()}</span>}
+                                        </p>
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                                            <button 
+                                                onClick={() => this.handleOpenUserModal(camara.id)}
+                                                className="btn-secondary" 
+                                                style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                            >
+                                                <FaUsers /> Usuários
+                                            </button>
+                                            <button 
+                                                onClick={() => this.handleOpenModulesModal(camara.id)}
+                                                className="btn-secondary" 
+                                                style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', background: '#e3f2fd', color: '#1565c0', borderColor: '#bbdefb' }}
+                                            >
+                                                <FaCogs /> Módulos
+                                            </button>
+                                            <button 
+                                                onClick={() => this.handleDeleteCamara(camara.id)} 
+                                                className="btn-danger" 
+                                                style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                                            >
+                                                <FaTrash /> Excluir
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {existingCamaras.length === 0 && <p style={{ color: '#666', fontStyle: 'italic' }}>Nenhuma câmara encontrada.</p>}
+                            </div>
+                        </div>
+                    ) : (
+                        this.renderAdminTab()
+                    )}
+
                 </div>
 
                 {/* Modal de Gestão de Usuários da Câmara */}

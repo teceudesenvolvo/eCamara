@@ -35,9 +35,9 @@ class JuizoMateria extends Component {
     }
 
     componentDidMount() {
-        
+
         const camaraId = this.props.match.params.camaraId;
-        
+
         this.setState({ camaraId });
         this.fetchConfigsAndLogo();
         this.fetchMaterias(camaraId);
@@ -75,7 +75,7 @@ class JuizoMateria extends Component {
             ]);
 
             const layoutData = layoutSnap.val() || {};
-            
+
             if (layoutData.logoLight) {
                 this.getBase64(layoutData.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
             } else {
@@ -210,7 +210,7 @@ class JuizoMateria extends Component {
     getDocDefinition = (materia, parecerText, decisao, signatureMetadata = null) => {
         const { logoBase64, homeConfig, footerConfig, camaraId } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
-        
+
         const cityName = homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
         const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
 
@@ -252,21 +252,21 @@ class JuizoMateria extends Component {
                 { text: parecerText || "Não foi fornecida fundamentação.", style: 'bodyText' },
 
                 { text: 'III - CONCLUSÃO', style: 'sectionHeader' },
-                { text: [ 'Diante do exposto, esta Procuradoria Jurídica opina pela ', { text: decisao === 'favoravel' ? 'CONSTITUCIONALIDADE e LEGALIDADE' : 'INCONSTITUCIONALIDADE e ILEGALIDADE', bold: true }, ' da proposição, nos termos da análise apresentada.' ], style: 'bodyText' },
+                { text: ['Diante do exposto, esta Procuradoria Jurídica opina pela ', { text: decisao === 'favoravel' ? 'CONSTITUCIONALIDADE e LEGALIDADE' : 'INCONSTITUCIONALIDADE e ILEGALIDADE', bold: true }, ' da proposição, nos termos da análise apresentada.'], style: 'bodyText' },
 
                 { text: `\n\n${cityName}, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
 
                 { text: '\n\n\n\n________________________________', style: 'signature', alignment: 'center' },
                 { text: 'Procurador Jurídico', style: 'signatureName', alignment: 'center' },
                 { text: 'OAB/XX 123.456', style: 'signatureOAB', alignment: 'center' },
-                signatureMetadata && { 
+                signatureMetadata && {
                     text: [
                         { text: '\nASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
                         { text: `Assinado por: ${signatureMetadata.nome} (${signatureMetadata.email})\n`, fontSize: 8 },
                         { text: `Data/Hora: ${new Date(signatureMetadata.timestamp).toLocaleString()}`, fontSize: 8 }
-                    ], 
-                    alignment: 'center', 
-                    style: 'digitalSignatureInfo' 
+                    ],
+                    alignment: 'center',
+                    style: 'digitalSignatureInfo'
                 }
             ].filter(Boolean),
             footer: (currentPage, pageCount) => ({
@@ -306,24 +306,24 @@ class JuizoMateria extends Component {
 
         // Filtros
         const filteredMaterias = materias.filter(m => {
-            const matchesSearch = 
+            const matchesSearch =
                 (m.titulo && m.titulo.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (m.numero && m.numero.includes(searchTerm)) ||
                 (m.autor && m.autor.toLowerCase().includes(searchTerm.toLowerCase()));
-            
-            const matchesStatus = filterStatus === 'Todos' || m.status === filterStatus;
+
+            const matchesStatus = filterStatus === 'Todos' || (m.status && m.status.includes(filterStatus));
             const matchesType = filterType === 'Todos' || m.tipoMateria === filterType;
 
             return matchesSearch && matchesStatus && matchesType;
         });
 
         // Contadores para os Cards de Stats
-        const countAguardando = materias.filter(m => m.status === 'Aguardando Parecer').length;
-        const countParecerEmitido = materias.filter(m => m.status.includes('Parecer')).length;
-        const countVotadas = materias.filter(m => m.status === 'votada').length;
+        const countAguardando = materias.filter(m => m.status && m.status.includes('Aguardando Parecer')).length;
+        const countParecerEmitido = materias.filter(m => m.decisao || (m.status && m.status.includes('Parecer') && !m.status.includes('Aguardando'))).length;
+        const countVotadas = materias.filter(m => m.status === 'votada' || m.status === 'Sancionado' || m.status === 'Despachado' || m.status === 'Arquivado').length;
 
         if (loading && materias.length === 0) {
-            return <div className='App-header' style={{justifyContent: 'center'}}><FaSpinner className="animate-spin" size={40} color="#126B5E" /></div>;
+            return <div className='App-header' style={{ justifyContent: 'center' }}><FaSpinner className="animate-spin" size={40} color="#126B5E" /></div>;
         }
 
         return (
@@ -331,7 +331,7 @@ class JuizoMateria extends Component {
                 <MenuDashboard />
 
                 <div className="dashboard-content">
-                    
+
                     {selectedMateria ? (
                         // --- PÁGINA DE PARECER (Substitui o Modal) ---
                         <div className="dashboard-card">
@@ -370,35 +370,35 @@ class JuizoMateria extends Component {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                                     <label style={{ display: 'block', fontWeight: 'bold', color: '#333', fontSize: '1.1rem' }}>Fundamentação Jurídica</label>
                                     <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button 
-                                            onClick={() => this.handleViewDetail(selectedMateria)} 
+                                        <button
+                                            onClick={() => this.handleViewDetail(selectedMateria)}
                                             className="btn-secondary"
                                             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                                         >
                                             <FaFileAlt /> Ver Texto Original
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => this.openParecerPDF(selectedMateria, parecerText, 'favoravel')} // A decisão aqui é só para preview
                                             className="btn-secondary"
                                         >
                                             <FaEye style={{ marginRight: '8px', color: '#555' }} />
                                             Visualizar PDF
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={this.handleGenerateParecerWithAI}
                                             disabled={isGeneratingParecer}
                                             className="btn-primary"
                                             style={{ color: '#fff', borderColor: '#126B5E' }}
                                         >
-                                            <FaMagic style={{ marginRight: '8px', color: '#fff' }} /> 
+                                            <FaMagic style={{ marginRight: '8px', color: '#fff' }} />
                                             {isGeneratingParecer ? 'Gerando...' : 'Sugerir com IA'}
                                         </button>
                                     </div>
                                 </div>
-                                <textarea 
-                                    rows="20" 
+                                <textarea
+                                    rows="20"
                                     className="modal-textarea"
-                                    style={{ 
+                                    style={{
                                         background: isGeneratingParecer ? '#f5f5f5' : '#fff',
                                         border: '1px solid #ccc',
                                         padding: '15px',
@@ -415,14 +415,14 @@ class JuizoMateria extends Component {
 
                             {/* Ações */}
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                                <button 
+                                <button
                                     onClick={() => this.handleSubmitParecer('contrario')}
                                     className="btn-danger"
                                     style={{ padding: '12px 25px', fontSize: '1rem' }}
                                 >
                                     <FaTimesCircle style={{ marginRight: '8px' }} /> Parecer Contrário
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => this.handleSubmitParecer('favoravel')}
                                     className="btn-success"
                                     style={{ padding: '12px 25px', fontSize: '1rem' }}
@@ -436,10 +436,13 @@ class JuizoMateria extends Component {
                         <>
                             {/* Header */}
                             <div className="dashboard-header">
-                                <h1 className="dashboard-header-title">
-                                    <FaGavel style={{color: 'var(--primary-color)'}} /> Triagem e Pareceres
-                                </h1>
+                                <div>
+                                    <h1 className="dashboard-header-title">
+                                        <FaGavel style={{ color: 'var(--primary-color)' }} /> Triagem e Pareceres
+                                    </h1>
                                 <p className="dashboard-header-desc">Gestão jurídica e legislativa das matérias em tramitação.</p>
+                                </div>
+
                             </div>
 
                             {/* Stats Cards */}
@@ -462,16 +465,16 @@ class JuizoMateria extends Component {
                             <div className="dashboard-filter-bar">
                                 <div className="search-input-wrapper">
                                     <FaSearch className="search-icon" />
-                                    <input 
-                                        type="text"  
-                                        placeholder="Buscar por número, ementa ou autor..." 
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por número, ementa ou autor..."
                                         value={searchTerm}
                                         onChange={(e) => this.setState({ searchTerm: e.target.value })}
                                         className="search-input"
                                     />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <select 
+                                    <select
                                         value={filterType}
                                         onChange={(e) => this.setState({ filterType: e.target.value })}
                                         className="filter-select"
@@ -484,7 +487,7 @@ class JuizoMateria extends Component {
                                     </select>
 
                                     <FaFilter color="#666" />
-                                    <select 
+                                    <select
                                         value={filterStatus}
                                         onChange={(e) => this.setState({ filterStatus: e.target.value })}
                                         className="filter-select"
@@ -514,9 +517,9 @@ class JuizoMateria extends Component {
                                                     </span>
                                                 )}
                                             </div>
-                                            <h3 className="list-item-title" style={{fontWeight: '600'}}>{materia.titulo}</h3>
-                                            <button 
-                                                onClick={() => this.handleViewDetail(materia)} 
+                                            <h3 className="list-item-title" style={{ fontWeight: '600' }}>{materia.titulo}</h3>
+                                            <button
+                                                onClick={() => this.handleViewDetail(materia)}
                                                 style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: 0, fontSize: '0.85rem', fontWeight: '600', marginBottom: '10px' }}
                                             >
                                                 <FaEye size={12} /> Ver Matéria Completa
@@ -531,11 +534,11 @@ class JuizoMateria extends Component {
 
                                         <div className="list-item-actions">
                                             <div style={{ textAlign: 'right' }}>
-                                                <span style={{ 
+                                                <span style={{
                                                     display: 'block',
-                                                    padding: '6px 12px', 
-                                                    borderRadius: '20px', 
-                                                    fontSize: '0.8rem', 
+                                                    padding: '6px 12px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '0.8rem',
                                                     fontWeight: 'bold',
                                                     background: materia.status === 'Aguardando Parecer' ? '#fff3e0' : (materia.decisao === 'favoravel' ? '#e8f5e9' : (materia.decisao === 'contrario' ? '#ffebee' : '#f5f5f5')),
                                                     color: materia.status === 'Aguardando Parecer' ? '#ef6c00' : (materia.decisao === 'favoravel' ? '#2e7d32' : (materia.decisao === 'contrario' ? '#d32f2f' : '#666'))
@@ -544,14 +547,14 @@ class JuizoMateria extends Component {
                                                 </span>
                                             </div>
                                             {materia.parecerDate ? (
-                                                <button 
+                                                <button
                                                     onClick={() => this.openParecerPDF(materia, materia.parecer, materia.decisao)}
                                                     className="btn-primary"
                                                 >
                                                     <FaFileAlt /> Visualizar
                                                 </button>
                                             ) : (
-                                                <button 
+                                                <button
                                                     onClick={() => this.handleOpenParecer(materia)}
                                                     className="btn-primary"
                                                 >
@@ -583,12 +586,12 @@ class JuizoMateria extends Component {
                                     <div>
                                         <h4 style={{ color: 'var(--primary-color)', marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>Ementa</h4>
                                         <p style={{ fontStyle: 'italic', color: '#555', marginBottom: '20px', lineHeight: '1.5' }}>{viewingMateria.ementa}</p>
-                                        
+
                                         <h4 style={{ color: 'var(--primary-color)', marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>Texto da Proposição</h4>
-                                        <div 
+                                        <div
                                             className="materia-content-view"
                                             style={{ lineHeight: '1.6', color: '#333', fontSize: '1rem' }}
-                                            dangerouslySetInnerHTML={{ __html: viewingMateria.textoMateria }} 
+                                            dangerouslySetInnerHTML={{ __html: viewingMateria.textoMateria }}
                                         />
                                     </div>
                                 </div>

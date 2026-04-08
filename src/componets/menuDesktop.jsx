@@ -1,16 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-    FaHome, FaGavel, FaFileAlt, FaVideo, FaBook, FaBars, FaTimes, FaUsers, FaRobot
+    FaHome, FaGavel, FaFileAlt, FaVideo, FaBook, FaBars, FaTimes, FaUsers, FaRobot,
+    FaCalendarCheck, FaBalanceScale, FaIdCard, FaGraduationCap, FaCommentDots, FaBullhorn, FaFemale, FaBriefcase, FaTv
 } from 'react-icons/fa';
 import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
 import '../App.css';
+import { db } from '../firebaseConfig';
+import { ref, get } from 'firebase/database';
 
 const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
     const location = useLocation();
+    const [activeModules, setActiveModules] = useState({});
 
     // Função auxiliar para verificar se a rota está ativa
     const isActive = (path) => location.pathname === path ? 'link-desktop-active' : '';
+
+    useEffect(() => {
+        if (!camaraId) return;
+
+        const fetchModules = async () => {
+            try {
+                const modulesRef = ref(db, `${camaraId}/dados-config/modulos_ativos`);
+                const snapshot = await get(modulesRef);
+                if (snapshot.exists()) {
+                    setActiveModules(snapshot.val());
+                }
+            } catch (error) {
+                console.error("Erro ao carregar módulos ativos:", error);
+            }
+        };
+
+        fetchModules();
+    }, [camaraId]);
+
+    // Lista de serviços para renderização dinâmica (mesma lógica do menu admin)
+    const publicServices = [
+        { id: 'agendamentos', label: 'Agendamentos', path: 'sessoes', icon: <FaCalendarCheck className="icon-desktop" /> },
+        { id: 'assistenciaJuridica', label: 'Assist. Jurídica', path: 'normas', icon: <FaBalanceScale className="icon-desktop" /> },
+        { id: 'balcaoCidadao', label: 'Balcão Cidadão', path: 'home', icon: <FaIdCard className="icon-desktop" /> },
+        { id: 'escolaLegislativo', label: 'Escola Legislativo', path: 'home', icon: <FaGraduationCap className="icon-desktop" /> },
+        { id: 'falarComVereador', label: 'Falar c/ Vereador', path: 'home', icon: <FaCommentDots className="icon-desktop" /> },
+        { id: 'ouvidoria', label: 'Ouvidoria', path: 'home', icon: <FaBullhorn className="icon-desktop" /> },
+        { id: 'procon', label: 'Procon', path: 'home', icon: <FaBalanceScale className="icon-desktop" /> },
+        { id: 'procuradoriaMulher', label: 'Proc. da Mulher', path: 'home', icon: <FaFemale className="icon-desktop" /> },
+        { id: 'salaEmpreendedor', label: 'Sala Empreendedor', path: 'home', icon: <FaBriefcase className="icon-desktop" /> },
+        { id: 'tvCamara', label: 'TV Câmara', path: 'home', icon: <FaTv className="icon-desktop" /> },
+    ];
+
+    // Verifica se deve exibir a seção de Legislativo
+    const showLegislativo = activeModules.sessoes || activeModules.comissoes || true; // Matérias e Normas costumam ser core
 
     return (
         <>
@@ -33,12 +72,15 @@ const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
                         <span className="text-desktop">Início</span>
                     </Link>
 
-                    <div className="divider-desktop">Legislativo</div>
+                    {showLegislativo && <div className="divider-desktop">Legislativo</div>}
 
-                    <Link to={`/sessoes/${camaraId}`} className={`aDesktop ${isActive(`/sessoes/${camaraId}`)}`}>
-                        <FaGavel className="icon-desktop" />
-                        <span className="text-desktop">Sessões</span>
-                    </Link>
+                    {activeModules.sessoes && (
+                        <Link to={`/sessoes/${camaraId}`} className={`aDesktop ${isActive(`/sessoes/${camaraId}`)}`}>
+                            <FaGavel className="icon-desktop" />
+                            <span className="text-desktop">Sessões</span>
+                        </Link>
+                    )}
+                    
                     <Link to={`/materias/${camaraId}`} className={`aDesktop ${isActive(`/materias/${camaraId}`)}`}>
                         <FaFileAlt className="icon-desktop" />
                         <span className="text-desktop">Matérias</span>
@@ -48,17 +90,36 @@ const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
                         <FaBook className="icon-desktop" />
                         <span className="text-desktop">Normas</span>
                     </Link>
-                    <Link to={`/comissoes/${camaraId}`} className={`aDesktop ${isActive(`/comissoes/${camaraId}`)}`}>
-                        <FaUsers className="icon-desktop" />
-                        <span className="text-desktop">Comissões</span>
-                    </Link>
 
-                    <div className="divider-desktop">Camara AI</div>
+                    {activeModules.comissoes && (
+                        <Link to={`/comissoes/${camaraId}`} className={`aDesktop ${isActive(`/comissoes/${camaraId}`)}`}>
+                            <FaUsers className="icon-desktop" />
+                            <span className="text-desktop">Comissões</span>
+                        </Link>
+                    )}
 
-                    <div className={`aDesktop`} onClick={onOpenChat} style={{ cursor: 'pointer' }}>
-                        <FaRobot className="icon-desktop" />
-                        <span className="text-desktop">Falar com IA</span>
-                    </div>
+                    {/* Seção de Serviços ao Cidadão (Dinâmica) */}
+                    {publicServices.some(s => activeModules[s.id]) && (
+                        <>
+                            <div className="divider-desktop">Serviços</div>
+                            {publicServices.map(service => activeModules[service.id] && (
+                                <Link key={service.id} to={`/${service.path}/${camaraId}`} className="aDesktop">
+                                    {service.icon}
+                                    <span className="text-desktop">{service.label}</span>
+                                </Link>
+                            ))}
+                        </>
+                    )}
+
+                    {activeModules.assistente && (
+                        <>
+                            <div className="divider-desktop">Camara AI</div>
+                            <div className={`aDesktop`} onClick={onOpenChat} style={{ cursor: 'pointer' }}>
+                                <FaRobot className="icon-desktop" />
+                                <span className="text-desktop">Falar com IA</span>
+                            </div>
+                        </>
+                    )}
                 </nav>
             </div>
         </>

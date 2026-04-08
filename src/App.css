@@ -5359,8 +5359,14 @@ footer>p {
   gap: 15px;
 }
 
+.btgManagerSection{
+  font-size: 14px !important;
+  color: #a3a3a3;
+}
+
 .dashboard-header-desc {
   color: #666;
+  font-size: 14px;
   margin: 5px 0 0 0;
 }
 

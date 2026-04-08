@@ -104,15 +104,6 @@ class JuizoPresidente extends Component {
                 homeConfig: homeSnap.val() || {},
                 footerConfig: footerSnap.val() || {}
             });
-            const getBase64 = async (url) => {
-                const response = await fetch(url);
-                const blob = await response.blob();
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.readAsDataURL(blob);
-                });
-            };
         } catch (error) {
             console.error("Erro ao carregar configurações:", error);
         }
@@ -396,33 +387,37 @@ class JuizoPresidente extends Component {
         if (selectedMateria.status === 'Aprovado na Comissão') {
             return (
                 <button 
+                    key="btn-plenario"
                     onClick={() => this.openPasswordModal('Enviado para Plenário')}
-                    className="btn-primary"
+                    className="btn-primary" style={{ flex: 1 }}
                 >
                     <FaPaperPlane /> Enviar para Plenário
                 </button>
             );
         }
 
-        // Regra do Parecer Favorável: Arquivar, Comissões ou Plenário
-        if (selectedMateria.status === 'Parecer Favorável') {
+        // Regra do Parecer Favorável ou Aguardando: Arquivar, Comissões ou Plenário
+        if (selectedMateria.status === 'Parecer Favorável' || selectedMateria.status === 'Aguardando Despacho da Presidência') {
             return (
                 <>
                     <button 
+                        key="btn-arquivar"
                         onClick={() => this.openPasswordModal('Arquivado')}
-                        className="btn-danger"
+                        className="btn-danger" style={{ flex: 1 }}
                     >
                         <FaArchive /> Arquivar
                     </button>
                     <button 
+                        key="btn-comissao"
                         onClick={() => this.openPasswordModal('Encaminhado às Comissões')}
                         className="btn-primary"
                     >
                         <FaPaperPlane /> Enviar para Comissão
                     </button>
                     <button 
+                        key="btn-plenario-f"
                         onClick={() => this.openPasswordModal('Enviado para Plenário')}
-                        className="btn-success"
+                        className="btn-success" style={{ flex: 1 }}
                     >
                         <FaCheckCircle /> Enviar para Plenário
                     </button>
@@ -435,14 +430,16 @@ class JuizoPresidente extends Component {
             return (
                 <>
                     <button 
+                        key="btn-despachar"
                         onClick={() => this.openPasswordModal('Despachado')}
-                        className="btn-success"
+                        className="btn-success" style={{ flex: 1 }}
                     >
                         <FaCheckCircle /> Despachar
                     </button>
                     <button 
+                        key="btn-plenario-req"
                         onClick={() => this.openPasswordModal('Enviado para Plenário')}
-                        className="btn-primary"
+                        className="btn-primary" style={{ flex: 1 }}
                     >
                         <FaPaperPlane /> Enviar para Plenário
                     </button>
@@ -454,14 +451,16 @@ class JuizoPresidente extends Component {
         return (
             <>
                 <button 
+                    key="btn-arquivar-g"
                     onClick={() => this.openPasswordModal('Arquivado')}
-                    className="btn-danger"
+                    className="btn-danger" style={{ flex: 1 }}
                 >
                     <FaArchive /> Arquivar
                 </button>
                 <button 
+                    key="btn-comissao-g"
                     onClick={() => this.openPasswordModal('Encaminhado às Comissões')}
-                    className="btn-primary"
+                    className="btn-primary" style={{ flex: 1 }}
                 >
                     <FaPaperPlane /> Enviar para Comissão
                 </button>
@@ -512,123 +511,133 @@ class JuizoPresidente extends Component {
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
 
-                <div className="dashboard-content" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
-                    {/* --- Coluna da Esquerda: Lista e Filtros --- */}
-                    <div style={{ flex: 1, maxWidth: '500px' }}>
-                        {/* Header */}
-                        <div className="dashboard-header" style={{ marginBottom: '20px' }}>
-                            <div>
-                                <h1 className="dashboard-header-title">
-                                    <FaBalanceScale /> Juízo
-                                </h1>
-                                <p className="dashboard-header-desc">Despachos da Presidência.</p>
-                            </div>
-                        </div>
-
-                        {/* Search and Tabs */}
-                        <div className="dashboard-card" style={{ padding: '15px', marginBottom: '20px' }}>
-                            <div className="search-input-wrapper" style={{ marginBottom: '15px' }}>
-                                <FaSearch className="search-icon" />
-                                <input 
-                                    type="text"
-                                    placeholder="Buscar matérias..."
-                                    className="search-input"
-                                    value={searchTerm}
-                                    onChange={this.handleSearchChange}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                {['Pendentes', 'Comissão', 'Plenário', 'Finalizadas'].map(tab => (
-                                    <button 
-                                        key={tab} 
-                                        onClick={() => this.handleTabChange(tab)}
-                                        className={activeTab === tab ? 'btn-primary' : 'btn-secondary'}
-                                        style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}
-                                    >
-                                        {tab}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Lista de Matérias */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', paddingRight: '10px' }}>
-                            {materiasFiltradas.length > 0 ? materiasFiltradas.map((materia) => (
-                                <div 
-                                    key={materia.id} 
-                                    className="list-item dashboard-card-hover" 
-                                    style={{ 
-                                        flexDirection: 'column', 
-                                        alignItems: 'flex-start', 
-                                        padding: '15px', 
-                                        cursor: 'pointer',
-                                        borderLeft: `4px solid ${selectedMateria && selectedMateria.id === materia.id ? '#FF740F' : (materia.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50')}`
-                                    }}
-                                    onClick={() => this.handleSelectMateria(materia)}
-                                >
-                                    <div className="list-item-header" style={{ marginBottom: '5px' }}>
-                                        <span className="tag tag-primary">{materia.tipo} {materia.numero}</span>
-                                        <span className={`tag ${materia.status.includes('Aguardando') || materia.status.includes('Aprovado') ? 'tag-warning' : 'tag-neutral'}`}>{materia.status}</span>
-                                    </div>
-                                    <p className="list-item-title" style={{ fontSize: '1rem', margin: 0 }}>{materia.ementa}</p>
-                                </div>
-                            )) : (
-                                <div className="dashboard-card" style={{ textAlign: 'center', color: '#888' }}>
-                                    <p>Nenhuma matéria encontrada nesta aba.</p>
-                                </div>
-                            )}
+                <div className="dashboard-content">
+                    <div className="dashboard-header" style={{ marginBottom: '30px' }}>
+                        <div>
+                            <h1 className="dashboard-header-title" style={{ fontSize: '20px' }}>
+                                <FaBalanceScale style={{ fontSize: '20px', color: 'var(--primary-color)' }} /> Juízo da Presidência
+                            </h1>
+                            <p style={{ fontSize: '15px'}} className="dashboard-header-desc">Gerenciamento de admissibilidade e despachos legislativos.</p>
                         </div>
                     </div>
 
-                    {/* --- Coluna da Direita: Detalhes e Ações --- */}
-                    <div style={{ flex: 1.5, position: 'sticky', top: '40px', height: 'calc(100vh - 80px)' }}>
-                        {selectedMateria ? (
-                            <div className="dashboard-card" style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                                <h2 className="modal-header" style={{ justifyContent: 'flex-start' }}>
-                                    Despacho da Matéria
-                                </h2>
-                                
-                                {/* Resumo e Texto Original */}
-                                <div style={{ marginBottom: '25px', textAlign: 'left' }}>
-                                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                                        <span className="tag tag-primary">{selectedMateria.tipo} {selectedMateria.numero}</span>
-                                        <span className="tag tag-neutral"><FaCalendarAlt size={12} /> {selectedMateria.dataApresenta}</span>
+                    {/* --- Navegação por Abas e Busca --- */}
+                    <div className="dashboard-card" style={{ padding: '10px 20px', marginBottom: '30px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                            {['Pendentes', 'Comissão', 'Plenário', 'Finalizadas'].map(tab => (
+                                <button 
+                                    key={tab} 
+                                    onClick={() => this.handleTabChange(tab)}
+                                    style={{ 
+                                        padding: '12px 25px', 
+                                        fontSize: '0.9rem', 
+                                        border: 'none', 
+                                        background: activeTab === tab ? 'var(--primary-color)' : 'transparent',
+                                        color: activeTab === tab ? '#fff' : '#666',
+                                        borderRadius: '12px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s'
+                                    }}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="search-input-wrapper" style={{ flex: '0 1 400px', margin: 0 }}>
+                                <FaSearch className="search-icon" />
+                                <input 
+                                    type="text"
+                                    placeholder="Pesquisar matéria..."
+                                    className="search-input"
+                                    style={{ background: '#f8f9fa' }}
+                                    value={searchTerm}
+                                    onChange={this.handleSearchChange}
+                                />
+                        </div>
+                    </div>
+
+                    {/* --- Lista de Matérias em Grid --- */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
+                        {materiasFiltradas.length > 0 ? materiasFiltradas.map((materia) => (
+                            <div 
+                                key={materia.id} 
+                                className="dashboard-card dashboard-card-hover" 
+                                style={{ 
+                                    padding: '25px',
+                                    cursor: 'pointer',
+                                    borderRadius: '20px',
+                                    borderLeft: `6px solid ${materia.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}`,
+                                    margin: 0
+                                }}
+                                onClick={() => this.handleSelectMateria(materia)}
+                            >
+                                <div className="list-item-header" style={{ marginBottom: '15px', justifyContent: 'space-between' }}>
+                                    <span className="tag tag-primary" style={{ fontSize: '0.75rem', padding: '5px 12px' }}>{materia.tipo} {materia.numero}</span>
+                                    <span className={`tag ${materia.status.includes('Aguardando') || materia.status.includes('Aprovado') ? 'tag-warning' : 'tag-neutral'}`} style={{ fontSize: '0.7rem' }}>{materia.status}</span>
+                                </div>
+                                <p className="list-item-title" style={{ fontSize: '1rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '15px', height: '3em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{materia.ementa}</p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                    <div>
+                                        <span style={{ color: '#888' }}>Autor:</span> <strong style={{ color: '#444' }}>{materia.autor}</strong>
                                     </div>
-                                    <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '10px', borderLeft: '4px solid #ccc', marginBottom: '15px' }}>
-                                        <p style={{ margin: 0, lineHeight: '1.5', color: '#333', fontStyle: 'italic', fontSize: '0.95rem' }}>"{selectedMateria.ementa}"</p>
+                                    <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Analisar <FaGavel /></span>
+                                </div>
+                            </div>
+                        )) : (
+                            <div style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '24px' }}>
+                                <FaInbox size={40} style={{ marginBottom: '15px', opacity: 0.3 }} />
+                                <p style={{ fontSize: '13px', opacity: 0.3 }}>Nenhuma matéria encontrada nesta categoria.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* --- Popup (Modal) de Detalhes --- */}
+                {selectedMateria && (
+                    <div className="modal-overlay" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+                        <div className="modal-content" style={{ width: '900px', maxWidth: '95vw', padding: 0, borderRadius: '24px', overflow: 'hidden' }}>
+                            <div style={{ height: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '30px', background: '#fff', borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 10 }}>
+                                    <div>
+                                        <h2 style={{ margin: 0, color: '#126B5E', fontSize: '1.4rem', textAlign: 'left' }}>Analise de Admissibilidade</h2>
+                                        <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '0.9rem', textAlign: 'left' }}>{selectedMateria.tipo} {selectedMateria.numero} - {selectedMateria.autor}</p>
                                     </div>
-                                    
-                                    {/* Grid de Dados Técnicos */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', padding: '15px', background: '#fff', border: '1px solid #eee', borderRadius: '8px', marginBottom: '15px' }}>
-                                        <div>
+                                    <button onClick={this.handleCloseDetails} style={{ background: '#f0f2f5', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
+                                </div>
+
+                                <div style={{ padding: '30px' }}>
+                                    {/* Resumo e Grid de Dados */}
+                                    <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '16px', borderLeft: '4px solid #ccc', marginBottom: '25px' }}>
+                                        <p style={{ margin: 0, lineHeight: '1.6', color: '#333', fontStyle: 'italic', fontSize: '1rem', textAlign: 'left' }}>"{selectedMateria.ementa}"</p>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
+                                        <div style={{ textAlign: 'left', background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee' }}>
                                             <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Protocolo</label>
-                                            <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{selectedMateria.protocolo || 'N/A'}</p>
+                                            <p style={{ margin: '5px 0 0 0', fontWeight: '600', color: '#333' }}>{selectedMateria.protocolo || 'N/A'}</p>
                                         </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Objeto</label>
-                                            <p style={{ margin: 0, fontWeight: '600', color: '#333', fontSize: '0.85rem' }}>{selectedMateria.objeto || 'Não informado'}</p>
-                                        </div>
-                                        <div>
+                                        <div style={{ textAlign: 'left', background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee' }}>
                                             <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Matéria Polêmica?</label>
-                                            <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{selectedMateria.materiaPolemica || 'Não'}</p>
+                                            <p style={{ margin: '5px 0 0 0', fontWeight: '600', color: selectedMateria.materiaPolemica === 'Sim' ? '#d32f2f' : '#333' }}>{selectedMateria.materiaPolemica || 'Não'}</p>
                                         </div>
-                                        <div>
+                                        <div style={{ textAlign: 'left', background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee' }}>
                                             <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Tipo de Lei</label>
-                                            <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{selectedMateria.isComplementar ? 'Lei Complementar' : 'Lei Ordinária'}</p>
+                                            <p style={{ margin: '5px 0 0 0', fontWeight: '600', color: '#333' }}>{selectedMateria.isComplementar ? 'Lei Complementar' : 'Lei Ordinária'}</p>
                                         </div>
                                     </div>
 
-                                    {/* Ações do PDF Original */}
-                                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                                        <button className="btn-secondary" onClick={() => window.open(`data:application/pdf;base64,${selectedMateria.pdfBase64}`)} style={{ fontSize: '0.8rem', padding: '8px 12px' }}>
+                                    {/* Ações do PDF */}
+                                    <div style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
+                                        <button className="btn-secondary" onClick={() => window.open(`data:application/pdf;base64,${selectedMateria.pdfBase64}`)} style={{ flex: 1, height: '45px' }}>
                                             <FaEye /> Ver PDF Original
                                         </button>
-                                        <button className="btn-secondary" onClick={this.handleDownloadOriginalPDF} style={{ fontSize: '0.8rem', padding: '8px 12px' }}>
-                                            <FaDownload /> Baixar PDF
+                                        <button className="btn-secondary" onClick={this.handleDownloadOriginalPDF} style={{ flex: 1, height: '45px' }}>
+                                            <FaDownload /> Baixar Arquivo
                                         </button>
                                     </div>
-                                </div>
-                                
+
                                 {/* Parecer Jurídico */}
                                 <div style={{ textAlign: 'left', background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: `4px solid ${selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}` }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -648,7 +657,7 @@ class JuizoPresidente extends Component {
                                         borderRadius: '6px',
                                         border: '1px solid #eee'
                                     }}>
-                                        {selectedMateria.parecer}
+                                        {selectedMateria.parecer || "Nenhum parecer jurídico registrado até o momento."}
                                     </div>
                                 </div>
 
@@ -714,19 +723,14 @@ class JuizoPresidente extends Component {
                                     ></textarea>
                                 </div>
                                 </div>
-
-                                <div className="modal-footer" style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid #eee' }}>
-                                    {this.renderActionButtons()}
+                                </div>
+                                <div className="modal-footer" style={{ padding: '20px 30px', background: '#f8f9fa', borderTop: '1px solid #eee' }}>
+                                    <div style={{ display: 'flex', gap: '10px', width: '100%' }}>{this.renderActionButtons()}</div>
                                 </div>
                             </div>
-                        ) : (
-                            <div className="dashboard-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#888', textAlign: 'center' }}>
-                                <FaInbox size={50} style={{ marginBottom: '20px' }} />
-                                <h3>Selecione uma matéria</h3>
-                                <p>Clique em uma matéria na lista à esquerda para ver os detalhes e realizar o despacho.</p>
                             </div>
-                        )}
                     </div>
+                )}
 
                     {/* Modal de Senha para Assinatura */}
                     {showPasswordModal && (
@@ -754,7 +758,6 @@ class JuizoPresidente extends Component {
                         </div>
                     )}
                 </div>
-            </div>
         );
     }
 }
