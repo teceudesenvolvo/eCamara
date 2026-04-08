@@ -6061,6 +6061,11 @@ footer>p {
   padding: 40px;
   box-sizing: border-box;
   min-height: 100vh;
+  
+}
+
+.jsZLJS{
+  right: 50px !important;
 }
 
 /* Media query para desktop para o dashboard-content */

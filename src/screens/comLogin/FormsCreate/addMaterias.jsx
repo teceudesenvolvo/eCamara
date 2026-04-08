@@ -897,9 +897,9 @@ class AddProducts extends Component {
                 
                 <Box component="main" sx={{ 
                     flexGrow: 1, 
-                    p: { xs: 2, md: 4 },
-                    ml: { xs: 0, md: '85px' }, // Respeita a largura do sidebar fixo
-                    width: { xs: '100%', md: 'calc(100% - 85px)' },
+                    p: { xs: 2, md: 5 },
+                    ml: { xs: 0, md: '65px' }, // Ajustado para a largura do menu lateral
+                    width: { xs: '100%', md: 'calc(100% - 65px)' },
                     maxWidth: '1400px', 
                     display: 'flex',
                     flexDirection: 'column',
@@ -964,8 +964,8 @@ class AddProducts extends Component {
 
                     <Grid container spacing={4}>
                         {/* Coluna de Dados Técnicos */}
-                        <Grid className="MuiGrid-item" item xs={11} md={4}>
-                            <Card sx={{ borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                        <Grid item xs={12} md={4}>
+                            <Card sx={{ borderRadius: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.05)', height: '100%' }}>
                                 <CardContent sx={{ p: 3 }}>
                                     <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: '#1a1a1a', fontWeight: 700 }}>
                                         <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'rgba(18, 107, 94, 0.1)', display: 'flex' }}>
@@ -1063,8 +1063,8 @@ class AddProducts extends Component {
                         </Grid>
 
                         {/* Coluna de Conteúdo e Editor */}
-                        <Grid item xs={10} md={8} className="MuiGrid-item">
-                            <Card sx={{ borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                        <Grid item xs={12} md={8}>
+                            <Card sx={{ borderRadius: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
                                 <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
                                     
                                     {/* Botão Único de Geração */}
@@ -1164,28 +1164,67 @@ class AddProducts extends Component {
                     </Grid>
                 </Box>
 
-                {/* Botão Flutuante de Chat AI */}
-                <Button 
-                    variant="contained" 
-                    onClick={this.toggleAiChat}
-                    sx={{ 
-                        position: 'fixed', 
-                        bottom: 30, 
-                        right: 30, 
-                        width: 65, 
-                        height: 65, 
-                        borderRadius: '50%', 
-                        minWidth: 0,
-                        p: 0,
-                        backgroundColor: '#FF740F',
-                        boxShadow: '0 8px 24px rgba(255, 116, 15, 0.4)',
-                        zIndex: 5001,
-                        '&:hover': { backgroundColor: '#e6680d', transform: 'scale(1.05)' },
-                        transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                    }}
-                >
-                    {showAiChat ? <FaTimes size={24} /> : <FaRobot size={30} />}
-                </Button>
+                {/* Botão Flutuante de Chat AI com Balão de Sugestão */}
+                <Box sx={{ 
+                    position: 'fixed', 
+                    bottom: 30, 
+                    right: 30, 
+                    zIndex: 5001, 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    '@keyframes slideHint': {
+                        '0%': { transform: 'translateX(0px)', opacity: 0.8 },
+                        '50%': { transform: 'translateX(-5px)', opacity: 1 },
+                        '100%': { transform: 'translateX(0px)', opacity: 0.8 }
+                    }
+                }}>
+                    {!showAiChat && (
+                        <Box sx={{
+                            backgroundColor: 'white',
+                            color: '#333',
+                            px: 2,
+                            py: 1,
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                            mr: 2,
+                            fontSize: '0.85rem',
+                            fontWeight: '700',
+                            position: 'relative',
+                            whiteSpace: 'nowrap',
+                            animation: 'slideHint 3s ease-in-out infinite',
+                            border: '1px solid #eee',
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                right: '-8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                borderTop: '8px solid transparent',
+                                borderBottom: '8px solid transparent',
+                                borderLeft: '8px solid white',
+                            }
+                        }}>
+                            Crie a matéria com IA.
+                        </Box>
+                    )}
+                    <Button 
+                        variant="contained" 
+                        onClick={this.toggleAiChat}
+                        sx={{ 
+                            width: 65, 
+                            height: 65, 
+                            borderRadius: '50%', 
+                            minWidth: 0,
+                            p: 0,
+                            backgroundColor: '#FF740F',
+                            boxShadow: '0 8px 24px rgba(255, 116, 15, 0.4)',
+                            '&:hover': { backgroundColor: '#e6680d', transform: 'scale(1.05)' },
+                            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                        }}
+                    >
+                        {showAiChat ? <FaTimes size={24} /> : <FaRobot size={30} />}
+                    </Button>
+                </Box>
 
                 {/* Janela de Chat AI (Widget no Canto Inferior Direito) */}
                 {showAiChat && (

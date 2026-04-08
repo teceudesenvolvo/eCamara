@@ -586,7 +586,7 @@ class JuizoPresidente extends Component {
                                 </div>
                             </div>
                         )) : (
-                            <div style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '24px' }}>
+                            <div style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', color: '#999', background: 'transparent', borderRadius: '24px' }}>
                                 <FaInbox size={40} style={{ marginBottom: '15px', opacity: 0.3 }} />
                                 <p style={{ fontSize: '13px', opacity: 0.3 }}>Nenhuma matéria encontrada nesta categoria.</p>
                             </div>

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaGavel, FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye, FaSpinner, FaHistory } from 'react-icons/fa';
+import { FaGavel, FaSearch, FaTimes, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye, FaSpinner, FaHistory, FaUserTie, FaCalendarAlt, FaExchangeAlt } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -18,6 +18,7 @@ class JuizoMateria extends Component {
             searchTerm: '',
             filterStatus: 'Todos',
             filterType: 'Todos',
+            filterYear: 'Todos',
             selectedMateria: null,
             parecerText: '',
             logoBase64: null,
@@ -302,7 +303,7 @@ class JuizoMateria extends Component {
 
 
     render() {
-        const { searchTerm, filterStatus, filterType, materias, selectedMateria, isGeneratingParecer, parecerText, loading, showDetailModal, viewingMateria, showPdfPopup, pdfData } = this.state;
+        const { searchTerm, filterStatus, filterType, filterYear, materias, selectedMateria, isGeneratingParecer, parecerText, loading, showDetailModal, viewingMateria, showPdfPopup, pdfData } = this.state;
 
         // Filtros
         const filteredMaterias = materias.filter(m => {
@@ -313,9 +314,13 @@ class JuizoMateria extends Component {
 
             const matchesStatus = filterStatus === 'Todos' || (m.status && m.status.includes(filterStatus));
             const matchesType = filterType === 'Todos' || m.tipoMateria === filterType;
+            const matchesYear = filterYear === 'Todos' || m.ano === filterYear;
 
-            return matchesSearch && matchesStatus && matchesType;
+            return matchesSearch && matchesStatus && matchesType && matchesYear;
         });
+
+        // Extrair anos únicos para o filtro
+        const years = [...new Set(materias.map(m => m.ano))].filter(Boolean).sort((a, b) => b - a);
 
         // Contadores para os Cards de Stats
         const countAguardando = materias.filter(m => m.status && m.status.includes('Aguardando Parecer')).length;
@@ -446,117 +451,187 @@ class JuizoMateria extends Component {
                             </div>
 
                             {/* Stats Cards */}
-                            <div className="dashboard-grid-stats">
-                                <div className="stat-card" style={{ borderLeftColor: '#f57c00' }}>
-                                    <h3 style={{ margin: 0, color: '#f57c00' }}>{countAguardando}</h3>
-                                    <p style={{ margin: 0, color: '#666' }}>Aguardando Parecer</p>
+                            <div className="dashboard-grid-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+                                <div className="stat-card" style={{ borderLeft: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '80px', padding: '15px' }}>
+                                    <div>
+                                        <p style={{ margin: 0, color: '#666', fontSize: '0.75rem', fontWeight: 600 }}>Aguardando Parecer</p>
+                                        <h3 style={{ margin: '2px 0 0 0', color: '#f57c00', fontSize: '1.4rem' }}>{countAguardando}</h3>
+                                    </div>
+                                    <div style={{ width: '40px', height: '30px' }}>
+                                        <svg width="40" height="30" viewBox="0 0 60 40">
+                                            <rect x="0" y="20" width="8" height="20" fill="#f57c00" opacity="0.3" rx="2" />
+                                            <rect x="12" y="10" width="8" height="30" fill="#f57c00" opacity="0.5" rx="2" />
+                                            <rect x="24" y="25" width="8" height="15" fill="#f57c00" opacity="0.7" rx="2" />
+                                            <rect x="36" y="5" width="8" height="35" fill="#f57c00" rx="2" />
+                                            <rect x="48" y="15" width="8" height="25" fill="#f57c00" opacity="0.6" rx="2" />
+                                        </svg>
+                                    </div>
                                 </div>
-                                <div className="stat-card" style={{ borderLeftColor: '#126B5E' }}>
-                                    <h3 style={{ margin: 0, color: '#126B5E' }}>{countParecerEmitido}</h3>
-                                    <p style={{ margin: 0, color: '#666' }}>Pareceres Emitidos</p>
+                                <div className="stat-card" style={{ borderLeft: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '80px', padding: '15px' }}>
+                                    <div>
+                                        <p style={{ margin: 0, color: '#666', fontSize: '0.75rem', fontWeight: 600 }}>Pareceres Emitidos</p>
+                                        <h3 style={{ margin: '2px 0 0 0', color: '#126B5E', fontSize: '1.4rem' }}>{countParecerEmitido}</h3>
+                                    </div>
+                                    <div style={{ width: '40px', height: '30px' }}>
+                                        <svg width="40" height="30" viewBox="0 0 60 40">
+                                            <rect x="0" y="5" width="8" height="35" fill="#126B5E" opacity="0.3" rx="2" />
+                                            <rect x="12" y="15" width="8" height="25" fill="#126B5E" opacity="0.5" rx="2" />
+                                            <rect x="24" y="10" width="8" height="30" fill="#126B5E" opacity="0.7" rx="2" />
+                                            <rect x="36" y="20" width="8" height="20" fill="#126B5E" rx="2" />
+                                            <rect x="48" y="8" width="8" height="32" fill="#126B5E" opacity="0.6" rx="2" />
+                                        </svg>
+                                    </div>
                                 </div>
-                                <div className="stat-card" style={{ borderLeftColor: '#2e7d32' }}>
-                                    <h3 style={{ margin: 0, color: '#2e7d32' }}>{countVotadas}</h3>
-                                    <p style={{ margin: 0, color: '#666' }}>Matérias Votadas</p>
-                                </div>
-                            </div>
-
-                            {/* Filtros e Busca */}
-                            <div className="dashboard-filter-bar">
-                                <div className="search-input-wrapper">
-                                    <FaSearch className="search-icon" />
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar por número, ementa ou autor..."
-                                        value={searchTerm}
-                                        onChange={(e) => this.setState({ searchTerm: e.target.value })}
-                                        className="search-input"
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <select
-                                        value={filterType}
-                                        onChange={(e) => this.setState({ filterType: e.target.value })}
-                                        className="filter-select"
-                                    >
-                                        <option value="Todos">Todos os Tipos</option>
-                                        <option value="requerimento">Requerimento</option>
-                                        <option value="projeto de lei">Projeto de Lei</option>
-                                        <option value="indicacao">Indicação</option>
-                                        <option value="mocao">Moção</option>
-                                    </select>
-
-                                    <FaFilter color="#666" />
-                                    <select
-                                        value={filterStatus}
-                                        onChange={(e) => this.setState({ filterStatus: e.target.value })}
-                                        className="filter-select"
-                                    >
-                                        <option value="Todos">Todos os Status</option>
-                                        <option value="Aguardando Parecer">Aguardando Parecer</option>
-                                        <option value="Em Análise">Em Análise</option>
-                                        <option value="Parecer Favorável">Parecer Favorável</option>
-                                        <option value="Parecer Contrário">Parecer Contrário</option>
-                                        <option value="votada">Votadas</option>
-                                    </select>
+                                <div className="stat-card" style={{ borderLeft: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '80px', padding: '15px' }}>
+                                    <div>
+                                        <p style={{ margin: 0, color: '#666', fontSize: '0.75rem', fontWeight: 600 }}>Matérias Votadas</p>
+                                        <h3 style={{ margin: '2px 0 0 0', color: '#2e7d32', fontSize: '1.4rem' }}>{countVotadas}</h3>
+                                    </div>
+                                    <div style={{ width: '40px', height: '30px' }}>
+                                        <svg width="40" height="30" viewBox="0 0 60 40">
+                                            <path d="M0 35 L12 25 L24 30 L36 10 L48 20 L60 5" fill="none" stroke="#2e7d32" strokeWidth="3" strokeLinecap="round" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Lista de Matérias */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            {/* Filtros e Busca Otimizados */}
+                            <div className="dashboard-filter-bar" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '25px' }}>
+                                <div style={{ display: 'flex', gap: '15px', width: '100%' }}>
+                                    <div className="search-input-wrapper" style={{ flex: 1 }}>
+                                        <FaSearch className="search-icon" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar por número, ementa ou autor..."
+                                            value={searchTerm}
+                                            onChange={(e) => this.setState({ searchTerm: e.target.value })}
+                                            className="search-input"
+                                            style={{ width: '100%', boxSizing: 'border-box' }}
+                                        />
+                                    </div>
+                                    <button 
+                                        className="btn-secondary" 
+                                        style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', height: '45px' }}
+                                        onClick={() => this.setState({ searchTerm: '', filterStatus: 'Todos', filterType: 'Todos', filterYear: 'Todos' })}
+                                    >
+                                        <FaTimes /> Limpar Filtros
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tipo de Matéria</label>
+                                        <select
+                                            value={filterType}
+                                            onChange={(e) => this.setState({ filterType: e.target.value })}
+                                            className="filter-select"
+                                            style={{ width: '100%', margin: 0 }}
+                                        >
+                                            <option value="Todos">Todos os Tipos</option>
+                                            <option value="requerimento">Requerimento</option>
+                                            <option value="projeto de lei">Projeto de Lei</option>
+                                            <option value="indicacao">Indicação</option>
+                                            <option value="mocao">Moção</option>
+                                        </select>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status do Processo</label>
+                                        <select
+                                            value={filterStatus}
+                                            onChange={(e) => this.setState({ filterStatus: e.target.value })}
+                                            className="filter-select"
+                                            style={{ width: '100%', margin: 0 }}
+                                        >
+                                            <option value="Todos">Todos os Status</option>
+                                            <option value="Aguardando Parecer">Aguardando Parecer</option>
+                                            <option value="Em Análise">Em Análise</option>
+                                            <option value="Parecer Favorável">Parecer Favorável</option>
+                                            <option value="Parecer Contrário">Parecer Contrário</option>
+                                            <option value="votada">Votadas</option>
+                                        </select>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ano / Exercício</label>
+                                        <select
+                                            value={filterYear}
+                                            onChange={(e) => this.setState({ filterYear: e.target.value })}
+                                            className="filter-select"
+                                            style={{ width: '100%', margin: 0 }}
+                                        >
+                                            <option value="Todos">Todos os Anos</option>
+                                            {years.map(year => <option key={year} value={year}>{year}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Grid de Matérias (3 por linha) */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '25px' }}>
                                 {filteredMaterias.map((materia) => (
-                                    <div key={materia.id} className="list-item" style={{ borderLeft: (materia.decisao === 'contrario') ? '4px solid #d32f2f' : (materia.decisao === 'favoravel' ? '4px solid #2e7d32' : '4px solid #f57c00') }}>
-                                        <div className="list-item-content">
-                                            <div className="list-item-header">
-                                                <span className="tag tag-primary">
-                                                    {materia.tipoMateria} {materia.numero}
-                                                </span>
-                                                {materia.urgencia && (
-                                                    <span className="tag tag-danger">
-                                                        <FaExclamationTriangle size={12} /> Urgente
-                                                    </span>
-                                                )}
+                                    <div key={materia.id} className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', borderLeft: (materia.decisao === 'contrario') ? '5px solid #d32f2f' : (materia.decisao === 'favoravel' ? '5px solid #2e7d32' : '5px solid #f57c00') }}>
+                                        <div style={{ padding: '20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fafafa' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#e0f2f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#126B5E' }}>
+                                                    <FaFileAlt size={20} />
+                                                </div>
+                                                <div>
+                                                    <h3 style={{ margin: 0, color: '#333', fontSize: '1.0rem' }}>{materia.tipoMateria} {materia.numero}</h3>
+                                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>Protocolo: {materia.protocolo}</span>
+                                                </div>
                                             </div>
-                                            <h3 className="list-item-title" style={{ fontWeight: '600' }}>{materia.titulo}</h3>
-                                            <button
-                                                onClick={() => this.handleViewDetail(materia)}
-                                                style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: 0, fontSize: '0.85rem', fontWeight: '600', marginBottom: '10px' }}
-                                            >
-                                                <FaEye size={12} /> Ver Matéria Completa
-                                            </button>
+                                            <span style={{
+                                                padding: '5px 12px',
+                                                borderRadius: '20px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 'bold',
+                                                background: materia.status === 'Aguardando Parecer' ? '#fff3e0' : (materia.decisao === 'favoravel' ? '#e8f5e9' : (materia.decisao === 'contrario' ? '#ffebee' : '#f5f5f5')),
+                                                color: materia.status === 'Aguardando Parecer' ? '#ef6c00' : (materia.decisao === 'favoravel' ? '#2e7d32' : (materia.decisao === 'contrario' ? '#d32f2f' : '#666'))
+                                            }}>
+                                                {materia.status}
+                                            </span>
+                                        </div>
 
-                                            <div className="list-item-meta">
-                                                <span><strong>Autor:</strong> {materia.autor}</span>
-                                                <span style={{ color: '#ccc' }}>|</span>
-                                                <span><strong>Protocolo:</strong> {materia.protocolo}</span>
+                                        <div style={{ padding: '20px', flex: 1 }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#555', fontSize: '0.95rem' }}>
+                                                    <FaUserTie style={{ color: '#aaa' }} />
+                                                    <span><strong>Autor:</strong> {materia.autor}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#555', fontSize: '0.95rem' }}>
+                                                    <FaCalendarAlt style={{ color: '#aaa' }} />
+                                                    <span><strong>Apresentação:</strong> {materia.dataApresenta || 'Não informada'}</span>
+                                                </div>
+                                                <div style={{ marginTop: '5px' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#666', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                        <strong>Ementa:</strong> {materia.ementa}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="list-item-actions">
-                                            <div style={{ textAlign: 'right' }}>
-                                                <span style={{
-                                                    display: 'block',
-                                                    padding: '6px 12px',
-                                                    borderRadius: '20px',
-                                                    fontSize: '0.8rem',
-                                                    fontWeight: 'bold',
-                                                    background: materia.status === 'Aguardando Parecer' ? '#fff3e0' : (materia.decisao === 'favoravel' ? '#e8f5e9' : (materia.decisao === 'contrario' ? '#ffebee' : '#f5f5f5')),
-                                                    color: materia.status === 'Aguardando Parecer' ? '#ef6c00' : (materia.decisao === 'favoravel' ? '#2e7d32' : (materia.decisao === 'contrario' ? '#d32f2f' : '#666'))
-                                                }}>
-                                                    {materia.status}
-                                                </span>
-                                            </div>
+                                        <div style={{ padding: '15px 20px', background: '#fff', borderTop: '1px solid #f0f0f0', display: 'flex', gap: '10px' }}>
+                                            <button 
+                                                className="btn-secondary" 
+                                                style={{ flex: 1, color: '#666', fontSize: '0.85rem' }}
+                                                onClick={() => this.handleViewDetail(materia)}
+                                            >
+                                                <FaEye /> Ver Tudo
+                                            </button>
                                             {materia.parecerDate ? (
                                                 <button
+                                                    className="btn-primary" 
+                                                    style={{ flex: 1, fontSize: '0.85rem' }}
                                                     onClick={() => this.openParecerPDF(materia, materia.parecer, materia.decisao)}
-                                                    className="btn-primary"
                                                 >
                                                     <FaFileAlt /> Visualizar
                                                 </button>
                                             ) : (
-                                                <button
+                                                <button 
+                                                    className="btn-primary" 
+                                                    style={{ flex: 1, fontSize: '0.85rem' }}
                                                     onClick={() => this.handleOpenParecer(materia)}
-                                                    className="btn-primary"
                                                 >
                                                     <FaPenFancy /> Analisar
                                                 </button>
