@@ -4,9 +4,8 @@ import {
     FaSpinner, FaPlayCircle, FaPlus, FaVideo, FaEye, 
     FaUsers, FaClock, FaEdit, FaTrash 
 } from 'react-icons/fa';
-import { ref, onValue, update, remove } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class TvCamara extends Component {
     constructor(props) {
@@ -22,33 +21,29 @@ class TvCamara extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchTvData();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchTvData();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchTvData = () => {
+    fetchTvData = async () => {
         const { camaraId } = this.state;
-        const tvRef = ref(db, `${camaraId}/tv_camara`);
-
-        onValue(tvRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                const videos = data.videos ? Object.entries(data.videos).map(([key, val]) => ({ id: key, ...val })) : [];
-                const programacao = data.programacao ? Object.entries(data.programacao).map(([key, val]) => ({ id: key, ...val })) : [];
-                
-                // Ordenar vídeos por data (mais recentes primeiro)
-                videos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                
-                this.setState({ videos, programacao, loading: false });
-            } else {
-                this.setState({ loading: false });
-            }
-        });
+        try {
+            const response = await api.get(`/tv-camara/${camaraId}`);
+            const data = response.data || {};
+            const videos = Array.isArray(data.videos) ? data.videos : [];
+            const programacao = Array.isArray(data.programacao) ? data.programacao : [];
+            
+            // Ordenar vídeos por data (mais recentes primeiro)
+            videos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            this.setState({ videos, programacao, loading: false });
+        } catch (error) {
+            console.error("Erro ao buscar dados da TV Câmara:", error);
+            this.setState({ loading: false });
+        }
     };
 
     getYouTubeID = (url) => {

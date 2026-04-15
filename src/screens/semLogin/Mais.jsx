@@ -14,55 +14,48 @@ import React, { Component } from 'react';
 
 class Mais extends Component {
   render() {
+    const camaraId = this.props.match.params.camaraId || '';
+    
     return (
 
       <div className='App-header MenuPage' >
         <div className='Mais-content'>
           <div className='Mais-item'>
-            <a href='/sessoes' className='Mais-icon' >
+            <a href={`/sessoes/${camaraId}`} className='Mais-icon' >
               <span className='Mais-item-title'>Sessões</span>
             </a>
           </div>
           <div className='Mais-item'>
-            <a href='/relatorios' className='Mais-icon' >
+            <a href={`/relatorios/${camaraId}`} className='Mais-icon' >
               <span className='Mais-item-title'>Relatórios</span>
             </a>
           </div>
           <div className='Mais-item'>
-            <a href='/sessao-virtual' className='Mais-icon' >
+            <a href={`/sessao-virtual/${camaraId}`} className='Mais-icon' >
               <span className='Mais-item-title'>Sessão Virtual</span>
             </a>
           </div>
           <div className='Mais-item'>
-            <a href='/normas' className='Mais-icon' >
+            <a href={`/normas/${camaraId}`} className='Mais-icon' >
               <span className='Mais-item-title'>Normas Juridicas</span>
             </a> 
           </div>
           <div className='Mais-item'>
-            <a href='/comissoes' className='Mais-icon' >
+            <a href={`/comissoes/${camaraId}`} className='Mais-icon' >
               <span className='Mais-item-title'>Comissões</span>
             </a> 
           </div>
           <div className='Mais-item'>
-            <a href='/materias' className='Mais-icon' >
+            <a href={`/materias/${camaraId}`} className='Mais-icon' >
               <span className='Mais-item-title'>Matérias</span>
             </a> 
           </div>
-          {/* <div className='Mais-item'>
-            <a href='/perfil' className='Mais-icon' >
-              <span className='Mais-item-title'>Minha Conta</span>
-            </a>
-          </div> */}
           <div className='Mais-item'>
-            <a href='/ajuda' className='Mais-icon' >
+            <a href={`/ajuda`} className='Mais-icon' >
               <span className='Mais-item-title'>Ajuda</span>
             </a>
           </div>
         </div>
-
-
-
-
       </div>
     );
   }

@@ -2,8 +2,7 @@ import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaFileAlt, FaUsers, FaGavel, FaSpinner, FaArrowLeft } from 'react-icons/fa';
 import PageHeader from '../../componets/PageHeader.jsx';
-import { db } from '../../firebaseConfig';
-import { ref, get, query, orderByChild, equalTo } from 'firebase/database';
+import api from '../../services/api.js';
 
 class VereadorProfile extends Component {
     constructor(props) {
@@ -26,51 +25,46 @@ class VereadorProfile extends Component {
         const { camaraId, vereadorId } = this.state;
         
         try {
-            // 1. Buscar dados do vereador
-            const userRef = ref(db, `${camaraId}/users/${vereadorId}`);
-            const userSnapshot = await get(userRef);
-            
-            if (!userSnapshot.exists()) {
+            // Fetch data from multiple endpoints via the new API
+            const [userResponse, mattersResponse, comissoesResponse] = await Promise.all([
+                api.get(`/users/id/${vereadorId}`),
+                api.get(`/legislative-matters/${camaraId}`),
+                api.get(`/commissions/${camaraId}`)
+            ]);
+
+            // 1. Councilman details
+            const vereador = userResponse.data;
+            if (!vereador) {
                 this.setState({ loading: false });
                 return;
             }
-            
-            const vereador = userSnapshot.val();
 
-            // 2. Buscar matérias do vereador (pelo ID do usuário)
-            const materiasRef = ref(db, `${camaraId}/materias`);
-            const materiasQuery = query(materiasRef, orderByChild('userId'), equalTo(vereadorId));
-            const materiasSnapshot = await get(materiasQuery);
-            
-            const materias = [];
-            if (materiasSnapshot.exists()) {
-                materiasSnapshot.forEach(child => {
-                    materias.push({ id: child.key, ...child.val() });
-                });
-            }
+            // 2. Legislative matters (filtered by councilman ID)
+            const materias = (mattersResponse.data || [])
+                .filter(m => m.userId === vereadorId)
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-            // 3. Buscar comissões que o vereador participa
-            const comissoesRef = ref(db, `${camaraId}/comissoes`);
-            const comissoesSnapshot = await get(comissoesRef);
-            
-            const comissoes = [];
-            if (comissoesSnapshot.exists()) {
-                comissoesSnapshot.forEach(child => {
-                    const comissao = child.val();
-                    if (comissao.membros && comissao.membros[vereadorId]) {
-                        comissoes.push({
-                            id: child.key,
-                            nome: comissao.nome,
-                            descricao: comissao.descricao,
-                            cargo: comissao.membros[vereadorId].cargo
-                        });
+            // 3. Commissions participation
+            const comissoes = (comissoesResponse.data || [])
+                .filter(com => {
+                    if (com.membros) {
+                        return Object.values(com.membros).some(m => (m.id || m.uid) === vereadorId);
                     }
+                    return false;
+                })
+                .map(com => {
+                    const memberInfo = Object.values(com.membros).find(m => (m.id || m.uid) === vereadorId);
+                    return {
+                        id: com.id,
+                        nome: com.nome,
+                        descricao: com.descricao,
+                        cargo: memberInfo?.cargo || 'Membro'
+                    };
                 });
-            }
 
             this.setState({
                 vereador,
-                materias: materias.reverse(), // Mais recentes primeiro
+                materias,
                 comissoes,
                 loading: false
             });

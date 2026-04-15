@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebaseConfig';
-import { ref, onValue, update, set, push } from 'firebase/database';
+import api from '../services/api.js';
 import { FaSignature, FaUsers, FaCheckCircle, FaUserPlus, FaInfoCircle } from 'react-icons/fa';
 import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
@@ -22,17 +21,24 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
     useEffect(() => {
         if (!materia || !materia.id) return;
 
-        const subRef = ref(db, `${camaraId}/materias/${materia.id}/subscricoes`);
-        const unsubscribe = onValue(subRef, (snapshot) => {
-            if (snapshot.exists()) {
-                setSubscricoes(snapshot.val());
-            } else {
-                setSubscricoes({});
+        const fetchSubscriptions = async () => {
+            try {
+                const response = await api.get(`/legislative-matters/id/${materia.id}`);
+                if (response.data && response.data.subscricoes) {
+                    setSubscricoes(response.data.subscricoes);
+                } else {
+                    setSubscricoes({});
+                }
+            } catch (error) {
+                console.error("Erro ao buscar subscrições:", error);
             }
-        });
+        };
 
-        return () => unsubscribe();
-    }, [camaraId, materia]);
+        fetchSubscriptions();
+        const intervalId = setInterval(fetchSubscriptions, 5000); // Polling every 5 seconds
+
+        return () => clearInterval(intervalId);
+    }, [camaraId, materia.id]);
 
     const handleOpenMenu = (event) => {
         setAnchorEl(event.currentTarget);
@@ -46,26 +52,35 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
         if (!user) return;
         
         const subData = {
-            uid: user.uid,
-            nome: user.displayName || 'Parlamentar',
+            uid: user.id || user.uid,
+            nome: user.name || user.displayName || 'Parlamentar',
             tipo: tipo,
             timestamp: new Date().toISOString(),
-            avatar: user.photoURL || null
+            avatar: user.photoURL || user.foto || null
         };
 
         try {
-            const updates = {};
-            updates[`/${camaraId}/materias/${materia.id}/subscricoes/${user.uid}`] = subData;
+            const updatedSubscricoes = { ...subscricoes, [subData.uid]: subData };
+            await api.patch(`/legislative-matters/id/${materia.id}`, { subscricoes: updatedSubscricoes });
             
             // Também salva um log na sessão para o operador ver instantaneamente
-            const logRef = push(ref(db, `${camaraId}/sessoes/${sessaoId}/logs`));
-            updates[`/${camaraId}/sessoes/${sessaoId}/logs/${logRef.key}`] = {
-                tipo: 'subscricao',
-                texto: `${subData.nome} subscreveu a matéria ${materia.tipoMateria} ${materia.numero} como ${tipo}`,
-                timestamp: subData.timestamp
-            };
+            if (sessaoId) {
+                try {
+                    const sessionResponse = await api.get(`/sessions/id/${sessaoId}`);
+                    const currentLogs = sessionResponse.data?.logs || [];
+                    const newLog = {
+                        id: Date.now().toString(),
+                        tipo: 'subscricao',
+                        texto: `${subData.nome} subscreveu a matéria ${materia.tipoMateria} ${materia.numero} como ${tipo}`,
+                        timestamp: subData.timestamp
+                    };
+                    await api.patch(`/sessions/id/${sessaoId}`, { logs: [...currentLogs, newLog] });
+                } catch (logError) {
+                    console.error("Erro ao salvar log da sessão:", logError);
+                }
+            }
 
-            await update(ref(db), updates);
+            setSubscricoes(updatedSubscricoes);
             setToast({ open: true, message: `Subscrição realizada como ${tipo}!`, severity: 'success' });
             handleCloseMenu();
         } catch (error) {
@@ -74,8 +89,8 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
         }
     };
 
-    const isSubscribed = user && subscricoes[user.uid];
-    const canSubscribe = user && !isSubscribed && (materia.permiteSubscricao !== false) && (materia.userId !== user.uid);
+    const isSubscribed = user && subscricoes[user.id || user.uid];
+    const canSubscribe = user && !isSubscribed && (materia.permiteSubscricao !== false) && (materia.userId !== (user.id || user.uid));
     const subscritoresList = Object.values(subscricoes);
 
     return (
@@ -160,7 +175,7 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
                     )}
 
                     {isSubscribed && (
-                        <Tooltip title={`Você subscreveu como ${subscricoes[user.uid].tipo}`}>
+                        <Tooltip title={`Você subscreveu como ${subscricoes[user.id || user.uid].tipo}`}>
                             <Box display="flex" alignItems="center" gap={0.5} sx={{ color: '#4caf50', fontSize: '0.75rem', fontWeight: 600 }}>
                                 <FaCheckCircle /> Subscrito
                             </Box>

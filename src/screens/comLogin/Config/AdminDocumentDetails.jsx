@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { FaArrowLeft, FaDownload, FaCopy, FaEye } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { db } from '../../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../../../services/api.js';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../../assets/logo.png';
@@ -62,11 +61,9 @@ class AdminDocumentDetails extends Component {
         }
 
         try {
-            const docRef = ref(db, `${this.props.match.params.camaraId}/documentos_administrativos/${docId}`);
-            const snapshot = await get(docRef);
-
-            if (snapshot.exists()) {
-                this.setState({ documento: { id: docId, ...snapshot.val() }, loading: false });
+            const response = await api.get(`/administrative-documents/id/${docId}`);
+            if (response.data) {
+                this.setState({ documento: response.data, loading: false });
             } else {
                 this.setState({ loading: false });
             }
@@ -79,13 +76,10 @@ class AdminDocumentDetails extends Component {
     fetchConfigsAndLogo = async () => {
         const { camaraId } = this.state;
         try {
-            const [layoutSnap, homeSnap, footerSnap] = await Promise.all([
-                get(ref(db, `${camaraId}/dados-config/layout`)),
-                get(ref(db, `${camaraId}/dados-config/home`)),
-                get(ref(db, `${camaraId}/dados-config/footer`))
-            ]);
+            const response = await api.get(`/councils/${camaraId}`);
+            const configData = response.data || {};
 
-            const layoutData = layoutSnap.val() || {};
+            const layoutData = configData.layout || {};
             
             if (layoutData.logoLight) {
                 this.getBase64(layoutData.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
@@ -94,8 +88,8 @@ class AdminDocumentDetails extends Component {
             }
 
             this.setState({
-                homeConfig: homeSnap.val() || {},
-                footerConfig: footerSnap.val() || {}
+                homeConfig: configData.home || {},
+                footerConfig: configData.footer || {}
             });
         } catch (error) {
             console.error("Erro ao carregar configurações:", error);

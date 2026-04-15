@@ -1,10 +1,7 @@
 import React, { Component } from 'react';
 import { Splide, SplideSlide } from '@splidejs/react-splide';
 import { withRouter } from 'react-router-dom';
-import { db } from '../firebaseConfig';
-import { ref, get } from 'firebase/database';
-import { FaPlayCircle, FaCalendarAlt } from 'react-icons/fa';
-import '@splidejs/react-splide/css';
+import api from '../services/api.js';
 
 class SlideSessoes extends Component {
     constructor(props) {
@@ -31,14 +28,10 @@ class SlideSessoes extends Component {
         if (!camaraId) return;
 
         try {
-            const sessoesRef = ref(db, `${camaraId}/sessoes`);
-            const snapshot = await get(sessoesRef);
+            const response = await api.get(`/sessions/${camaraId}`);
+            const data = response.data || [];
             
-            if (snapshot.exists()) {
-                const data = [];
-                snapshot.forEach(child => {
-                    data.push({ id: child.key, ...child.val() });
-                });
+            if (data.length > 0) {
                 // Ordena por data mais recente
                 data.sort((a, b) => {
                     const dateA = a.data.split('/').reverse().join('');

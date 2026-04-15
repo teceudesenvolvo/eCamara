@@ -1,97 +1,51 @@
-import {httpsCallable} from "firebase/functions";
-import {functions, db, storage} from "./firebaseConfig";
-import { ref, onValue, off } from "firebase/database";
-import { ref as storageRef, uploadBytes } from "firebase/storage";
-
-// Referência para a função PÚBLICA (usada na Home)
-const falarComIAPublico = httpsCallable(functions, "falarComCamaraAIPublico", { timeout: 120000 });
-
-// Referência para a função PRIVADA (usada nas áreas logadas)
-const falarComIAPrivado = httpsCallable(functions, "falarComCamaraAIPrivado", { timeout: 120000 });
-
-// Referência para a função de Geração de Ata via Arquivo
-const gerarAtaViaArquivoFunc = httpsCallable(functions, "gerarAtaViaArquivo");
+import api from "./services/api";
 
 /**
- * Envia uma mensagem para a Cloud Function PÚBLICA (sem autenticação).
- * @param {string} message O texto a ser enviado para o modelo Gemini.
+ * Envia uma mensagem para a IA (PÚBLICO).
+ * @param {string} message O texto a ser enviado.
  * @return {Promise<string>} A resposta em texto da IA.
  */
 export const sendMessageToAIPublic = async (message: string): Promise<string> => {
   try {
-    const result = await falarComIAPublico({message});
-    const aiResponse = (result.data as { response: string }).response;
-    return aiResponse;
-  } catch (error) {
-    console.error("Erro ao chamar a Cloud Function 'falarComCamaraAIPublico':", error);
-    // A HttpsError do Firebase já vem com uma mensagem amigável.
-    const msg = (error as Error).message || "Erro ao se comunicar com a IA.";
-    throw new Error(msg);
+    const response = await api.post('/process-chat/public', { message });
+    return response.data.response;
+  } catch (error: any) {
+    console.error("Erro ao chamar IA Pública:", error);
+    throw new Error(error.response?.data?.message || "Erro ao se comunicar com a IA.");
   }
 };
 
 /**
- * Inicia o job de geração de ata a partir de um arquivo de áudio.
- * @param {File} file O arquivo de áudio selecionado.
- * @return {Promise<string>} O ID do job criado.
+ * Gera uma ata a partir de uma transcrição e metadados.
+ * @param {string} slug Slug da câmara.
+ * @param {string} transcription Texto completo da sessão.
+ * @param {object} metadata Dados da sessão (data, tipo).
+ * @return {Promise<any>} Resultado do processamento.
  */
-export const startAtaGenerationJob = async (file: File): Promise<string> => {
+export const processAta = async (slug: string, transcription: string, metadata: any): Promise<any> => {
   try {
-    // Gera um ID de sessão temporário para o job
-    const sessaoId = `assistente-${Date.now()}`;
-    
-    // 1. Upload do arquivo para o Firebase Storage
-    const fileRef = storageRef(storage, `atas/temp/${sessaoId}_${file.name}`);
-    await uploadBytes(fileRef, file);
-    const storagePath = fileRef.fullPath;
-
-    // 2. Inicia o Job no Backend passando o caminho do arquivo
-    const result = await gerarAtaViaArquivoFunc({ storagePath, sessaoId });
-    const data = result.data as { success: boolean; jobId: string };
-
-    if (!data.jobId) {
-      throw new Error("Não foi possível iniciar o processamento. O backend não retornou um ID de job.");
-    }
-    return data.jobId;
-  } catch (error) {
-    console.error("Erro ao gerar ata via arquivo:", error);
-    const msg = (error as Error).message || "Erro ao processar o arquivo.";
-    throw new Error(msg);
+    const response = await api.post(`/process-ata/${slug}`, {
+      transcription,
+      metadata
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error("Erro ao processar ata:", error);
+    throw new Error(error.response?.data?.message || "Erro ao gerar ata.");
   }
 };
 
 /**
- * Escuta as atualizações de um job de ata no Realtime Database.
- * @param {string} jobId O ID do job para escutar.
- * @param {(status: string, data?: string) => void} onUpdate Callback acionado a cada atualização de status.
- * @return {() => void} Uma função para parar de escutar (unsubscribe).
- */
-export const listenToAtaJob = (jobId: string, onUpdate: (status: string, data?: string) => void): () => void => {
-  const jobRef = ref(db, `camara-teste/ataJobs/${jobId}`);
-  const listener = onValue(jobRef, (snapshot) => {
-    const job = snapshot.val();
-    if (job) {
-      onUpdate(job.status, job.ata || job.error);
-    }
-  });
-
-  // Retorna uma função para que o componente possa se desinscrever do listener
-  return () => off(jobRef, 'value', listener);
-};
-
-/**
- * Envia uma mensagem para a Cloud Function PRIVADA (com autenticação).
- * @param {string} message O texto a ser enviado para o modelo Gemini.
+ * Envia uma mensagem para a IA (PRIVADO).
+ * @param {string} message O texto a ser enviado.
  * @return {Promise<string>} A resposta em texto da IA.
  */
 export const sendMessageToAIPrivate = async (message: string): Promise<string> => {
   try {
-    const result = await falarComIAPrivado({message});
-    const aiResponse = (result.data as { response: string }).response;
-    return aiResponse;
-  } catch (error) {
-    console.error("Erro ao chamar a Cloud Function 'falarComCamaraAIPrivado':", error);
-    const msg = (error as Error).message || "Erro ao se comunicar com a IA.";
-    throw new Error(msg);
+    const response = await api.post('/process-chat/private', { message });
+    return response.data.response;
+  } catch (error: any) {
+    console.error("Erro ao chamar IA Privada:", error);
+    throw new Error(error.response?.data?.message || "Erro ao se comunicar com a IA.");
   }
 };

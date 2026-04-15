@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
-import { FaIdCard, FaTools, FaSearch, FaSpinner, FaCheck, FaTimes, FaCheckCircle, FaInfoCircle, FaClipboardList, FaMapMarkerAlt } from 'react-icons/fa';
-import { ref, onValue, update } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
+import { FaIdCard, FaClipboardList, FaMapMarkerAlt, FaInfoCircle, FaSearch, FaSpinner, FaTools, FaCheckCircle, FaTimes, FaCheck } from 'react-icons/fa';
+import api from '../../../services/api';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-
 class BalcaoCidadao extends Component {
     constructor(props) {
         super(props);
@@ -18,40 +16,42 @@ class BalcaoCidadao extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchSolicitacoes();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchSolicitacoes();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchSolicitacoes = () => {
+    fetchSolicitacoes = async () => {
         const { camaraId } = this.state;
-        const refSolicitacoes = ref(db, `${camaraId}/balcao_cidadao`);
+        this.setState({ loading: true });
 
-        onValue(refSolicitacoes, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
-            }
+        try {
+            const response = await api.get(`/citizen-services/${camaraId}`);
+            const data = response.data;
+            
             // Ordenar por data de criação (mais recentes primeiro)
-            data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            this.setState({ solicitacoes: data, loading: false });
-        });
+            if (Array.isArray(data)) {
+                data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                this.setState({ solicitacoes: data, loading: false });
+            } else {
+                this.setState({ solicitacoes: [], loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar solicitações:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleUpdateStatus = async (id, newStatus) => {
-        const { camaraId } = this.state;
         try {
-            await update(ref(db, `${camaraId}/balcao_cidadao/${id}`), { 
-                status: newStatus,
-                updatedAt: new Date().toISOString()
+            await api.patch(`/citizen-services/${id}`, { 
+                status: newStatus
             });
             alert(`Solicitação atualizada com sucesso para: ${newStatus}`);
+            this.fetchSolicitacoes(); // Recarregar a lista
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             alert("Erro ao atualizar o chamado.");

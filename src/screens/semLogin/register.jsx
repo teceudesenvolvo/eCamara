@@ -1,10 +1,7 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
-import { db, auth } from '../../firebaseConfig';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { ref, get, update, set } from 'firebase/database';
+import api from '../../services/api';
 import logo from '../../assets/logo-camara-ai-font-verde.png';
-
 class Register extends Component {
     constructor(props) {
         super(props);
@@ -13,8 +10,9 @@ class Register extends Component {
             email: '',
             senha: '',
             confirmarSenha: '',
-            camaraId: this.props.match.params.camaraId,
-            inviteId: null,
+            cpf: '',
+            phone: '',
+            camaraId: '',
             tipo: null,
             loading: true,
             error: '',
@@ -24,37 +22,13 @@ class Register extends Component {
 
     componentDidMount() {
         const params = new URLSearchParams(this.props.location.search);
-        const inviteId = params.get('invite');
-        const tipo = params.get('tipo');
         const camaraId = params.get('camara');
+        const tipo = params.get('tipo');
 
-        // Se tiver inviteId, validamos no banco. Se tiver tipo direto (link genérico), usamos direto.
-        if (inviteId && camaraId) {
-            this.validateInvite(inviteId, camaraId);
-        } else if (tipo && camaraId) {
-            this.setState({ tipo, camaraId, loading: false });
+        if (camaraId) {
+            this.setState({ camaraId, tipo, loading: false });
         } else {
-            this.setState({ error: 'Link de convite inválido ou incompleto. Verifique se o link possui "camara" e ("invite" ou "tipo").', loading: false });
-        }
-    }
-
-    validateInvite = async (inviteId, camaraId) => {
-        const inviteRef = ref(db, `${camaraId}/convites/${inviteId}`);
-        try {
-            const snapshot = await get(inviteRef);
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                if (data.used) {
-                    this.setState({ error: 'Este convite já foi utilizado.', loading: false });
-                } else {
-                    this.setState({ inviteId, camaraId, tipo: data.tipo, email: data.email || '', loading: false });
-                }
-            } else {
-                this.setState({ error: 'Convite não encontrado.', loading: false });
-            }
-        } catch (error) {
-            console.error("Erro ao validar convite:", error);
-            this.setState({ error: 'Erro ao validar convite.', loading: false });
+            this.setState({ error: 'ID da câmara não encontrado no link.', loading: false });
         }
     }
 
@@ -64,7 +38,7 @@ class Register extends Component {
 
     handleRegister = async (e) => {
         e.preventDefault();
-        const { nome, email, senha, confirmarSenha, camaraId, tipo, inviteId } = this.state;
+        const { nome, email, senha, confirmarSenha, cpf, phone, camaraId } = this.state;
 
         if (senha !== confirmarSenha) {
             this.setState({ error: 'As senhas não coincidem.' });
@@ -74,42 +48,20 @@ class Register extends Component {
         this.setState({ loading: true, error: '' });
 
         try {
-            // 1. Create user in Firebase Auth
-            const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-            const user = userCredential.user;
-
-            // 2. Save user data to Realtime Database
-            const userRef = ref(db, `${camaraId}/users/${user.uid}`);
-            await update(userRef, {
-                uid: user.uid,
-                nome: nome,
-                email: email,
-                tipo: tipo,
-                createdAt: new Date().toISOString(),
+            await api.post('/auth/register', {
+                name: nome,
+                email,
+                password: senha,
+                cpf,
+                phone,
+                councilSlug: camaraId
             });
 
-            // // 3. Salvar no índice global para facilitar o login
-            // const globalUserRef = ref(db, `${camaraId}/users${user.uid}`);
-            // await set(globalUserRef, { camaraId });
-
-            // 4. Se houver inviteId, marcar como usado
-            if (inviteId) {
-                const inviteRef = ref(db, `${camaraId}/convites/${inviteId}`);
-                await update(inviteRef, {
-                    used: true,
-                    usedBy: user.uid,
-                    usedAt: new Date().toISOString()
-                });
-            }
-
             this.setState({ success: true, loading: false });
-
         } catch (error) {
             let errorMessage = 'Ocorreu um erro ao realizar o cadastro.';
-            if (error.code === 'auth/email-already-in-use') {
-                errorMessage = 'Este email já está em uso. Tente fazer login.';
-            } else if (error.code === 'auth/weak-password') {
-                errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
             }
             console.error("Erro no cadastro:", error);
             this.setState({ error: errorMessage, loading: false });
@@ -117,16 +69,16 @@ class Register extends Component {
     };
 
     render() {
-        const { loading, error, success, nome, email, senha, confirmarSenha } = this.state;
+        const { loading, error, success, nome, email, senha, confirmarSenha, cpf, phone } = this.state;
 
         const renderContent = () => {
             if (loading) {
-                return <p>Verificando convite...</p>;
+                return <p>Carregando...</p>;
             }
-            if (error) {
+            if (error && !success) {
                 return (
                     <div style={{ textAlign: 'center' }}>
-                        <h2 style={{ color: '#d32f2f' }}>Erro no Convite</h2>
+                        <h2 style={{ color: '#d32f2f' }}>Erro no Cadastro</h2>
                         <p style={{ color: '#333' }}>{error}</p>
                         <Link to="/login" className="btn-primary" style={{ textDecoration: 'none', marginTop: '20px' }}>Voltar para o Login</Link>
                     </div>
@@ -144,7 +96,7 @@ class Register extends Component {
             return (
                 <>
                     <h1>Finalize seu Cadastro</h1>
-                    <p>Você foi convidado para se juntar à plataforma. Complete seus dados abaixo.</p>
+                    <p>Preencha seus dados para acessar o sistema.</p>
                     <form onSubmit={this.handleRegister} style={{ width: '100%' }}>
                         <input
                             type="text"
@@ -161,6 +113,24 @@ class Register extends Component {
                             className="inputLogin"
                             placeholder="Seu email"
                             value={email}
+                            onChange={this.handleInputChange}
+                            required
+                        />
+                         <input
+                            type="text"
+                            name="cpf"
+                            className="inputLogin"
+                            placeholder="CPF (000.000.000-00)"
+                            value={cpf}
+                            onChange={this.handleInputChange}
+                            required
+                        />
+                        <input
+                            type="text"
+                            name="phone"
+                            className="inputLogin"
+                            placeholder="Telefone/WhatsApp"
+                            value={phone}
                             onChange={this.handleInputChange}
                             required
                         />
@@ -182,8 +152,8 @@ class Register extends Component {
                             onChange={this.handleInputChange}
                             required
                         />
-                        {error && <p className="txtErro">{error}</p>}
-                        <button type="submit" className="buttonLogin" disabled={loading}>
+                        {error && <p className="txtErro" style={{ color: 'red', fontSize: '0.8rem', marginTop: '5px' }}>{error}</p>}
+                        <button type="submit" className="buttonLogin" disabled={loading} style={{ marginTop: '20px' }}>
                             {loading ? 'Cadastrando...' : 'Finalizar Cadastro'}
                         </button>
                     </form>

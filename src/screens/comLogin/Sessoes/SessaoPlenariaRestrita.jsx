@@ -8,8 +8,7 @@ import { FaFileAlt, FaUserCheck, FaMicrophone, FaVoteYea, FaPlus, FaTrash, FaDes
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { db, auth } from '../../../firebaseConfig';
-import { ref, get, onValue, update, set } from 'firebase/database';
+import api from '../../../services/api.js';
 import '../../../styles/FuturisticPanel.css';
 import MateriaCard from '../../../componets/MateriaCard.jsx';
 
@@ -32,16 +31,16 @@ class SessaoPlenariaRestrita extends Component {
     }
 
     componentDidMount() {
-        this.unsubscribeAuth = auth.onAuthStateChanged(user => {
-            this.setState({ user });
-            if (user) {
-                this.fetchUserRole(user.uid);
-            } else {
-                this.props.history.push(`/login/${this.state.camaraId}`);
-            }
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        if (token && user.id) {
+            this.setState({ user, userRole: user.tipo?.toLowerCase() });
             this.fetchParlamentares();
-            this.fetchSessaoData();
-        });
+            this.startPolling();
+        } else {
+            this.props.history.push(`/login/${this.state.camaraId}`);
+        }
 
         this.uiTimer = setInterval(() => {
             this.setState({ currentTime: new Date() });
@@ -50,10 +49,14 @@ class SessaoPlenariaRestrita extends Component {
     }
 
     componentWillUnmount() {
-        if (this.unsubscribeAuth) this.unsubscribeAuth();
         if (this.uiTimer) clearInterval(this.uiTimer);
-        if (this.sessaoUnsubscribe) this.sessaoUnsubscribe();
+        if (this.pollingInterval) clearInterval(this.pollingInterval);
     }
+
+    startPolling = () => {
+        this.fetchSessaoData();
+        this.pollingInterval = setInterval(this.fetchSessaoData, 3000);
+    };
 
     componentDidUpdate(prevProps, prevState) {
         if (this.state.sessao && prevState.sessao && JSON.stringify(prevState.sessao.itens) !== JSON.stringify(this.state.sessao.itens)) {
@@ -61,31 +64,21 @@ class SessaoPlenariaRestrita extends Component {
         }
     }
 
-    fetchUserRole = async (uid) => {
-        const { camaraId } = this.state;
-        const userRef = ref(db, `${camaraId}/users/${uid}`);
-        const snapshot = await get(userRef);
-        if (snapshot.exists()) {
-            this.setState({ userRole: snapshot.val().tipo?.toLowerCase() });
-        }
-    }
+    // fetchUserRole is now handled in componentDidMount via localStorage
 
     fetchParlamentares = async () => {
         const { camaraId } = this.state;
-        const usersRef = ref(db, `${camaraId}/users`);
-        const snapshot = await get(usersRef);
-        if (snapshot.exists()) {
-            const allUsers = [];
-            snapshot.forEach(child => {
-                allUsers.push({ id: child.key, ...child.val() });
-            });
+        try {
+            const response = await api.get(`/users/council/${camaraId}`);
+            const allUsers = response.data || [];
             const parlamentares = allUsers.filter(u => u.tipo === 'vereador' || u.tipo === 'presidente');
             this.setState({ parlamentares });
+        } catch (error) {
+            console.error("Erro ao buscar parlamentares:", error);
         }
-    }
+    };
 
     fetchSessaoData = async () => {
-        const { camaraId } = this.state;
         const { state } = this.props.location;
         const sessaoId = state ? state.sessaoId : (this.props.match.params.sessaoId || null);
 
@@ -94,15 +87,17 @@ class SessaoPlenariaRestrita extends Component {
             return;
         }
 
-        const sessaoRef = ref(db, `${camaraId}/sessoes/${sessaoId}`);
-        this.sessaoUnsubscribe = onValue(sessaoRef, (snapshot) => {
-            if (snapshot.exists()) {
-                this.setState({ sessao: { id: snapshot.key, ...snapshot.val() }, loading: false });
+        try {
+            const response = await api.get(`/sessions/id/${sessaoId}`);
+            if (response.data) {
+                this.setState({ sessao: response.data, loading: false });
             } else {
                 this.setState({ loading: false });
             }
-        });
-    }
+        } catch (error) {
+            console.error("Erro ao buscar dados da sessão:", error);
+        }
+    };
 
     handleOpenMateriaModal = (materia) => {
         this.setState({ selectedMateria: materia, showMateriaModal: true });
@@ -115,9 +110,11 @@ class SessaoPlenariaRestrita extends Component {
     handleRegisterPresence = async () => {
         const { camaraId, sessao, user } = this.state;
         if (!sessao || !user) return;
-        const presenceRef = ref(db, `${camaraId}/sessoes/${sessao.id}/presenca/${user.uid}`);
+        
         try {
-            await set(presenceRef, { nome: user.displayName, presente: true, timestamp: new Date().toISOString() });
+            const updatedPresenca = { ...sessao.presenca, [user.id]: { nome: user.name || user.displayName, presente: true, timestamp: new Date().toISOString() } };
+            await api.patch(`/sessions/id/${sessao.id}`, { presenca: updatedPresenca });
+            this.setState(prevState => ({ sessao: { ...prevState.sessao, presenca: updatedPresenca } }));
         } catch (error) {
             console.error("Erro ao registrar presença:", error);
         }
@@ -126,89 +123,99 @@ class SessaoPlenariaRestrita extends Component {
     handleRequestToSpeak = async () => {
         const { camaraId, sessao, user } = this.state;
         if (!sessao || !user) return;
-        const speakerQueueRef = ref(db, `${camaraId}/sessoes/${sessao.id}/filaDeInscritos`);
-        const snapshot = await get(speakerQueueRef);
-        const currentQueue = snapshot.val() || [];
-        if (currentQueue.some(speaker => speaker.uid === user.uid)) return;
-        const parlamentar = this.state.parlamentares.find(p => p.id === user.uid);
-        const nome = parlamentar?.nome || user.displayName || 'Parlamentar';
-        const newQueue = [...currentQueue, { uid: user.uid, nome: nome, timestamp: new Date().toISOString() }];
-        await set(speakerQueueRef, newQueue);
+        
+        const currentQueue = sessao.filaDeInscritos || [];
+        if (currentQueue.some(speaker => speaker.uid === user.id)) return;
+        
+        const parlamentar = this.state.parlamentares.find(p => p.id === user.id);
+        const nome = parlamentar?.nome || user.name || user.displayName || 'Parlamentar';
+        const newQueue = [...currentQueue, { uid: user.id, nome: nome, timestamp: new Date().toISOString() }];
+        
+        try {
+            await api.patch(`/sessions/id/${sessao.id}`, { filaDeInscritos: newQueue });
+            this.setState(prevState => ({ sessao: { ...prevState.sessao, filaDeInscritos: newQueue } }));
+        } catch (error) {
+            console.error("Erro ao solicitar palavra:", error);
+        }
     };
 
     handleSetMateriaEmDiscussao = async (index) => {
         const { camaraId, sessao } = this.state;
         if (!sessao || !sessao.itens || index === undefined) return;
 
-        const materia = sessao.itens[index];
-        const updates = {};
-
-        // 1. Encerrar qualquer matéria anterior que esteja "Em Discussão" ou "Em Votação"
-        sessao.itens.forEach((m, idx) => {
+        const updatedItens = sessao.itens.map((m, idx) => {
             if (m.status === 'Em Discussão' || m.status === 'Em Votação') {
-                updates[`/${camaraId}/sessoes/${sessao.id}/itens/${idx}/status`] = 'Encerrada Discussão/Votação'; // New status for clarity
-                if (m.id) {
-                    const path = m.isAcessorio ? `documentos_acessorios/${m.id}` : `materias/${m.id}`;
-                    updates[`/${camaraId}/${path}/status`] = 'Encerrada Discussão/Votação';
-                }
+                return { ...m, status: 'Encerrada Discussão/Votação' };
             }
+            if (idx === index) {
+                return { ...m, status: 'Em Discussão', spokenBy: {} };
+            }
+            return m;
         });
 
-        // 2. Definir nova matéria "Em Discussão" no nível da sessão
-        updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/status`] = 'Em Discussão';
-        updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/spokenBy`] = {}; // Initialize spokenBy for this matter
+        try {
+            await api.patch(`/sessions/id/${sessao.id}`, { 
+                itens: updatedItens,
+                oradorAtual: null,
+                filaDeInscritos: []
+            });
 
-        // 3. Sincronizar com o nó global de matérias
-        if (materia.id) {
-            const path = materia.isAcessorio ? `documentos_acessorios/${materia.id}` : `materias/${materia.id}`;
-            updates[`/${camaraId}/${path}/status`] = 'Em Discussão';
-            updates[`/${camaraId}/${path}/spokenBy`] = {};
-            console.log(`Sincronizando status global para ${materia.isAcessorio ? 'acessório' : 'matéria'} ${materia.id}: Em Discussão`);
+            // Sincronizar status global das matérias envolvidas
+            const targetMateria = sessao.itens[index];
+            if (targetMateria.id) {
+                await api.patch(`/legislative-matters/id/${targetMateria.id}`, { status: 'Em Discussão' });
+            }
+
+            this.setState(prevState => ({ 
+                sessao: { ...prevState.sessao, itens: updatedItens, oradorAtual: null, filaDeInscritos: [] } 
+            }));
+        } catch (error) {
+            console.error("Erro ao definir matéria em discussão:", error);
         }
-
-        // 4. Limpar orador atual e fila de inscritos para a nova discussão
-        updates[`${camaraId}/sessoes/${sessao.id}/oradorAtual`] = null;
-        updates[`${camaraId}/sessoes/${sessao.id}/filaDeInscritos`] = [];
-
-        await update(ref(db), updates);
     };
 
     handleSetMateriaEmVotacao = async (index) => {
         const { camaraId, sessao } = this.state;
         if (!sessao || !sessao.itens || index === undefined) return;
 
-        const materia = sessao.itens[index];
-        const updates = {};
-
-        // 1. Encerrar matéria anterior que esteja "Em Votação" ou "Em Discussão"
-        sessao.itens.forEach((m, idx) => {
+        const updatedItens = sessao.itens.map((m, idx) => {
             if (m.status === 'Em Votação' || m.status === 'Em Discussão') {
-                updates[`/${camaraId}/sessoes/${sessao.id}/itens/${idx}/status`] = 'Encerrada';
-                if (m.id) {
-                    const path = m.isAcessorio ? `documentos_acessorios/${m.id}` : `materias/${m.id}`;
-                    updates[`/${camaraId}/${path}/status`] = 'Encerrada';
-                }
+                return { ...m, status: 'Encerrada' };
             }
+            if (idx === index) {
+                return { ...m, status: 'Em Votação' };
+            }
+            return m;
         });
 
-        // 2. Definir nova matéria "Em Votação" no nível da sessão
-        updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/status`] = 'Em Votação';
+        try {
+            await api.patch(`/sessions/id/${sessao.id}`, { itens: updatedItens });
 
-        // 3. Sincronizar com o nó global de matérias (para aparecer no materiasDash)
-        if (materia.id) {
-            const path = materia.isAcessorio ? `documentos_acessorios/${materia.id}` : `materias/${materia.id}`;
-            updates[`/${camaraId}/${path}/status`] = 'Em Votação';
-            console.log(`Sincronizando status global para ${materia.isAcessorio ? 'acessório' : 'matéria'} ${materia.id}: Em Votação`);
+            const targetMateria = sessao.itens[index];
+            if (targetMateria.id) {
+                await api.patch(`/legislative-matters/id/${targetMateria.id}`, { status: 'Em Votação' });
+            }
+
+            this.setState(prevState => ({ sessao: { ...prevState.sessao, itens: updatedItens } }));
+        } catch (error) {
+            console.error("Erro ao definir matéria em votação:", error);
         }
-
-        await update(ref(db), updates);
     };
 
     handleVote = async (index, voto) => {
         const { camaraId, sessao, user } = this.state;
         if (!sessao || !sessao.itens[index] || !user) return;
-        const voteRef = ref(db, `/${camaraId}/sessoes/${sessao.id}/itens/${index}/votos/${user.uid}`);
-        await set(voteRef, { voto, nome: user.displayName, timestamp: new Date().toISOString() });
+
+        const materia = sessao.itens[index];
+        const updatedVotos = { ...materia.votos, [user.id]: { voto, nome: user.name || user.displayName, timestamp: new Date().toISOString() } };
+        const updatedItens = sessao.itens.map((m, idx) => idx === index ? { ...m, votos: updatedVotos } : m);
+
+        try {
+            await api.patch(`/sessions/id/${sessao.id}`, { itens: updatedItens });
+            this.setState(prevState => ({ sessao: { ...prevState.sessao, itens: updatedItens } }));
+        } catch (error) {
+            console.error("Erro ao votar:", error);
+        }
     };
 
     handleOpenYieldTimeModal = () => {
@@ -239,9 +246,8 @@ class SessaoPlenariaRestrita extends Component {
             const { camaraId, sessao } = this.state;
             if (!sessao) return;
             try {
-                await update(ref(db, `/${camaraId}/sessoes/${sessao.id}`), { status: 'Encerrada' });
+                await api.patch(`/sessions/id/${sessao.id}`, { status: 'Encerrada' });
                 alert("Sessão encerrada com sucesso.");
-                // Opcional: Redirecionar para o dashboard da camara
                 this.props.history.push(`/admin/sessoes/${camaraId}`);
             } catch (error) {
                 console.error("Erro ao encerrar sessão:", error);
@@ -263,7 +269,8 @@ class SessaoPlenariaRestrita extends Component {
         const totalPresentes = Object.keys(presenca).length;
         if (totalPresentes === 0) return;
 
-        for (const [index, materia] of sessao.itens.entries()) { // Use for...of for async operations
+        let sessionUpdated = false;
+        const updatedItens = await Promise.all(sessao.itens.map(async (materia, index) => {
             if (materia.status === 'Em Votação') {
                 const votos = materia.votos || {};
                 const totalVotes = Object.keys(votos).length;
@@ -275,35 +282,38 @@ class SessaoPlenariaRestrita extends Component {
                         if (votoInfo.voto === 'abstencao') voteCounts.abstencao++;
                     });
                     const newStatus = voteCounts.sim > voteCounts.nao ? 'Aprovada' : 'Rejeitada';
-
-                    const updates = {};
-                    updates[`/${camaraId}/sessoes/${sessao.id}/itens/${index}/status`] = newStatus;
+                    
                     if (materia.id) {
-                        const path = materia.isAcessorio ? `documentos_acessorios/${materia.id}` : `materias/${materia.id}`;
-                        updates[`/${camaraId}/${path}/status`] = newStatus;
-                        console.log(`Sincronizando status global final para ${materia.isAcessorio ? 'acessório' : 'matéria'} ${materia.id}: ${newStatus}`);
+                        await api.patch(`/legislative-matters/id/${materia.id}`, { status: newStatus });
                     }
-                    try {
-                        await update(ref(db), updates);
-                    } catch (error) {
-                        console.error("Erro ao sincronizar status final:", error);
-                    }
+                    sessionUpdated = true;
+                    return { ...materia, status: newStatus };
                 }
+            }
+            return materia;
+        }));
+
+        if (sessionUpdated) {
+            try {
+                await api.patch(`/sessions/id/${sessao.id}`, { itens: updatedItens });
+                this.setState(prevState => ({ sessao: { ...prevState.sessao, itens: updatedItens } }));
+            } catch (error) {
+                console.error("Erro ao sincronizar status final:", error);
             }
         }
     }
 
     handleYieldTime = async () => {
-        const { camaraId, sessao, user, selectedVereadorToYieldTo, parlamentares, userRole } = this.state;
-        if (!sessao || (!user && userRole !== 'presidente') || !selectedVereadorToYieldTo) return;
+        const { camaraId, sessao, selectedVereadorToYieldTo, parlamentares } = this.state;
+        if (!sessao || !selectedVereadorToYieldTo) return;
 
-        const materiaEmDiscussao = sessao.itens.find(m => m.status === 'Em Discussão');
-        if (!materiaEmDiscussao) {
+        const materiaEmDiscussaoIndex = sessao.itens.findIndex(m => m.status === 'Em Discussão');
+        if (materiaEmDiscussaoIndex === -1) {
             alert("Nenhuma matéria em discussão para ceder a vez.");
             return;
         }
 
-        const yieldingSpeakerUid = sessao.oradorAtual?.uid; // The current speaker is yielding
+        const yieldingSpeakerUid = sessao.oradorAtual?.uid;
         const targetVereador = parlamentares.find(p => p.id === selectedVereadorToYieldTo);
 
         if (!targetVereador) {
@@ -311,28 +321,28 @@ class SessaoPlenariaRestrita extends Component {
             return;
         }
 
-        const updates = {};
-
-        // 1. Mark the yielding vereador as having spoken on this matter
+        const updatedItens = [...sessao.itens];
         if (yieldingSpeakerUid) {
-            updates[`/${camaraId}/sessoes/${sessao.id}/itens/${sessao.itens.indexOf(materiaEmDiscussao)}/spokenBy/${yieldingSpeakerUid}`] = true;
-            if (materiaEmDiscussao.id) {
-                const path = materiaEmDiscussao.isAcessorio ? `documentos_acessorios/${materiaEmDiscussao.id}` : `materias/${materiaEmDiscussao.id}`;
-                updates[`/${camaraId}/${path}/spokenBy/${yieldingSpeakerUid}`] = true;
-            }
+            updatedItens[materiaEmDiscussaoIndex] = {
+                ...updatedItens[materiaEmDiscussaoIndex],
+                spokenBy: { ...updatedItens[materiaEmDiscussaoIndex].spokenBy, [yieldingSpeakerUid]: true }
+            };
         }
 
-        // 2. Set the target vereador as the new current speaker with a fresh 5 minutes
-        const oradorData = { uid: targetVereador.id, nome: targetVereador.nome, tempo: 300, inicio: Date.now() }; // 5 minutes
-        updates[`${camaraId}/sessoes/${sessao.id}/oradorAtual`] = oradorData;
-
-        // 3. Remove the target vereador from the queue if they were there
-        const currentQueue = sessao.filaDeInscritos || [];
-        updates[`${camaraId}/sessoes/${sessao.id}/filaDeInscritos`] = currentQueue.filter(s => s.uid !== targetVereador.id);
+        const oradorData = { uid: targetVereador.id, nome: targetVereador.nome, tempo: 300, inicio: Date.now() };
+        const newQueue = (sessao.filaDeInscritos || []).filter(s => s.uid !== targetVereador.id);
 
         try {
-            await update(ref(db), updates);
+            await api.patch(`/sessions/id/${sessao.id}`, { 
+                itens: updatedItens,
+                oradorAtual: oradorData,
+                filaDeInscritos: newQueue
+            });
+
             this.handleCloseYieldTimeModal();
+            this.setState(prevState => ({
+                sessao: { ...prevState.sessao, itens: updatedItens, oradorAtual: oradorData, filaDeInscritos: newQueue }
+            }));
             alert(`${sessao.oradorAtual?.nome || 'O orador anterior'} cedeu a vez para ${targetVereador.nome}.`);
         } catch (error) {
             console.error("Erro ao ceder a vez:", error);
@@ -341,32 +351,45 @@ class SessaoPlenariaRestrita extends Component {
     };
 
     handleGrantWord = async (speaker) => {
-        const { camaraId, sessao } = this.state;
+        const { camaraId, sessao, parlamentares } = this.state;
         if (!sessao) return;
-        const nome = speaker.nome || speaker.name || this.state.parlamentares.find(p => p.id === speaker.uid)?.nome || 'Parlamentar';
-        const oradorData = { uid: speaker.uid, nome: nome, tempo: 300, inicio: Date.now() }; // 5 minutes
-        const updates = {};
-        updates[`${camaraId}/sessoes/${sessao.id}/oradorAtual`] = oradorData;
-        const currentQueue = sessao.filaDeInscritos || [];
-        updates[`${camaraId}/sessoes/${sessao.id}/filaDeInscritos`] = currentQueue.filter(s => s.uid !== speaker.uid);
-        await update(ref(db), updates);
+        const nome = speaker.nome || speaker.name || parlamentares.find(p => p.id === speaker.uid)?.nome || 'Parlamentar';
+        const oradorData = { uid: speaker.uid, nome: nome, tempo: 300, inicio: Date.now() };
+        const newQueue = (sessao.filaDeInscritos || []).filter(s => s.uid !== speaker.uid);
+        
+        try {
+            await api.patch(`/sessions/id/${sessao.id}`, { oradorAtual: oradorData, filaDeInscritos: newQueue });
+            this.setState(prevState => ({ sessao: { ...prevState.sessao, oradorAtual: oradorData, filaDeInscritos: newQueue } }));
+        } catch (error) {
+            console.error("Erro ao conceder palavra:", error);
+        }
     };
 
     handleAddTime = async () => {
         const { camaraId, sessao } = this.state;
         if (sessao.oradorAtual) {
             const newTime = (sessao.oradorAtual.tempo || 0) + 60;
-            await update(ref(db, `${camaraId}/sessoes/${sessao.id}/oradorAtual`), { tempo: newTime });
+            try {
+                await api.patch(`/sessions/id/${sessao.id}`, { oradorAtual: { ...sessao.oradorAtual, tempo: newTime } });
+                this.setState(prevState => ({ sessao: { ...prevState.sessao, oradorAtual: { ...prevState.sessao.oradorAtual, tempo: newTime } } }));
+            } catch (error) {
+                console.error("Erro ao adicionar tempo:", error);
+            }
         }
     };
 
     handleRemoveSpeaker = async (speakerUid) => {
         const { camaraId, sessao } = this.state;
-        const updates = {};
-        const filaDeInscritos = sessao.filaDeInscritos || [];
-        updates[`${camaraId}/sessoes/${sessao.id}/filaDeInscritos`] = filaDeInscritos.filter(s => s.uid !== speakerUid);
-        if (sessao.oradorAtual && sessao.oradorAtual.uid === speakerUid) updates[`${camaraId}/sessoes/${sessao.id}/oradorAtual`] = null;
-        await update(ref(db), updates);
+        const newQueue = (sessao.filaDeInscritos || []).filter(s => s.uid !== speakerUid);
+        const updates = { filaDeInscritos: newQueue };
+        if (sessao.oradorAtual && sessao.oradorAtual.uid === speakerUid) updates.oradorAtual = null;
+        
+        try {
+            await api.patch(`/sessions/id/${sessao.id}`, updates);
+            this.setState(prevState => ({ sessao: { ...prevState.sessao, ...updates } }));
+        } catch (error) {
+            console.error("Erro ao remover orador:", error);
+        }
     };
 
     renderStatusBadge = (status) => {

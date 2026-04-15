@@ -1,9 +1,7 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-
-import { Switch, Route, useLocation } from 'react-router-dom'
-import { db } from './firebaseConfig';
-import { ref, get } from 'firebase/database';
+import { Switch, Route, useLocation } from 'react-router-dom';
+import api from './services/api';
 
 //Screen Navigate
 import HomeDashboard from './screens/semLogin/HomePage.jsx';
@@ -27,7 +25,6 @@ import CreateAccessoryDocument from './screens/comLogin/Materias/CreateAccessory
 import AccessoryDocumentsDash from './screens/comLogin/Materias/AccessoryDocumentsDash.jsx';
 
 import JuizoMateria from './screens/comLogin/Juridico/juizoMateria.jsx';
-
 import JuizoPresidente from './screens/comLogin/Presidencia/juizoPresidente.jsx';
 
 import PautasSessao from './screens/comLogin/Sessoes/pautasSessao.jsx';
@@ -72,22 +69,12 @@ import VereadorProfile from './screens/semLogin/VereadorProfile.jsx';
 // Paginas Configurações e Gerenciamento
 import CamaraSelector from './screens/semLogin/CamaraSelector.jsx';
 
-
 // Navigate Components
 import ChatAI from './screens/semLogin/ChatAI.jsx';
 import TopBar from './componets/topBarSearch.jsx';
-import MenuDesktop from './componets/menuDesktop.jsx'; // Verifique se este arquivo existe ou se deveria ser menuDashboard.jsx
-import { FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
-
+import MenuDesktop from './componets/menuDesktop.jsx';
 
 function App() {
-  // Configuração do Tenant (Pode vir de um Contexto ou API)
-  const tenant = {
-    name: "Câmara Municipal de Blumenau",
-    email: "contato@camarablumenau.sc.gov.br",
-    phone: "(47) 3322-0000",
-    address: "Rua XV de Novembro, 55 - Centro"
-  };
   const [footerConfig, setFooterConfig] = useState({
     slogan: "Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.",
     address: "Endereço não informado",
@@ -100,57 +87,80 @@ function App() {
     slogan: "Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.",
   });
 
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState({
     corPrimaria: '#126B5E', // Default primary color
     corDestaque: '#FF740F', // Default highlight color
     logo: '', // Logo dynamic
   });
 
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
   const openChat = () => setIsChatOpen(true);
   const closeChat = () => setIsChatOpen(false);
 
   const location = useLocation();
   const pathParts = location.pathname.split('/').filter(Boolean);
-  const camaraId = pathParts.length > 1 ? pathParts[1] : ''; // Extract camaraId from URL
+  const camaraId = pathParts.length > 1 ? pathParts[1] : ''; // slug da câmara
 
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
   const hideMenuDesktop = ['/', '/login/:camaraId', '/register', '/admin/perfil/:camaraId', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/');
 
+  // 1. Verificar Sessão (Me)
   useEffect(() => {
-    const fetchLayoutConfig = async () => {
-      if (camaraId) {
-        const homeRef = ref(db, `${camaraId}/dados-config/home`);
-        const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
-        const footerRef = ref(db, `${camaraId}/dados-config/footer`);
+    const verifySession = async () => {
+      const token = localStorage.getItem('@CamaraAI:token');
+      if (token) {
         try {
-          const snapshot = await get(layoutRef);
-          const footerSnapshot = await get(footerRef);
-          const homeSnapshot = await get(homeRef);
+          const response = await api.get('/auth/me');
+          setCurrentUser(response.data);
+          localStorage.setItem('@CamaraAI:user', JSON.stringify(response.data));
+        } catch (error) {
+          console.error("Erro ao verificar sessão:", error);
+          localStorage.removeItem('@CamaraAI:token');
+          localStorage.removeItem('@CamaraAI:user');
+        }
+      }
+    };
+    verifySession();
+  }, []);
 
+  // 2. Buscar Configurações da Câmara
+  useEffect(() => {
+    const fetchCamaraConfig = async () => {
+      if (camaraId && camaraId !== ':camaraId') {
+        try {
+          const response = await api.get(`/councils/${camaraId}`);
+          const council = response.data;
 
-          if (snapshot.exists()) {
-            setLayoutConfig(snapshot.val());
-          } else {
-            // Reset to default if no config found
-            setLayoutConfig({ corPrimaria: '#126B5E', corDestaque: '#FF740F' });
-          }
+          if (council) {
+            setHomeConfig({
+              titulo: council.name || 'Camara AI',
+              slogan: council.slogan || homeConfig.slogan
+            });
 
-          if (footerSnapshot.exists()) {
-            setFooterConfig(footerSnapshot.val());
-          }
+            setFooterConfig({
+              slogan: council.slogan || footerConfig.slogan,
+              address: council.address || footerConfig.address,
+              phone: council.phone || footerConfig.phone,
+              email: council.email || footerConfig.email,
+            });
 
-          if (homeSnapshot.exists()) {
-            setHomeConfig(homeSnapshot.val());
+            // Se o backend retornar cores, usamos elas. Caso contrário, mantemos os defaults.
+            setLayoutConfig({
+              corPrimaria: council.corPrimaria || '#126B5E',
+              corDestaque: council.corDestaque || '#FF740F',
+              logo: council.logoUrl || '',
+            });
           }
         } catch (error) {
-          console.error("Error fetching layout config:", error);
+          console.error("Error fetching council config:", error);
         }
       }
     };
 
-    fetchLayoutConfig();
-  }, [location.pathname, camaraId]);
+    fetchCamaraConfig();
+  }, [camaraId]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -192,6 +202,7 @@ function App() {
           <Route path="/admin/perfil/:camaraId" component={Perfil} />
 
           {/* Páginas Mobile */}
+          <Route path="/Mais/:camaraId" component={Mais} />
           <Route path="/Mais" component={Mais} />
 
           {/* Páginas Filho */}

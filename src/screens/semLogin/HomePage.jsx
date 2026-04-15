@@ -4,9 +4,7 @@ import { FaSearch, FaArrowRight } from 'react-icons/fa';
 import SlideFeacures from '../../componets/slideFeactures.jsx';
 import '../../App.css';
 import ChatAI from './ChatAI.jsx';
-import { db } from '../../firebaseConfig';
-import { ref, get, query, orderByChild, equalTo, limitToLast } from 'firebase/database';
-import SlideSessoes from '../../componets/SlideSessoes';
+import api from '../../services/api.js';
 
 
 class HomePage extends Component {
@@ -39,66 +37,47 @@ class HomePage extends Component {
         this.setState({ loading: true });
 
         try {
-            // 1. Fetch home page configuration
-            const configRef = ref(db, `${camaraId}/dados-config/home`);
-            const configSnapshot = await get(configRef);
-            const homeConfig = configSnapshot.exists() ? configSnapshot.val() : {};
+            // Fetch data from multiple endpoints via the new API
+            const [councilResponse, usersResponse, mattersResponse, sessionsResponse] = await Promise.all([
+                api.get(`/councils/id/${camaraId}`),
+                api.get(`/users/${camaraId}`),
+                api.get(`/legislative-matters/${camaraId}`),
+                api.get(`/sessions/${camaraId}`)
+            ]);
 
-            // 2. Fetch representatives (vereadores)
-            const usersRef = ref(db, `${camaraId}/users`);
-            // Client-side filtering to avoid needing a Firebase index for now.
-            // This is less performant on large datasets but resolves the immediate error.
-            const usersSnapshot = await get(usersRef);
-            const vereadores = [];
-            if (usersSnapshot.exists()) {
-                usersSnapshot.forEach(child => {
-                    const user = child.val();
-                    if (user.tipo === 'vereador') {
-                        vereadores.push({ id: child.key, ...user });
-                    }
-                });
-            }
+            // 1. Home page configuration
+            const councilData = councilResponse.data || {};
+            const config = councilData.config || councilData.dadosConfig || {};
+            const homeConfig = config.home || {};
 
-            // 3. Fetch recent matters for "Acontece na Câmara"
-            const materiasRef = ref(db, `${camaraId}/materias`);
-            // Fetches the last 3 created matters
-            const materiasQuery = query(materiasRef, orderByChild('createdAt'), limitToLast(3));
-            const materiasSnapshot = await get(materiasQuery);
-            const agenda = [];
-            if (materiasSnapshot.exists()) {
-                materiasSnapshot.forEach(child => {
-                    const materia = child.val();
-                    // Use dataApresenta if available, otherwise fallback to createdAt
-                    const data = new Date(materia.dataApresenta || materia.createdAt);
-                    agenda.push({
-                        id: child.key,
-                        day: data.getDate(),
-                        month: data.toLocaleString('pt-BR', { month: 'short' }).toUpperCase().replace('.', ''),
-                        time: '19:00', // Placeholder time
-                        title: materia.titulo || 'Matéria sem título',
-                        location: 'Plenário Virtual', // Placeholder location
-                        imagem: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60' // Placeholder image
-                    });
-                });
-            }
+            // 2. Representatives (vereadores)
+            const vereadores = (usersResponse.data || []).filter(u => u.tipo === 'vereador');
+
+            // 3. Recent matters for "Acontece na Câmara"
+            const agendaRaw = mattersResponse.data || [];
+            agendaRaw.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const agenda = agendaRaw.slice(0, 3).map(materia => {
+                const data = new Date(materia.dataApresenta || materia.createdAt);
+                return {
+                    id: materia.id,
+                    day: data.getDate(),
+                    month: data.toLocaleString('pt-BR', { month: 'short' }).toUpperCase().replace('.', ''),
+                    time: materia.hora || '19:00',
+                    title: materia.titulo || materia.ementa || 'Matéria sem título',
+                    location: 'Plenário Virtual',
+                    imagem: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60'
+                };
+            });
 
             // 4. Buscar sessões recentes
-            const sessoesRef = ref(db, `${camaraId}/sessoes`);
-            const sessoesSnapshot = await get(sessoesRef);
-            const sessoes = [];
-            if (sessoesSnapshot.exists()) {
-                sessoesSnapshot.forEach(child => {
-                    sessoes.push({ id: child.key, ...child.val() });
-                });
-                // Ordenar por data de criação (mais recentes primeiro)
-                sessoes.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            }
+            const sessoes = sessionsResponse.data || [];
+            sessoes.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
             this.setState({
                 homeConfig,
                 vereadores,
-                agenda: agenda.reverse(), // Reverse to show newest first
-                sessoes: sessoes.slice(0, 3), // Mostra apenas as 3 mais recentes no grid
+                agenda,
+                sessoes: sessoes.slice(0, 3),
                 loading: false,
             });
 

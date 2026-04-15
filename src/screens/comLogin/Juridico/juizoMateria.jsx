@@ -5,9 +5,7 @@ import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../../assets/logo.png';
 import { sendMessageToAIPrivate } from '../../../aiService';
-import { db } from '../../../firebaseConfig';
-import { ref, onValue, update, get } from 'firebase/database';
-import { auth } from '../../../firebaseConfig';
+import api from '../../../services/api';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -44,22 +42,15 @@ class JuizoMateria extends Component {
         this.fetchMaterias(camaraId);
     }
 
-    fetchMaterias = (camaraId) => {
+    fetchMaterias = async (camaraId) => {
         this.setState({ loading: true });
         try {
-            const materiasRef = ref(db, `${camaraId}/materias/`);
-            // Usando onValue para escuta em tempo real das matérias
-            onValue(materiasRef, (snapshot) => {
-                const materias = [];
-                if (snapshot.exists()) {
-                    Object.entries(snapshot.val()).forEach(([key, val]) => {
-                        materias.push({ id: key, ...val });
-                    });
-                }
-                // Ordenar por mais recentes
-                materias.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                this.setState({ materias, loading: false });
-            });
+            const response = await api.get(`/legislative-matters/${camaraId}`);
+            const materias = response.data || [];
+            
+            // Ordenar por mais recentes
+            materias.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            this.setState({ materias, loading: false });
         } catch (error) {
             console.error("Erro ao buscar matérias para parecer:", error);
             this.setState({ loading: false });
@@ -69,23 +60,18 @@ class JuizoMateria extends Component {
     fetchConfigsAndLogo = async () => {
         const { camaraId } = this.state;
         try {
-            const [layoutSnap, homeSnap, footerSnap] = await Promise.all([
-                get(ref(db, `${camaraId}/dados-config/layout`)),
-                get(ref(db, `${camaraId}/dados-config/home`)),
-                get(ref(db, `${camaraId}/dados-config/footer`))
-            ]);
+            const response = await api.get(`/councils/${camaraId}`);
+            const configData = response.data || {};
 
-            const layoutData = layoutSnap.val() || {};
-
-            if (layoutData.logoLight) {
-                this.getBase64(layoutData.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
+            if (configData.layout?.logoLight) {
+                this.getBase64(configData.layout.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
             } else {
                 this.getBase64(logo).then(logoBase64 => this.setState({ logoBase64 }));
             }
 
             this.setState({
-                homeConfig: homeSnap.val() || {},
-                footerConfig: footerSnap.val() || {}
+                homeConfig: configData.home || {},
+                footerConfig: configData.footer || {}
             });
         } catch (error) {
             console.error("Erro ao carregar configurações:", error);
@@ -139,22 +125,18 @@ class JuizoMateria extends Component {
         const { selectedMateria, parecerText, camaraId } = this.state;
         if (!selectedMateria) return;
 
-        const user = auth.currentUser;
-        // Simplificado: Aqui não temos modal de senha explícito no fluxo original, 
-        // mas vamos adicionar metadados básicos de quem está logado ao salvar
-        // Para rigidez total, deveria haver um modal de senha aqui também.
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        
         const signatureMetadata = {
-            nome: user?.displayName || 'Procurador',
-            email: user?.email,
-            timestamp: new Date().toISOString(),
-            // IP e hash simplificados aqui pois não há modal de confirmação no fluxo atual
-            // userAgent: navigator.userAgent
+            nome: user.name || 'Procurador',
+            email: user.email,
+            timestamp: new Date().toISOString()
         };
 
         const pdfBase64 = await this.generateParecerPDFBase64(selectedMateria, parecerText, decisao, signatureMetadata);
 
         const newStatus = decisao === 'favoravel' ? 'Parecer Favorável' : 'Parecer Contrário';
-        const parecerData = {
+        const parecerUpdateData = {
             status: newStatus,
             parecer: parecerText || "Não foi fornecida fundamentação.",
             decisao: decisao,
@@ -164,13 +146,16 @@ class JuizoMateria extends Component {
         };
 
         try {
-            // Salva o parecer no nó da matéria
-            const materiaRef = ref(db, `${camaraId}/materias/${selectedMateria.id}`);
-            await update(materiaRef, parecerData);
+            // Atualiza a matéria via patch
+            await api.patch(`/legislative-matters/id/${selectedMateria.id}`, parecerUpdateData);
 
-            // Abre o PDF no popup para o usuário após salvar
-            this.setState({ pdfData: pdfBase64, showPdfPopup: true });
-            this.setState({ selectedMateria: null });
+            // Atualiza a lista local para refletir a mudança
+            this.setState(prevState => ({
+                materias: prevState.materias.map(m => m.id === selectedMateria.id ? { ...m, ...parecerUpdateData } : m),
+                pdfData: pdfBase64,
+                showPdfPopup: true,
+                selectedMateria: null
+            }));
         } catch (error) {
             console.error("Erro ao salvar parecer:", error);
             alert("Ocorreu um erro ao salvar o parecer. Tente novamente.");

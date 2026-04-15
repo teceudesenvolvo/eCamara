@@ -11,8 +11,7 @@ import PageHeader from '../../componets/PageHeader.jsx';
 import { FaSpinner, FaTimes } from 'react-icons/fa';
 
 // Firebase
-import { db } from '../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../../services/api.js';
 
 class NormasJuridicas extends Component {
     constructor(props) {
@@ -40,44 +39,42 @@ class NormasJuridicas extends Component {
         }
 
         try {
-            // Busca da base de conhecimento configurada no painel admin
-            const normasRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
-            const snapshot = await get(normasRef);
+            // Busca da base de conhecimento configurada no painel admin via API
+            const response = await api.get(`/councils/id/${camaraId}`);
+            const councilData = response.data || {};
+            const config = councilData.config || councilData.dadosConfig || {};
+            const baseData = config['base-conhecimento'] || {};
             
             const fetchedNormas = [];
 
-            if (snapshot.exists()) {
-                const data = snapshot.val();
+            // Mapeia a Lei Orgânica se existir
+            if (baseData.leiOrganicaText) {
+                fetchedNormas.push({
+                    id: 'lei-organica',
+                    tipo: 'Lei Orgânica',
+                    numero: '',
+                    ano: '',
+                    data: 'Texto Consolidado',
+                    descricao: 'Lei máxima do município. Estabelece as regras e competências locais e a organização dos poderes.',
+                    status: 'Vigente',
+                    imagem: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&w=500&q=60',
+                    textoCompleto: baseData.leiOrganicaText,
+                });
+            }
 
-                // Mapeia a Lei Orgânica se existir
-                if (data.leiOrganicaText) {
-                    fetchedNormas.push({
-                        id: 'lei-organica',
-                        tipo: 'Lei Orgânica',
-                        numero: '',
-                        ano: '',
-                        data: 'Texto Consolidado',
-                        descricao: 'Lei máxima do município. Estabelece as regras e competências locais e a organização dos poderes.',
-                        status: 'Vigente',
-                        imagem: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&w=500&q=60',
-                        textoCompleto: data.leiOrganicaText,
-                    });
-                }
-
-                // Mapeia o Regimento Interno se existir
-                if (data.regimentoText) {
-                    fetchedNormas.push({
-                        id: 'regimento-interno',
-                        tipo: 'Regimento Interno',
-                        numero: '',
-                        ano: '',
-                        data: 'Texto Consolidado',
-                        descricao: 'Conjunto de normas que regem o funcionamento interno da Câmara Municipal e o Processo Legislativo.',
-                        status: 'Vigente',
-                        imagem: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60',
-                        textoCompleto: data.regimentoText,
-                    });
-                }
+            // Mapeia o Regimento Interno se existir
+            if (baseData.regimentoText) {
+                fetchedNormas.push({
+                    id: 'regimento-interno',
+                    tipo: 'Regimento Interno',
+                    numero: '',
+                    ano: '',
+                    data: 'Texto Consolidado',
+                    descricao: 'Conjunto de normas que regem o funcionamento interno da Câmara Municipal e o Processo Legislativo.',
+                    status: 'Vigente',
+                    imagem: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=60',
+                    textoCompleto: baseData.regimentoText,
+                });
             }
 
             this.setState({ normas: fetchedNormas, loading: false });

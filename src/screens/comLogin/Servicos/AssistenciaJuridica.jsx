@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { FaBalanceScale, FaClock, FaUser, FaCheck, FaTimes, FaSearch, FaSpinner, FaGavel, FaInfoCircle, FaCheckCircle } from 'react-icons/fa';
-import { ref, onValue, update } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class AssistenciaJuridica extends Component {
     constructor(props) {
@@ -18,40 +17,40 @@ class AssistenciaJuridica extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchConsultas();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchConsultas();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchConsultas = () => {
+    fetchConsultas = async () => {
         const { camaraId } = this.state;
-        const consultasRef = ref(db, `${camaraId}/assistencia_juridica`);
-
-        onValue(consultasRef, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
-            }
+        try {
+            const response = await api.get(`/legal-assistance/${camaraId}`);
+            const data = response.data || [];
+            
             // Ordenar por data (mais recentes primeiro)
-            data.sort((a, b) => new Date(b.dataPedido) - new Date(a.dataPedido));
-            this.setState({ consultas: data, loading: false });
-        });
+            if (Array.isArray(data)) {
+                data.sort((a, b) => new Date(b.dataPedido) - new Date(a.dataPedido));
+                this.setState({ consultas: data, loading: false });
+            } else {
+                this.setState({ consultas: [], loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar consultas:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleUpdateStatus = async (id, newStatus) => {
-        const { camaraId } = this.state;
         try {
-            await update(ref(db, `${camaraId}/assistencia_juridica/${id}`), { 
-                status: newStatus,
-                dataAtualizacao: new Date().toISOString()
+            await api.patch(`/legal-assistance/${id}`, { 
+                status: newStatus
             });
             alert(`Solicitação atualizada para: ${newStatus}`);
+            this.fetchConsultas();
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             alert("Erro ao processar atualização.");

@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import { FaUsers, FaFileAlt, FaCheck, FaTimes, FaPlus, FaCalendarCheck, FaUserTag, FaPenFancy, FaRobot, FaEye, FaSpinner } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { db, auth } from '../../../firebaseConfig';
-import { ref, get, onValue, update, push, set } from 'firebase/database';
-import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import api from '../../../services/api.js';
 import { sendMessageToAIPrivate } from '../../../aiService';
 
 class ComissaoDetails extends Component {
@@ -47,41 +45,41 @@ class ComissaoDetails extends Component {
     }
 
     componentDidMount() {
-        const { state } = this.props.location || {};
-        const comissaoId = state ? state.comissaoId : null;
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
-        console.log("Comissão ID recebido via props.location.state:", comissaoId);
-        this.setState({ comissaoId }); // Atualiza o estado com o comissaoId recebido
+        if (!token || !user.id) {
+            this.props.history.push(`/login/${this.state.camaraId}`);
+            return;
+        }
+
+        const { state } = this.props.location || {};
+        const comissaoId = state ? state.comissaoId : (this.props.match.params.comissaoId || null);
 
         if (!comissaoId) {
             this.setState({ loading: false, error: "ID da comissão não fornecido." });
             return;
         }
 
-        const camaraId = this.props.match.params.camaraId;
+        const camaraId = user.camaraId || this.props.match.params.camaraId;
 
-        this.setState({ camaraId, comissaoId }, () => {
+        this.setState({ camaraId, comissaoId, currentUser: user }, () => {
             this.fetchComissaoDetails();
         });
     }
 
     fetchComissaoDetails = async () => {
-        const { camaraId, comissaoId } = this.state;
-        this.setState({ loading: true }); // Set loading to true before fetching
-        const comissaoRef = ref(db, `${this.props.match.params.camaraId}/comissoes/${comissaoId}`);
-        console.log(comissaoRef);
-        console.log("camaraId:", camaraId, "comissaoId:", comissaoId);
+        const { camaraId, comissaoId, currentUser } = this.state;
+        this.setState({ loading: true });
         
         try {
-            const snapshot = await get(comissaoRef);
-            console.log(snapshot.exists());
-            if (snapshot.exists()) {
-                const comissaoData = { id: snapshot.key, ...snapshot.val() };
+            const response = await api.get(`/commissions/id/${comissaoId}`);
+            if (response.data) {
+                const comissaoData = response.data;
                 
-                // Determine User Role
                 let userRole = 'Visitante';
-                if (auth.currentUser && comissaoData.membros) {
-                    const membro = Object.values(comissaoData.membros).find(m => m.id === auth.currentUser.uid);
+                if (currentUser && comissaoData.membros) {
+                    const membro = Object.values(comissaoData.membros).find(m => m.id === currentUser.id);
                     if (membro) userRole = membro.cargo;
                 }
 
@@ -91,35 +89,25 @@ class ComissaoDetails extends Component {
                 });
             } else {
                 this.setState({ loading: false, error: "Comissão não encontrada." });
-                console.log("Comissão encontrada:", this.state.comissao);
-                console.log(snapshot.exists());
             }
         } catch (error) {
             console.error("Erro ao buscar detalhes da comissão:", error); 
-            this.setState({ loading: false, error: "Erro ao buscar detalhes da comissão." }); // Handle error
+            this.setState({ loading: false, error: "Erro ao buscar detalhes da comissão." });
         }
     };
 
 
-    fetchMaterias = () => {
+    fetchMaterias = async () => {
         const { camaraId, comissao } = this.state;
         if (!comissao) return;
 
-        const materiasRef = ref(db, `${camaraId}/materias`);
-        onValue(materiasRef, (snapshot) => {
-            const allMaterias = [];
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    allMaterias.push({ id: child.key, ...child.val() });
-                });
-            }
-            // Filtra matérias destinadas a esta comissão
+        try {
+            const response = await api.get(`/legislative-matters/council/${camaraId}`);
+            const allMaterias = response.data || [];
+            
             const materiasDaComissao = allMaterias.filter(m => {
-                // 1. Matérias recém encaminhadas (sem relator ainda ou status inicial)
                 if (m.status === `Encaminhado à ${comissao.nome}`) return true;
-
-                // 2. Matérias já em processo na comissão (com relator definido que pertence a esta comissão)
-                if (m.relatorId && comissao.membros && comissao.membros[m.relatorId]) {
+                if (m.relatorId && comissao.membros && Object.values(comissao.membros).some(mem => mem.id === m.relatorId)) {
                     return m.status.startsWith('Em Análise pelo Relator') ||
                            m.status === 'Parecer Emitido - Aguardando Votação' ||
                            m.status === 'Aprovado na Comissão' ||
@@ -128,35 +116,32 @@ class ComissaoDetails extends Component {
                 return false;
             });
             this.setState({ materias: materiasDaComissao, loading: false });
-        },  (error) => {
+        } catch (error) {
             console.error("Erro ao buscar matérias da comissão:", error);
-            this.setState({ loading: false, error: "Erro ao buscar matérias da comissão." }); // Handle error
-        });
+            this.setState({ loading: false, error: "Erro ao buscar matérias da comissão." });
+        }
     };
 
-    fetchReunioes = () => {
-        const { camaraId, comissaoId } = this.state;
+    fetchReunioes = async () => {
+        const { comissaoId } = this.state;
         if (!comissaoId) return;
 
-        const reunioesRef = ref(db, `${camaraId}/comissoes/${comissaoId}/reunioes`);
-        onValue(reunioesRef, (snapshot) => {
-            const reunioesList = [];
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    reunioesList.push({ id: child.key, ...child.val() });
-                });
-            }
-            // Ordena por data, da mais recente para a mais antiga
+        try {
+            // Supondo que as reuniões sejam buscadas por comissão
+            const response = await api.get(`/commissions/id/${comissaoId}/meetings`);
+            const reunioesList = response.data || [];
             reunioesList.sort((a, b) => new Date(b.data) - new Date(a.data));
             this.setState({ reunioes: reunioesList });
-        });
+        } catch (error) {
+            console.error("Erro ao buscar reuniões:", error);
+        }
     };
-     handleUpdateMateriaStatus = async (materiaId, newStatus) => {
-        const { camaraId } = this.state;
-        const materiaRef = ref(db, `${camaraId}/materias/${materiaId}`);
+
+    handleUpdateMateriaStatus = async (materiaId, newStatus) => {
         try {
-            await update(materiaRef, { status: newStatus });
+            await api.patch(`/legislative-matters/id/${materiaId}`, { status: newStatus });
             alert(`Matéria atualizada para: ${newStatus}`);
+            this.fetchMaterias();
         } catch (error) {
             console.error("Erro ao atualizar status da matéria:", error);
         }
@@ -183,27 +168,20 @@ class ComissaoDetails extends Component {
     };
 
     handleCastVote = async () => {
-        const { camaraId, votingMateria, memberVote, votoEmSeparadoBase64 } = this.state;
-        const userId = auth.currentUser.uid;
-        const user = auth.currentUser;
+        const { votingMateria, memberVote, votoEmSeparadoBase64, currentUser } = this.state;
+        if (!currentUser) return;
         
-        // Metadados básicos para o voto
         const signatureMetadata = {
-            nome: user.displayName || 'Membro',
-            email: user.email,
+            nome: currentUser.name || currentUser.displayName || 'Membro',
+            email: currentUser.email,
             timestamp: new Date().toISOString(),
             userAgent: navigator.userAgent
-            // IP requires async fetch which might be overkill for simple vote, 
-            // but can be added if needed. Kept simple for list view votes.
         };
 
-        // Save vote to Firebase
-        const voteRef = ref(db, `${camaraId}/materias/${votingMateria.id}/votosComissao/${userId}`);
-        
         const voteData = {
             voto: memberVote,
             data: new Date().toISOString(),
-            nome: auth.currentUser.displayName || 'Membro',
+            nome: currentUser.name || currentUser.displayName || 'Membro',
             signature: signatureMetadata
         };
 
@@ -211,19 +189,26 @@ class ComissaoDetails extends Component {
             voteData.parecerBase64 = votoEmSeparadoBase64;
         }
 
-        await update(voteRef, voteData);
-
-        this.setState({ showVotingModal: false, votingMateria: null, memberVote: 'Favorável', votoEmSeparadoFile: null, votoEmSeparadoBase64: null });
+        try {
+            const updatedVotos = { ...votingMateria.votosComissao, [currentUser.id]: voteData };
+            await api.patch(`/legislative-matters/id/${votingMateria.id}`, { votosComissao: updatedVotos });
+            this.setState({ showVotingModal: false, votingMateria: null, memberVote: 'Favorável', votoEmSeparadoFile: null, votoEmSeparadoBase64: null });
+            this.fetchMaterias();
+        } catch (error) {
+            console.error("Erro ao computar voto:", error);
+        }
     };
 
     handleFinalizeVoting = async (materiaId, resultado) => {
-        const { camaraId } = this.state;
-        const materiaRef = ref(db, `${camaraId}/materias/${materiaId}`);
-        
-        await update(materiaRef, {
-            status: resultado === 'Aprovado' ? 'Aprovado na Comissão' : 'Rejeitado na Comissão',
-            dataVotacaoComissao: new Date().toISOString()
-        });
+        try {
+            await api.patch(`/legislative-matters/id/${materiaId}`, {
+                status: resultado === 'Aprovado' ? 'Aprovado na Comissão' : 'Rejeitado na Comissão',
+                dataVotacaoComissao: new Date().toISOString()
+            });
+            this.fetchMaterias();
+        } catch (error) {
+            console.error("Erro ao finalizar votação:", error);
+        }
     };
 
 
@@ -273,9 +258,6 @@ class ComissaoDetails extends Component {
             pautaFinal += `${pautaFinal ? '\n\n' : ''}Outros Tópicos:\n${novaReuniaoPauta}`;
         }
 
-        const reunioesRef = ref(db, `${camaraId}/comissoes/${comissaoId}/reunioes`);
-        const newReuniaoRef = push(reunioesRef);
-
         let reuniaoData = {
             data: novaReuniaoData,
             tipo: novaReuniaoTipo,
@@ -286,16 +268,17 @@ class ComissaoDetails extends Component {
         };
 
         if (novaReuniaoTipo === 'Virtual') {
-            const roomName = `camara-ai-${camaraId}-${comissaoId}-${newReuniaoRef.key}`;
+            const roomName = `camara-ai-${camaraId}-${comissaoId}-${Date.now()}`;
             reuniaoData.url = `https://meet.jit.si/${roomName}`;
         } else {
             reuniaoData.local = novaReuniaoLocal || 'A definir';
         }
 
         try {
-            await set(newReuniaoRef, reuniaoData);
+            await api.post(`/commissions/id/${comissaoId}/meetings`, reuniaoData);
             alert('Reunião criada com sucesso!');
             this.handleCloseReuniaoModal();
+            this.fetchReunioes();
         } catch (error) {
             console.error("Erro ao criar reunião:", error);
             alert('Erro ao criar reunião.');
@@ -308,21 +291,21 @@ class ComissaoDetails extends Component {
     };
 
     handleDesignateRelator = async () => {
-        const { camaraId, designatingMateria, selectedRelatorId, comissao } = this.state;
+        const { designatingMateria, selectedRelatorId, comissao } = this.state;
         if (!selectedRelatorId) return alert("Selecione um relator.");
 
         const relatorMember = Object.values(comissao.membros).find(m => m.id === selectedRelatorId);
         if (!relatorMember) return;
 
-        const materiaRef = ref(db, `${camaraId}/materias/${designatingMateria.id}`);
         try {
-            await update(materiaRef, {
+            await api.patch(`/legislative-matters/id/${designatingMateria.id}`, {
                 relatorId: relatorMember.id,
                 relatorNome: relatorMember.nome,
                 status: `Em Análise pelo Relator (${relatorMember.nome})`
             });
             alert(`Relator ${relatorMember.nome} designado com sucesso.`);
             this.setState({ showDesignateModal: false, designatingMateria: null });
+            this.fetchMaterias();
         } catch (error) {
             console.error("Erro ao designar relator:", error);
         }
@@ -371,12 +354,11 @@ class ComissaoDetails extends Component {
     };
 
     handleSaveParecer = async () => {
-        const { camaraId, parecerMateria, parecerText, parecerVoto } = this.state;
+        const { parecerMateria, parecerText, parecerVoto } = this.state;
         if (!parecerText) return alert("O texto do parecer não pode estar vazio.");
 
-        const materiaRef = ref(db, `${camaraId}/materias/${parecerMateria.id}`);
         try {
-            await update(materiaRef, {
+            await api.patch(`/legislative-matters/id/${parecerMateria.id}`, {
                 parecerComissao: parecerText,
                 votoRelator: parecerVoto,
                 status: 'Parecer Emitido - Aguardando Votação',
@@ -384,6 +366,7 @@ class ComissaoDetails extends Component {
             });
             alert("Parecer salvo e emitido com sucesso.");
             this.setState({ showParecerModal: false, parecerMateria: null });
+            this.fetchMaterias();
         } catch (error) {
             console.error("Erro ao salvar parecer:", error);
         }
@@ -465,7 +448,7 @@ class ComissaoDetails extends Component {
                                             )}
 
                                             {/* Ações do Relator: Emitir Parecer */}
-                                            {auth.currentUser && materia.relatorId === auth.currentUser.uid && !materia.parecerComissao && (
+                                            {this.state.currentUser && materia.relatorId === this.state.currentUser.id && !materia.parecerComissao && (
                                                 <button className="btn-primary" onClick={() => this.handleOpenParecer(materia)} style={{fontSize: '0.8rem'}}>
                                                     <FaPenFancy /> Emitir Parecer
                                                 </button>
@@ -531,8 +514,8 @@ class ComissaoDetails extends Component {
                         <div className="dashboard-card">
                             <h3 style={{ margin: '0 0 20px 0', color: '#126B5E' }}>Minhas Relatorias</h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                {materias.filter(m => m.relatorId === auth.currentUser?.uid).length > 0 ? 
-                                materias.filter(m => m.relatorId === auth.currentUser?.uid).map(materia => (
+                                {materias.filter(m => m.relatorId === this.state.currentUser?.id).length > 0 ? 
+                                materias.filter(m => m.relatorId === this.state.currentUser?.id).map(materia => (
                                     <div key={materia.id} className="list-item">
                                         <div className="list-item-content">
                                             <div className="list-item-header">
@@ -590,7 +573,7 @@ class ComissaoDetails extends Component {
                                         </div>
                                         <div className="list-item-actions" style={{flexDirection: 'column', alignItems: 'flex-end', gap: '5px'}}>
                                             {/* Botão de Voto para Membros */}
-                                            {auth.currentUser && comissao.membros && comissao.membros[auth.currentUser.uid] && (
+                                            {this.state.currentUser && comissao.membros && Object.values(comissao.membros).some(m => m.id === this.state.currentUser.id) && (
                                                 <button className="btn-primary" onClick={() => this.handleOpenVoting(materia)} style={{fontSize: '0.8rem'}}>
                                                     <FaCheck /> Votar
                                                 </button>

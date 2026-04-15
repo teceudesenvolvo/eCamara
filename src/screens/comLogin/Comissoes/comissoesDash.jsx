@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { FaUsers, FaArrowRight } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Reusing for member avatar
-import { db, auth } from '../../../firebaseConfig';
-import { ref, onValue, get } from 'firebase/database';
+import api from '../../../services/api.js';
 
 class ComissoesDash extends Component {
     constructor(props) {
@@ -16,39 +15,32 @@ class ComissoesDash extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                const userIndexRef = ref(db, `${this.props.match.params.camaraId}/users/${user.uid}`);
-                const snapshot = await get(userIndexRef);
-                const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
-                
-                this.setState({ camaraId });
-                this.setState({ userId: user.uid });
-                this.fetchComissoes(camaraId, user.uid);
-            } else {
-                this.setState({ loading: false }); // No user logged in
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        if (token && user.id) {
+            const camaraId = user.camaraId || this.props.match.params.camaraId || 'camara-teste';
+            this.setState({ camaraId, userId: user.id });
+            this.fetchComissoes(camaraId, user.id);
+        } else {
+            this.setState({ loading: false });
+        }
     }
 
-    fetchComissoes = (camaraId, userId) => {
-        const comissoesRef = ref(db, `${this.props.match.params.camaraId}/comissoes`);
-        onValue(comissoesRef, (snapshot) => {
-            const allComissoes = [];
-            if (snapshot.exists()) {
-                snapshot.forEach((childSnapshot) => {
-                    allComissoes.push({ id: childSnapshot.key, ...childSnapshot.val() });
-                });
-            }
+    fetchComissoes = async (camaraId, userId) => {
+        try {
+            const response = await api.get(`/commissions/${camaraId}`);
+            const allComissoes = response.data || [];
+            
             // Filtra para mostrar apenas as comissões das quais o usuário é membro
             const myComissoes = allComissoes.filter(c => 
                 c.membros && Object.values(c.membros).some(m => m.id === userId)
             );
             this.setState({ comissoes: myComissoes, loading: false });
-        }, (error) => {
+        } catch (error) {
             console.error("Erro ao buscar comissões:", error);
             this.setState({ loading: false });
-        });
+        }
     };
 
     handleNavigateToDetails = (comissaoId) => {

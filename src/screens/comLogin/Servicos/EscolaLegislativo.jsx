@@ -3,9 +3,8 @@ import {
     FaGraduationCap, FaVideo, FaChalkboardTeacher, FaFilePdf, 
     FaSearch, FaPlus, FaUsers, FaClock, FaSpinner, FaEdit, FaTrash 
 } from 'react-icons/fa';
-import { ref, onValue, remove } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class EscolaLegislativo extends Component {
     constructor(props) {
@@ -20,38 +19,38 @@ class EscolaLegislativo extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchCursos();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchCursos();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchCursos = () => {
+    fetchCursos = async () => {
         const { camaraId } = this.state;
-        const cursosRef = ref(db, `${camaraId}/escola_legislativo/conteudos`);
-
-        onValue(cursosRef, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
+        try {
+            const response = await api.get(`/legislative-school/${camaraId}`);
+            const data = response.data || [];
+            
+            if (Array.isArray(data)) {
+                data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                this.setState({ cursos: data, loading: false });
+            } else {
+                this.setState({ cursos: [], loading: false });
             }
-            // Ordenar por data (mais recentes primeiro)
-            data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            this.setState({ cursos: data, loading: false });
-        });
+        } catch (error) {
+            console.error("Erro ao buscar cursos:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleDelete = async (id) => {
         if (window.confirm("Tem certeza que deseja excluir este conteúdo educacional?")) {
-            const { camaraId } = this.state;
             try {
-                await remove(ref(db, `${camaraId}/escola_legislativo/conteudos/${id}`));
+                await api.delete(`/legislative-school/id/${id}`);
                 alert("Conteúdo removido com sucesso.");
+                this.fetchCursos();
             } catch (error) {
                 console.error("Erro ao excluir:", error);
             }

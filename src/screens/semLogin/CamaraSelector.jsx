@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import logoApp from '../../assets/logo-camara-ai-vertical.png';
 import Background from '../../assets/bg-waves2.png';
-import { db } from '../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../../services/api.js';
 import { FaBuilding, FaMapMarkerAlt, FaSpinner } from 'react-icons/fa';
-import '@splidejs/react-splide/css';
+
 
 const CamaraSelector = () => {
     const [camaras, setCamaras] = useState([]);
@@ -16,24 +15,25 @@ const CamaraSelector = () => {
 
     useEffect(() => {
         const fetchCamaras = async () => {
-            const rootRef = ref(db, '/');
             try {
-                const snapshot = await get(rootRef);
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    const camaraList = Object.keys(data).map(id => {
-                        const homeConfig = data[id]?.['dados-config']?.home;
-                        const layoutConfig = data[id]?.['dados-config']?.layout;
-                        return {
-                            id: id,
-                            name: homeConfig?.titulo || id.replace(/-/g, ' ').replace(/(^\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase()),
-                            logo: layoutConfig?.logoDark || layoutConfig?.logo || null,
-                            cityName: homeConfig?.cidade || '',
-                            corPrimaria: layoutConfig?.corPrimaria || '#126B5E'
-                        };
-                    });
-                    setCamaras(camaraList);
-                }
+                const response = await api.get('/councils');
+                const data = response.data || [];
+
+                const camaraList = data.map(council => {
+                    const config = council.config || council.dadosConfig || {};
+                    const homeConfig = config.home || {};
+                    const layoutConfig = config.layout || {};
+
+                    return {
+                        id: council.id,
+                        name: homeConfig.titulo || council.name || council.id.replace(/-/g, ' ').replace(/(^\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase()),
+                        logo: layoutConfig.logoDark || layoutConfig.logo || null,
+                        cityName: homeConfig.cidade || '',
+                        corPrimaria: layoutConfig.corPrimaria || '#126B5E'
+                    };
+                });
+
+                setCamaras(camaraList);
                 setLoading(false);
             } catch (error) {
                 console.error("Erro ao buscar lista de câmaras:", error);
@@ -61,15 +61,15 @@ const CamaraSelector = () => {
                 // Usando Nominatim (OpenStreetMap) para geocodificação reversa
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
                 const data = await response.json();
-                
+
                 // Tenta extrair a cidade de diferentes campos possíveis da resposta
                 const cityDetected = data.address?.city || data.address?.town || data.address?.village || data.address?.municipality;
 
                 if (cityDetected) {
                     const normDetected = normalize(cityDetected);
                     // Busca flexível: verifica se o nome da cidade está contido no nome da câmara ou no ID
-                    const match = camaras.find(c => 
-                        normalize(c.cityName) === normDetected || 
+                    const match = camaras.find(c =>
+                        normalize(c.cityName) === normDetected ||
                         normalize(c.name).includes(normDetected) ||
                         normalize(c.id).includes(normDetected)
                     );
@@ -115,7 +115,7 @@ const CamaraSelector = () => {
     }
 
     return (
-        <div className="selector-page-container" style={{ 
+        <div className="selector-page-container" style={{
             backgroundImage: `linear-gradient(135deg, rgba(18, 107, 94, 0.85) 0%, rgba(0, 63, 54, 0.95) 100%), url(${Background})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -148,8 +148,8 @@ const CamaraSelector = () => {
                     <p style={{ color: '#fff', marginBottom: '15px', fontWeight: 'bold' }}>A câmara da sua localização:</p>
                     <Link to={`/home/${detectedCamara.id}`} className="camera-card-link" style={{ width: '100%', maxWidth: '350px' }}>
                         <div className="camera-card" style={{ backgroundColor: detectedCamara.corPrimaria }}>
-                                {detectedCamara.logo ? <img src={detectedCamara.logo} alt={detectedCamara.name} className="camera-custom-logo" /> : <FaBuilding />}
-                            
+                            {detectedCamara.logo ? <img src={detectedCamara.logo} alt={detectedCamara.name} className="camera-custom-logo" /> : <FaBuilding />}
+
                         </div>
                         <h2 className="camera-name-label">{detectedCamara.name}</h2>
                     </Link>
@@ -163,8 +163,8 @@ const CamaraSelector = () => {
                         <div key={camara.id} className="camera-grid-item">
                             <Link to={`/home/${camara.id}`} className="camera-card-link">
                                 <div className="camera-card" style={{ backgroundColor: camara.corPrimaria }}>
-                                        {camara.logo ? <img src={camara.logo} alt={camara.name} className="camera-custom-logo" /> : <FaBuilding />}
-                                    
+                                    {camara.logo ? <img src={camara.logo} alt={camara.name} className="camera-custom-logo" /> : <FaBuilding />}
+
                                 </div>
                                 <h2 className="camera-name-label">{camara.name}</h2>
                             </Link>

@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import { FaPalette, FaHome, FaCog, FaSave } from 'react-icons/fa';
-import { db } from '../../../firebaseConfig';
-import { ref, get, update } from 'firebase/database';
-import { auth } from '../../../firebaseConfig';
+import api from '../../../services/api.js';
 
 class LayoutManager extends Component {
     constructor(props) {
@@ -31,23 +29,15 @@ class LayoutManager extends Component {
     fetchLayoutData = async (camaraId) => {
         if (!camaraId) return;
         this.setState({ loading: true });
-        const layoutRef = ref(db, `${this.props.match.params.camaraId}/dados-config/layout`);
-        const homeRef = ref(db, `${this.props.match.params.camaraId}/dados-config/home`);
-        const footerRef = ref(db, `${this.props.match.params.camaraId}/dados-config/footer`);
-
-        console.log("Buscando dados para câmara:", this.props.match.params.camaraId);
      
         try {
-            // Busca todos os dados em paralelo para melhor performance
-            const [layoutSnapshot, homeSnapshot, footerSnapshot] = await Promise.all([
-                get(layoutRef),
-                get(homeRef),
-                get(footerRef),
-            ]);
-
-            const layoutData = layoutSnapshot.exists() ? layoutSnapshot.val() : {};
-            const homeData = homeSnapshot.exists() ? homeSnapshot.val() : {};
-            const footerData = footerSnapshot.exists() ? footerSnapshot.val() : {};
+            const response = await api.get(`/councils/id/${camaraId}`);
+            const data = response.data || {};
+            const config = data.config || data.dadosConfig || {};
+            
+            const layoutData = config.layout || {};
+            const homeData = config.home || {};
+            const footerData = config.footer || {};
 
             this.setState({
                 layoutConfig: {
@@ -158,23 +148,14 @@ class LayoutManager extends Component {
     };
 
     componentDidMount() {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                const camaraIdFromUrl = this.props.match?.params?.camaraId;
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
-                if (camaraIdFromUrl) {
-                    this.setState({ selectedCamara: camaraIdFromUrl }, () => this.fetchLayoutData(camaraIdFromUrl));
-                } else {
-                    const userIndexRef = ref(db, `users_index/${user.uid}`);
-                    const snapshot = await get(userIndexRef);
-                    // Se o usuário não for admin geral, força a seleção apenas da câmara dele
-                    const userCamaraId = snapshot.exists() ? snapshot.val().camaraId : 'camara-teste';
-                    
-                    // Aqui assumimos que LayoutManager deve gerenciar apenas a câmara do usuário logado
-                    this.setState({ selectedCamara: userCamaraId }, () => this.fetchLayoutData(userCamaraId));
-                }
-            }
-        });
+        if (token && user.id) {
+            const camaraIdFromUrl = this.props.match?.params?.camaraId;
+            const camaraId = camaraIdFromUrl || user.camaraId || 'pacatuba';
+            this.setState({ selectedCamara: camaraId }, () => this.fetchLayoutData(camaraId));
+        }
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -201,30 +182,36 @@ class LayoutManager extends Component {
             alert("Nenhuma câmara selecionada.");
             return;
         }
-        const layoutRef = ref(db, `${this.props.match.params.camaraId}/dados-config/layout`);
-        const homeRef = ref(db, `${this.props.match.params.camaraId}/dados-config/home`);
-        const footerRef = ref(db, `${this.props.match.params.camaraId}/dados-config/footer`);
 
         try {
-            // Save colors to layout node
-            await update(layoutRef, {
-                corPrimaria: layoutConfig.corPrimaria,
-                corDestaque: layoutConfig.corDestaque,
-                logo: layoutConfig.logo,
-            });
-            // Save texts to home node
-            await update(homeRef, {
-                titulo: layoutConfig.titulo,
-                slogan: layoutConfig.slogan,
-            });
-            // Save footer data to footer node
-            await update(footerRef, {
-                slogan: layoutConfig.footerSlogan,
-                address: layoutConfig.footerAddress,
-                phone: layoutConfig.footerPhone,
-                email: layoutConfig.footerEmail,
-                copyright: layoutConfig.footerCopyright || layoutConfig.footerCopyright,
-            });
+            // First fetch current config to preserve other fields
+            const response = await api.get(`/councils/id/${selectedCamara}`);
+            const currentConfig = response.data?.config || response.data?.dadosConfig || {};
+
+            const updatedConfig = {
+                ...currentConfig,
+                layout: {
+                    ...currentConfig.layout,
+                    corPrimaria: layoutConfig.corPrimaria,
+                    corDestaque: layoutConfig.corDestaque,
+                    logo: layoutConfig.logo,
+                },
+                home: {
+                    ...currentConfig.home,
+                    titulo: layoutConfig.titulo,
+                    slogan: layoutConfig.slogan,
+                },
+                footer: {
+                    ...currentConfig.footer,
+                    slogan: layoutConfig.footerSlogan,
+                    address: layoutConfig.footerAddress,
+                    phone: layoutConfig.footerPhone,
+                    email: layoutConfig.footerEmail,
+                    copyright: layoutConfig.footerCopyright,
+                }
+            };
+
+            await api.patch(`/councils/id/${selectedCamara}`, { config: updatedConfig });
             alert('Layout salvo com sucesso!');
         } catch (error) {
             console.error("Erro ao salvar layout:", error);

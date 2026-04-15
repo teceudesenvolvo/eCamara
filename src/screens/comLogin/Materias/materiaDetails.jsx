@@ -1,8 +1,6 @@
 import React, { Component } from 'react';
 import { FaArrowLeft, FaFilePdf, FaHistory, FaCheckCircle, FaClock, FaUserTie, FaCalendarAlt, FaPrint, FaExchangeAlt, FaDownload, FaShareAlt, FaGavel, FaInfoCircle, FaParagraph, FaBalanceScale } from 'react-icons/fa';
-import MenuDashboard from "../../../componets/menuAdmin.jsx";
-import { db } from '../../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from "../../../services/api";
 
 class MateriaDetails extends Component {
     constructor(props) {
@@ -23,12 +21,10 @@ class MateriaDetails extends Component {
         }
 
         try {
-            const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${materiaId}`);
-            const snapshot = await get(materiaRef);
+            const response = await api.get(`/legislative-matters/id/${materiaId}`);
+            const data = response.data;
 
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                
+            if (data) {
                 // Constrói o histórico com base nos eventos registrados na matéria
                 const historico = [];
 
@@ -86,7 +82,7 @@ class MateriaDetails extends Component {
                     parecerDate: data.parecerDate,
                     publicacao: data.publicacao,
                     isComplementar: data.isComplementar,
-                    subscricoes: data.subscricoes ? Object.values(data.subscricoes) : []
+                    subscricoes: data.subscricoes ? (Array.isArray(data.subscricoes) ? data.subscricoes : Object.values(data.subscricoes)) : []
                 };
 
                 this.setState({ materia, loading: false });

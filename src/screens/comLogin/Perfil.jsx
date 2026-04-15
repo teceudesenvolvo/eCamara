@@ -4,9 +4,7 @@ import { FaUsers, FaUser, FaCalendarAlt, FaEdit, FaChartPie, FaSave, FaCamera, F
 import ProfileImage from '../../assets/vereador.jpg'; // Imagem padrão para perfil
 import MenuDashboard from '../../componets/menuAdmin.jsx';
 
-import { auth, db } from '../../firebaseConfig';
-import { ref, get, update, query, orderByChild, equalTo } from 'firebase/database';
-import { signOut } from 'firebase/auth';
+import api from '../../services/api.js';
 
 import { Bar, Pie } from 'react-chartjs-2';
 
@@ -60,107 +58,80 @@ class Perfil extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged(async (userAuth) => {
+        const token = localStorage.getItem('@CamaraAI:token');
+        const userAuth = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
-            if (!userAuth) {
-                this.props.history.push(`/login/${this.props.match.params.camaraId}`);
-                return;
-            }
+        if (!token || !userAuth.id) {
+            this.props.history.push(`/login/${this.props.match.params.camaraId}`);
+            return;
+        }
 
-            try {
+        this.fetchProfileData(userAuth.id);
+    }
 
-                const camaraId = this.props.match.params.camaraId;
+    fetchProfileData = async (userId) => {
+        try {
+            const camaraId = this.props.match.params.camaraId;
 
-                const userRef = ref(db, `${camaraId}/users/${userAuth.uid}`);
+            // Busca os dados do usuário, matérias, comissões e sessões via API
+            const [userResponse, materiasResponse, comissoesResponse, sessoesResponse] = await Promise.all([
+                api.get(`/users/id/${userId}`),
+                api.get(`/legislative-matters/${camaraId}`),
+                api.get(`/commissions/${camaraId}`),
+                api.get(`/sessions/${camaraId}`)
+            ]);
 
-                const snapshot = await get(userRef);
+            const userData = userResponse.data || {};
+            const allMaterias = materiasResponse.data || [];
+            const allComissoes = comissoesResponse.data || [];
+            const allSessoes = sessoesResponse.data || [];
 
-                let userData = {
-                    nome: userAuth.displayName,
-                    email: userAuth.email
-                };
+            // Processa Matérias do Usuário
+            let materias = allMaterias.filter(m => m.userId === userId);
+            materias.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-                if (snapshot.exists()) {
-                    userData = snapshot.val();
+            // Processa Comissões (onde o usuário é membro)
+            let comissoesUsuario = allComissoes.filter(com => {
+                if (com.membros) {
+                    return Object.values(com.membros).some(m => (m.id || m.uid) === userId);
                 }
+                return false;
+            });
 
-                // Queries e Referências
-                const materiasRef = ref(db, `${camaraId}/materias`);
-                const q = query(materiasRef, orderByChild('userId'), equalTo(userAuth.uid));
-                const comissoesRef = ref(db, `${camaraId}/comissoes`);
-                const sessoesRef = ref(db, `${camaraId}/sessoes`);
-
-                // Busca todos os dados necessários em paralelo
-                const [materiasSnap, comissoesSnap, sessoesSnap] = await Promise.all([
-                    get(q),
-                    get(comissoesRef),
-                    get(sessoesRef)
-                ]);
-
-                // Processa Matérias
-                let materias = [];
-                if (materiasSnap.exists()) {
-                    materiasSnap.forEach(item => {
-                        materias.push({ id: item.key, ...item.val() });
-                    });
+            // Processa Sessões (onde o usuário registrou presença)
+            let sessoesParticipadas = allSessoes.filter(sessao => {
+                if (sessao.presenca) {
+                    return Object.keys(sessao.presenca).includes(userId);
                 }
-                materias.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                return false;
+            });
 
-                // Processa Comissões (onde o usuário é membro)
-                let comissoesUsuario = [];
-                if (comissoesSnap.exists()) {
-                    comissoesSnap.forEach(item => {
-                        const com = item.val();
-                        if (com.membros && com.membros[userAuth.uid]) {
-                            comissoesUsuario.push({ id: item.key, ...com });
-                        }
-                    });
-                }
+            // Ordena por data (DD/MM/YYYY) decrescente
+            sessoesParticipadas.sort((a, b) => {
+                const dateA = a.data.split('/').reverse().join('');
+                const dateB = b.data.split('/').reverse().join('');
+                return dateB.localeCompare(dateA);
+            });
 
-                // Processa Sessões (onde o usuário registrou presença)
-                let sessoesParticipadas = [];
-                if (sessoesSnap.exists()) {
-                    sessoesSnap.forEach(item => {
-                        const sessao = item.val();
-                        if (sessao.presenca && sessao.presenca[userAuth.uid]) {
-                            sessoesParticipadas.push({ id: item.key, ...sessao });
-                        }
-                    });
-                }
-                // Ordena por data (DD/MM/YYYY) decrescente
-                sessoesParticipadas.sort((a, b) => {
-                    const dateA = a.data.split('/').reverse().join('');
-                    const dateB = b.data.split('/').reverse().join('');
-                    return dateB.localeCompare(dateA);
-                });
+            const stats = this.calculateStats(materias);
 
-                const stats = this.calculateStats(materias);
+            this.setState({
+                user: userData,
+                editNome: userData.nome || '',
+                editCargo: userData.cargo || '',
+                editBio: userData.bio || '',
+                editFoto: userData.foto || userData.photoURL || '',
+                materias,
+                comissoesUsuario,
+                sessoesParticipadas,
+                stats,
+                loading: false
+            });
 
-                this.setState({
-                    user: {
-                        uid: userAuth.uid,
-                        ...userData
-                    },
-                    editNome: userData.nome || '',
-                    editCargo: userData.cargo || '',
-                    editBio: userData.bio || '',
-                    editFoto: userData.foto || '',
-                    materias,
-                    comissoesUsuario,
-                    sessoesParticipadas,
-                    stats,
-                    loading: false
-                });
-
-            } catch (error) {
-
-                console.error("Erro ao carregar perfil:", error);
-
-                this.setState({ loading: false });
-
-            }
-
-        });
+        } catch (error) {
+            console.error("Erro ao carregar perfil:", error);
+            this.setState({ loading: false });
+        }
     }
 
     calculateStats = (materias) => {
@@ -196,11 +167,9 @@ class Perfil extends Component {
     };
 
     handleLogout = async () => {
-
-        await signOut(auth);
-
+        localStorage.removeItem('@CamaraAI:token');
+        localStorage.removeItem('@CamaraAI:user');
         this.props.history.push(`/login/${this.props.match.params.camaraId}`);
-
     };
 
     handleImageChange = (e) => {
@@ -222,8 +191,7 @@ class Perfil extends Component {
         this.setState({ loading: true });
 
         try {
-            const userRef = ref(db, `${camaraId}/users/${user.uid}`);
-            await update(userRef, {
+            await api.patch(`/users/id/${user.id}`, {
                 nome: editNome,
                 bio: editBio,
                 foto: editFoto

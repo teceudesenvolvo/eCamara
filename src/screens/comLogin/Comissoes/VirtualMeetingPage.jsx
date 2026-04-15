@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { db } from '../../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../../../services/api.js';
 import { FaVideo, FaArrowLeft } from 'react-icons/fa';
 
 class VirtualMeetingPage extends Component {
@@ -23,19 +22,18 @@ class VirtualMeetingPage extends Component {
     }
 
     fetchMeetingDetails = async () => {
-        const { camaraId, comissaoId, reuniaoId } = this.state;
+        const { comissaoId, reuniaoId } = this.state;
 
-        if (!camaraId || !comissaoId || !reuniaoId) {
+        if (!comissaoId || !reuniaoId) {
             this.setState({ loading: false, error: "Parâmetros da reunião incompletos." });
             return;
         }
 
         try {
-            const reuniaoRef = ref(db, `${camaraId}/comissoes/${comissaoId}/reunioes/${reuniaoId}`);
-            const snapshot = await get(reuniaoRef);
+            const response = await api.get(`/commissions/id/${comissaoId}/meetings/${reuniaoId}`);
+            const reuniaoData = response.data;
 
-            if (snapshot.exists()) {
-                const reuniaoData = snapshot.val();
+            if (reuniaoData) {
                 if (reuniaoData.tipo === 'Virtual' && reuniaoData.url) {
                     this.setState({
                         reuniao: reuniaoData,

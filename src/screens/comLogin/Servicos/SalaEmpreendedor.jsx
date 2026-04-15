@@ -4,9 +4,8 @@ import {
     FaStore, FaGavel, FaFileInvoiceDollar, FaChartLine,
     FaInfoCircle, FaCheckCircle, FaUserTie, FaBuilding
 } from 'react-icons/fa';
-import { ref, onValue, update } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class SalaEmpreendedor extends Component {
     constructor(props) {
@@ -22,40 +21,40 @@ class SalaEmpreendedor extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchSolicitacoes();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchSolicitacoes();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchSolicitacoes = () => {
+    fetchSolicitacoes = async () => {
         const { camaraId } = this.state;
-        const refSolicitacoes = ref(db, `${camaraId}/sala_empreendedor/solicitacoes`);
-
-        onValue(refSolicitacoes, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
-            }
+        try {
+            const response = await api.get(`/entrepreneur-room/${camaraId}`);
+            const data = response.data || [];
+            
             // Ordenar por data (mais recentes primeiro)
-            data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            this.setState({ solicitacoes: data, loading: false });
-        });
+            if (Array.isArray(data)) {
+                data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                this.setState({ solicitacoes: data, loading: false });
+            } else {
+                this.setState({ solicitacoes: [], loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar solicitações:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleUpdateStatus = async (id, newStatus) => {
-        const { camaraId } = this.state;
         try {
-            await update(ref(db, `${camaraId}/sala_empreendedor/solicitacoes/${id}`), { 
-                status: newStatus,
-                updatedAt: new Date().toISOString()
+            await api.patch(`/entrepreneur-room/${id}`, { 
+                status: newStatus
             });
             alert(`Solicitação atualizada para: ${newStatus}`);
+            this.fetchSolicitacoes();
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             alert("Erro ao processar atualização.");

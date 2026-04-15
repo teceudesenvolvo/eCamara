@@ -6,21 +6,7 @@ import { withRouter } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { clickButton } from '../store/actions/index';
 import { bindActionCreators } from 'redux';
-import { db } from '../firebaseConfig';
-import { ref, get, query, orderByChild, equalTo } from 'firebase/database';
-
-// Default theme
-import '@splidejs/react-splide/css';
-
-// or other themes
-import '@splidejs/react-splide/css/skyblue';
-import '@splidejs/react-splide/css/sea-green';
-
-// or only core styles
-import '@splidejs/react-splide/css/core';
-
-// You might need a CSS file for custom styles, e.g., SlideFeactures.css
-// import './SlideFeactures.css';
+import api from '../services/api.js';
 
 class slideFeactures extends Component {
     constructor(props) {
@@ -40,60 +26,51 @@ class slideFeactures extends Component {
         if (!camaraId) return;
 
         try {
-            const usersRef = ref(db, `${camaraId}/users`);
-            const materiasRef = ref(db, `${camaraId}/materias`);
-            const comissoesRef = ref(db, `${camaraId}/comissoes`);
-
-            // Buscar usuários, matérias e comissões simultaneamente
-            const [usersSnapshot, materiasSnapshot, comissoesSnapshot] = await Promise.all([
-                get(usersRef),
-                get(materiasRef),
-                get(comissoesRef)
+            // Buscar usuários, matérias e comissões simultaneamente via API
+            const [usersResponse, materiasResponse, comissoesResponse] = await Promise.all([
+                api.get(`/users/${camaraId}`),
+                api.get(`/legislative-matters/${camaraId}`),
+                api.get(`/commissions/${camaraId}`)
             ]);
+
+            const usersData = usersResponse.data || [];
+            const materiasData = materiasResponse.data || [];
+            const comissoesData = comissoesResponse.data || [];
 
             // Calcular contagem de matérias por usuário
             const materiasCountByUserId = {};
-            if (materiasSnapshot.exists()) {
-                materiasSnapshot.forEach(child => {
-                    const mat = child.val();
-                    if (mat.userId) {
-                        materiasCountByUserId[mat.userId] = (materiasCountByUserId[mat.userId] || 0) + 1;
-                    }
-                });
-            }
+            materiasData.forEach(mat => {
+                if (mat.userId) {
+                    materiasCountByUserId[mat.userId] = (materiasCountByUserId[mat.userId] || 0) + 1;
+                }
+            });
 
             // Calcular contagem de comissões por usuário
             const comissoesCountByUserId = {};
-            if (comissoesSnapshot.exists()) {
-                comissoesSnapshot.forEach(child => {
-                    const com = child.val();
-                    if (com.membros) {
-                        Object.keys(com.membros).forEach(memberId => {
+            comissoesData.forEach(com => {
+                if (com.membros) {
+                    Object.values(com.membros).forEach(member => {
+                        const memberId = member.id || member.uid;
+                        if (memberId) {
                             comissoesCountByUserId[memberId] = (comissoesCountByUserId[memberId] || 0) + 1;
-                        });
-                    }
-                });
-            }
+                        }
+                    });
+                }
+            });
 
-            const fetchedVereadores = [];
-            if (usersSnapshot.exists()) {
-                usersSnapshot.forEach((child) => {
-                    const val = child.val();
-                    const tipo = (val.tipo || '').toLowerCase();
+            const fetchedVereadores = usersData
+                .filter(u => {
+                    const tipo = (u.tipo || '').toLowerCase();
+                    return tipo === 'vereador' || tipo === 'presidente';
+                })
+                .map(u => ({
+                    ...u,
+                    id: u.id,
+                    foto: u.foto || u.photoURL || 'https://via.placeholder.com/150',
+                    materiasCount: materiasCountByUserId[u.id] || 0,
+                    comissoesCount: comissoesCountByUserId[u.id] || 0
+                }));
 
-                    if (tipo === 'vereador' || tipo === 'presidente') {
-                        const userId = child.key;
-                        fetchedVereadores.push({
-                            id: userId,
-                            nome: val.nome,
-                            foto: val.foto || 'https://via.placeholder.com/150',
-                            ...val,
-                            materiasCount: materiasCountByUserId[userId] || 0,
-                            comissoesCount: comissoesCountByUserId[userId] || 0
-                        });
-                    }
-                });
-            }
             this.setState({ vereadores: fetchedVereadores, loading: false });
         } catch (error) {
             console.error("Erro ao buscar vereadores:", error);

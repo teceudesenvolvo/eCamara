@@ -8,8 +8,7 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import { FaFileAlt, FaUsers, FaCheckCircle, FaInfoCircle, FaCalendarAlt, FaArrowLeft, FaVideo, FaVoteYea, FaUser } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { db } from '../../../firebaseConfig.js';
-import { ref, get } from 'firebase/database';
+import api from '../../../services/api.js';
 
 class ResumoSessao extends Component {
     constructor(props) {
@@ -32,7 +31,6 @@ class ResumoSessao extends Component {
     }
 
     fetchSessao = async () => {
-        const { camaraId } = this.state;
         const { state } = this.props.location;
         const sessaoId = state ? state.sessaoId : null;
 
@@ -41,11 +39,10 @@ class ResumoSessao extends Component {
             return;
         }
 
-        const sessaoRef = ref(db, `${camaraId}/sessoes/${sessaoId}`);
         try {
-            const snapshot = await get(sessaoRef);
-            if (snapshot.exists()) {
-                this.setState({ sessao: { id: snapshot.key, ...snapshot.val() }, loading: false });
+            const response = await api.get(`/sessions/id/${sessaoId}`);
+            if (response.data) {
+                this.setState({ sessao: response.data, loading: false });
             } else {
                 this.setState({ loading: false });
             }
@@ -57,17 +54,15 @@ class ResumoSessao extends Component {
 
     fetchParlamentares = async () => {
         const { camaraId } = this.state;
-        const usersRef = ref(db, `${camaraId}/users`);
-        const snapshot = await get(usersRef);
-        if (snapshot.exists()) {
-            const allUsers = [];
-            snapshot.forEach(child => {
-                allUsers.push({ id: child.key, ...child.val() });
-            });
+        try {
+            const response = await api.get(`/users/council/${camaraId}`);
+            const allUsers = response.data || [];
             const parlamentares = allUsers.filter(u => u.tipo === 'vereador' || u.tipo === 'presidente');
             this.setState({ parlamentares });
+        } catch (error) {
+            console.error("Erro ao buscar parlamentares:", error);
         }
-    }
+    };
 
     getVoteCounts = (votos) => {
         const counts = { sim: 0, nao: 0, abstencao: 0 };

@@ -4,9 +4,8 @@ import {
     FaExclamationTriangle, FaHandsHelping, FaUserShield, 
     FaPhoneSlash, FaBalanceScale, FaInfoCircle, FaCheckCircle, FaEye, FaShareAlt
 } from 'react-icons/fa';
-import { ref, onValue, update } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class ProcuradoriaMulher extends Component {
     constructor(props) {
@@ -22,43 +21,43 @@ class ProcuradoriaMulher extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchDenuncias();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchDenuncias();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchDenuncias = () => {
+    fetchDenuncias = async () => {
         const { camaraId } = this.state;
-        const denunciasRef = ref(db, `${camaraId}/procuradoria_mulher/denuncias`);
-
-        onValue(denunciasRef, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
-            }
+        try {
+            const response = await api.get(`/womens-procuratorate/${camaraId}`);
+            const data = response.data || [];
+            
             // Ordenar por prioridade (Alertas de Pânico primeiro) e depois por data
-            data.sort((a, b) => {
-                if (a.isUrgent !== b.isUrgent) return a.isUrgent ? -1 : 1;
-                return new Date(b.createdAt) - new Date(a.createdAt);
-            });
-            this.setState({ denuncias: data, loading: false });
-        });
+            if (Array.isArray(data)) {
+                data.sort((a, b) => {
+                    if (a.isUrgent !== b.isUrgent) return a.isUrgent ? -1 : 1;
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+                this.setState({ denuncias: data, loading: false });
+            } else {
+                this.setState({ denuncias: [], loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar denúncias:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleUpdateStatus = async (id, newStatus) => {
-        const { camaraId } = this.state;
         try {
-            await update(ref(db, `${camaraId}/procuradoria_mulher/denuncias/${id}`), { 
-                status: newStatus,
-                updatedAt: new Date().toISOString()
+            await api.patch(`/womens-procuratorate/${id}`, { 
+                status: newStatus
             });
             alert(`Status atualizado para: ${newStatus}`);
+            this.fetchDenuncias();
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             alert("Erro ao processar atualização.");

@@ -1,10 +1,7 @@
 import React, { Component } from 'react';
 import { FaCog, FaBook, FaHistory, FaFileAlt, FaSave, FaUpload, FaGavel, FaSpinner, FaUsers, FaUserShield, FaPlus, FaPencilAlt, FaTimes, FaUserPlus, FaPalette, FaImage, FaLock } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { db } from '../../../firebaseConfig';
-import { query, orderByChild, equalTo, ref, get, update, push, set, remove } from 'firebase/database';
-
-import { auth } from '../../../firebaseConfig';
+import api from '../../../services/api.js';
 
 class Configuracoes extends Component {
     constructor(props) {
@@ -44,18 +41,13 @@ class Configuracoes extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                if (!this.state.camaraId || this.state.camaraId === this.props.match.params.camaraId) {
-                    const userIndexRef = ref(db, `${this.props.match.params.camaraId}/users${user.uid}`);
-                    const snapshot = await get(userIndexRef);
-                    const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
-                    this.setState({ camaraId }, () => this.fetchConfig());
-                } else {
-                    this.fetchConfig();
-                }
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        if (token && user.id) {
+            const camaraId = this.props.match.params.camaraId || user.camaraId;
+            this.setState({ camaraId }, () => this.fetchConfig());
+        }
     }
 
     // --- Modal Handlers ---
@@ -66,57 +58,26 @@ class Configuracoes extends Component {
     handleCloseInviteModal = () => {
         this.setState({ showInviteModal: false });
     }
-
     fetchConfig = async () => {
-
         const { camaraId } = this.state;
+        if (!camaraId) return;
 
         try {
-
-            const baseRef = ref(db, `${camaraId}/dados-config/base-conhecimento`);
-            const usersRef = ref(db, `${camaraId}/users`);
-            const comissoesRef = ref(db, `${camaraId}/comissoes`);
-            const layoutRef = ref(db, `${camaraId}/dados-config/layout`);
-            const permissoesRef = ref(db, `${camaraId}/dados-config/permissoes`);
-
-            const [baseSnapshot, usersSnapshot, comissoesSnapshot, layoutSnapshot, permissoesSnapshot] = await Promise.all([
-                get(baseRef),
-                get(usersRef),
-                get(comissoesRef),
-                get(layoutRef),
-                get(permissoesRef)
+            const [councilResponse, usersResponse, comissoesResponse] = await Promise.all([
+                api.get(`/councils/id/${camaraId}`),
+                api.get(`/users/${camaraId}`),
+                api.get(`/commissions/${camaraId}`)
             ]);
 
-            let baseData = {};
-            let usersList = [];
-            let comissoesList = [];
-            let layoutData = this.state.layoutConfig;
-
-            if (baseSnapshot.exists()) {
-                baseData = baseSnapshot.val();
-            }
-
-            if (usersSnapshot.exists()) {
-                usersSnapshot.forEach(child => {
-                    usersList.push({
-                        id: child.key,
-                        ...child.val()
-                    });
-                });
-            }
-
-            if (comissoesSnapshot.exists()) {
-                comissoesSnapshot.forEach(child => {
-                    comissoesList.push({
-                        id: child.key,
-                        ...child.val()
-                    });
-                });
-            }
-
-            if (layoutSnapshot.exists()) {
-                layoutData = { ...layoutData, ...layoutSnapshot.val() };
-            }
+            const councilData = councilResponse.data || {};
+            const config = councilData.config || councilData.dadosConfig || {};
+            
+            const baseData = config['base-conhecimento'] || {};
+            const layoutData = { ...this.state.layoutConfig, ...(config.layout || {}) };
+            const permissoesData = config.permissoes || {};
+            
+            const usersList = usersResponse.data || [];
+            const comissoesList = comissoesResponse.data || [];
 
             this.setState({
                 regimentoText: baseData.regimentoText || '',
@@ -130,47 +91,41 @@ class Configuracoes extends Component {
                 users: usersList,
                 comissoes: comissoesList,
                 layoutConfig: layoutData,
-                permissoes: permissoesSnapshot.val() || {},
+                permissoes: permissoesData,
                 loading: false
             });
 
         } catch (error) {
-
             console.error("Erro ao buscar configurações:", error);
-
-            this.setState({
-                loading: false
-            });
-
+            this.setState({ loading: false });
         }
-
     };
 
     handleSave = async () => {
         const { camaraId, regimentoText, regimentoFile, leiOrganicaText, leiOrganicaFile, materiasText, materiasFile, atasText, atasFile, layoutConfig, permissoes } = this.state;
         this.setState({ isSaving: true });
 
-        const camaraIdParaSalvar = this.props.match.params.camaraId;// Prioriza o camaraId da URL, mas cai para o estado se não tiver
-
-        const baseRef = ref(db, `${camaraIdParaSalvar}/dados-config/base-conhecimento`);
-        const layoutRef = ref(db, `${camaraIdParaSalvar}/dados-config/layout`);
-        const permissoesRef = ref(db, `${camaraIdParaSalvar}/dados-config/permissoes`);
-
-        const baseConfig = {
-            regimentoText, regimentoFile: regimentoFile || null,
-            leiOrganicaText, leiOrganicaFile: leiOrganicaFile || null,
-            materiasText, materiasFile: materiasFile || null,
-            atasText, atasFile: atasFile || null,
-            camaraId
-        };
-
         try {
-            await update(baseRef, baseConfig);
-            await update(layoutRef, layoutConfig);
-            await set(permissoesRef, permissoes);
-            alert('Base de Conhecimento atualizada com sucesso! A IA agora utilizará estas informações para gerar documentos mais precisos.');
+            // Fetch current config to merge
+            const response = await api.get(`/councils/id/${camaraId}`);
+            const currentConfig = response.data?.config || response.data?.dadosConfig || {};
+
+            const updatedConfig = {
+                ...currentConfig,
+                "base-conhecimento": {
+                    regimentoText, regimentoFile,
+                    leiOrganicaText, leiOrganicaFile,
+                    materiasText, materiasFile,
+                    atasText, atasFile
+                },
+                layout: layoutConfig,
+                permissoes: permissoes
+            };
+
+            await api.patch(`/councils/id/${camaraId}`, { config: updatedConfig });
+            alert('Configurações atualizadas com sucesso! A IA agora utilizará estas informações para gerar documentos mais precisos.');
         } catch (error) {
-            console.error("Erro ao salvar base de conhecimento:", error);
+            console.error("Erro ao salvar configurações:", error);
             alert('Erro ao salvar as configurações.');
         } finally {
             this.setState({ isSaving: false });
@@ -180,21 +135,17 @@ class Configuracoes extends Component {
     // --- User and Commission Handlers (Moved from LayoutManager) ---
 
     handleUpdateUserType = async (userId, newType) => {
-        const { camaraId } = this.state;
         try {
-            const userRef = ref(db, `${camaraId}/users/${userId}`);
-            await update(userRef, { tipo: newType });
-            this.fetchConfig(); // Refetch to update UI
+            await api.patch(`/users/id/${userId}`, { tipo: newType });
+            this.fetchConfig();
         } catch (error) {
             console.error("Erro ao atualizar tipo de usuário:", error);
         }
     };
 
     handleUpdateUserCargo = async (userId, newCargo) => {
-        const { camaraId } = this.state;
         try {
-            const userRef = ref(db, `${camaraId}/users/${userId}`);
-            await update(userRef, { cargo: newCargo });
+            await api.patch(`/users/id/${userId}`, { cargo: newCargo });
             this.fetchConfig();
         } catch (error) {
             console.error("Erro ao atualizar cargo do usuário:", error);
@@ -210,28 +161,26 @@ class Configuracoes extends Component {
         }));
     };
 
-    handleGenerateAndCopyInviteLink = () => {
-        const { camaraId, inviteType } = this.state; // Removido inviteEmail pois não é mais usado no estado
+    handleGenerateAndCopyInviteLink = async () => {
+        const { camaraId, inviteType } = this.state;
 
-        // Criar registro de convite no banco
-        const convitesRef = ref(db, `${camaraId}/convites`);
-        const newInviteRef = push(convitesRef);
-        const inviteId = newInviteRef.key;
-        const inviteLink = `${window.location.origin}/register?invite=${inviteId}&camara=${camaraId}`;
-
-        const inviteData = {
-            tipo: inviteType,
-            createdAt: new Date().toISOString(),
-            used: false
-        };
-
-        navigator.clipboard.writeText(inviteLink)
-            .then(() => alert(`Link de convite criado e copiado!\n\nEnvie este link para o novo usuário.`))
-            .catch(err => console.error('Erro ao copiar link: ', err));
-
-        set(newInviteRef, inviteData);
-
-        this.handleCloseInviteModal();
+        try {
+            const response = await api.post('/users/invite', {
+                role: inviteType,
+                camaraId
+            });
+            
+            const inviteLink = `${window.location.origin}/register?invite=${response.data.id}&camara=${camaraId}`;
+            
+            await navigator.clipboard.writeText(inviteLink);
+            alert(`Link de convite criado e copiado!\n\nEnvie este link para o novo usuário.`);
+            
+            this.handleCloseInviteModal();
+            this.fetchConfig();
+        } catch (error) {
+            console.error("Erro ao gerar convite:", error);
+            alert("Erro ao gerar convite.");
+        }
     };
 
     handleOpenComissaoModal = (comissao = null) => {
@@ -273,9 +222,9 @@ class Configuracoes extends Component {
         }
         try {
             if (editingComissao) {
-                await update(ref(db, `${camaraId}/comissoes/${editingComissao.id}`), comissaoFormData);
+                await api.patch(`/commissions/id/${editingComissao.id}`, comissaoFormData);
             } else {
-                await push(ref(db, `${camaraId}/comissoes`), comissaoFormData);
+                await api.post('/commissions', { ...comissaoFormData, camaraId });
             }
             alert('Comissão salva com sucesso!');
             this.handleCloseComissaoModal();
@@ -308,17 +257,35 @@ class Configuracoes extends Component {
             return;
         }
 
-        const memberData = { id: user.id, nome: user.nome, foto: user.foto || '', cargo: newRoleForCommission };
-        const memberRef = ref(db, `${camaraId}/comissoes/${commissionToUpdateMembers.id}/membros/${user.id}`);
-        await set(memberRef, memberData);
-        this.fetchConfig();
-        this.handleCloseAddMemberModal();
+        try {
+            const currentMembers = commissionToUpdateMembers.membros || {};
+            const updatedMembers = {
+                ...currentMembers,
+                [user.id]: { id: user.id, nome: user.nome, foto: user.foto || '', cargo: newRoleForCommission }
+            };
+
+            await api.patch(`/commissions/id/${commissionToUpdateMembers.id}`, { membros: updatedMembers });
+            this.fetchConfig();
+            this.handleCloseAddMemberModal();
+        } catch (error) {
+            console.error("Erro ao adicionar membro:", error);
+            alert("Erro ao adicionar membro.");
+        }
     };
 
     handleRemoveMember = async (comissaoId, memberId) => {
-        const { camaraId } = this.state;
-        await remove(ref(db, `${camaraId}/comissoes/${comissaoId}/membros/${memberId}`));
-        this.fetchConfig();
+        try {
+            const comissao = this.state.comissoes.find(c => c.id === comissaoId);
+            if (!comissao) return;
+
+            const updatedMembers = { ...comissao.membros };
+            delete updatedMembers[memberId];
+
+            await api.patch(`/commissions/id/${comissaoId}`, { membros: updatedMembers });
+            this.fetchConfig();
+        } catch (error) {
+            console.error("Erro ao remover membro:", error);
+        }
     };
 
     // --- File Upload Handlers ---

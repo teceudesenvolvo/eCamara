@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { FaCommentDots, FaLightbulb, FaTools, FaSearch, FaSpinner, FaCheck, FaArchive, FaReply, FaUser, FaClock, FaEnvelope } from 'react-icons/fa';
-import { ref, onValue, update } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class FalarComVereador extends Component {
     constructor(props) {
@@ -19,43 +18,45 @@ class FalarComVereador extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.setState({ userUid: user.uid }, () => {
-                    this.fetchSolicitacoes();
-                });
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        
+        if (token && user.id) {
+            this.setState({ userUid: user.id }, () => {
+                this.fetchSolicitacoes();
+            });
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchSolicitacoes = () => {
+    fetchSolicitacoes = async () => {
         const { camaraId, userUid } = this.state;
-        // As mensagens são filtradas pelo UID do vereador logado no banco
-        const mensagensRef = ref(db, `${camaraId}/mensagens_vereadores/${userUid}`);
-
-        onValue(mensagensRef, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
-            }
+        
+        try {
+            const response = await api.get(`/messages/${camaraId}/${userUid}`);
+            const data = response.data || [];
+            
             // Ordenar por data (mais recentes primeiro)
-            data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            this.setState({ solicitacoes: data, loading: false });
-        });
+            if (Array.isArray(data)) {
+                data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                this.setState({ solicitacoes: data, loading: false });
+            } else {
+                this.setState({ solicitacoes: [], loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar mensagens:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleUpdateStatus = async (id, newStatus) => {
-        const { camaraId, userUid } = this.state;
         try {
-            await update(ref(db, `${camaraId}/mensagens_vereadores/${userUid}/${id}`), { 
-                status: newStatus,
-                updatedAt: new Date().toISOString()
+            await api.patch(`/messages/${id}`, { 
+                status: newStatus
             });
             alert(`Status atualizado para: ${newStatus}`);
+            this.fetchSolicitacoes();
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             alert("Erro ao processar alteração.");

@@ -14,8 +14,7 @@ import PageHeader from '../../componets/PageHeader.jsx';
 import { FaSpinner } from 'react-icons/fa';
 
 // Firebase
-import { db } from '../../firebaseConfig';
-import { ref, get, query, orderByChild } from 'firebase/database';
+import api from '../../services/api.js';
 
 class Materias extends Component {
   constructor(props) {
@@ -47,35 +46,27 @@ class Materias extends Component {
     if (!camaraId) return;
 
     try {
-      const materiasRef = ref(db, `${camaraId}/materias`);
-      const q = query(materiasRef, orderByChild('createdAt'));
-      const snapshot = await get(q);
-      const fetchedRows = [];
+      const response = await api.get(`/legislative-matters/${camaraId}`);
+      const data = response.data || [];
+      
+      const fetchedRows = data.map((val) => ({
+        camaraId: camaraId,
+        id: val.id,
+        materia: `${val.tipoMateria || 'Matéria'} ${val.numero || ''}/${val.ano || ''}`,
+        tituloCompleto: val.titulo || val.ementa || 'Sem título',
+        situacao: val.status || 'Tramitando',
+        autor: val.autor || 'Desconhecido',
+        apresentacao: val.tipoApresentacao || 'Escrita',
+        tramitacao: val.regTramita || 'Ordinária',
+        exercicio: val.ano || '',
+        data: val.dataApresenta || (val.createdAt ? new Date(val.createdAt).toLocaleDateString('pt-BR') : ''),
+        linkId: val.id
+      }));
 
-      if (snapshot.exists()) {
-        snapshot.forEach((child) => {
-          const val = child.val();
-          // Gera imagem baseada no contexto (Título ou Ementa)
-          const keyword = this.extractKeyword(val.titulo || val.ementa || 'lei');
-          
-          fetchedRows.push({
-            camaraId: camaraId, // Importante para o link
-            id: child.key,
-            materia: `${val.tipoMateria || 'Matéria'} ${val.numero || ''}/${val.ano || ''}`,
-            tituloCompleto: val.titulo || val.ementa || 'Sem título',
-            situacao: val.status || 'Tramitando',
-            autor: val.autor || 'Desconhecido',
-            apresentacao: val.tipoApresentacao || 'Escrita',
-            tramitacao: val.regTramita || 'Ordinária',
-            exercicio: val.ano || '',
-            data: val.dataApresenta || new Date(val.createdAt).toLocaleDateString('pt-BR'),
-            linkId: child.key
-          });
-        });
-      }
+      // Sort by creation date or date of presentation
+      fetchedRows.sort((a, b) => new Date(b.createdAt || b.data) - new Date(a.createdAt || a.data));
 
-      // Reverte para mostrar as mais recentes primeiro
-      this.setState({ rows: fetchedRows.reverse(), loading: false });
+      this.setState({ rows: fetchedRows, loading: false });
 
     } catch (error) {
       console.error("Erro ao buscar matérias:", error);

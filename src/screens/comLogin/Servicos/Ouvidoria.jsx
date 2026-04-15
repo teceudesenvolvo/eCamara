@@ -4,9 +4,8 @@ import {
     FaUserSecret, FaReply, FaArchive, FaEye, FaFilter, 
     FaExclamationTriangle, FaLightbulb, FaThumbsUp, FaInfoCircle 
 } from 'react-icons/fa';
-import { ref, onValue, update } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class Ouvidoria extends Component {
     constructor(props) {
@@ -22,40 +21,40 @@ class Ouvidoria extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchManifestacoes();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchManifestacoes();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchManifestacoes = () => {
+    fetchManifestacoes = async () => {
         const { camaraId } = this.state;
-        const ouvidoriaRef = ref(db, `${camaraId}/ouvidoria/manifestacoes`);
-
-        onValue(ouvidoriaRef, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
-            }
+        try {
+            const response = await api.get(`/ombudsman/${camaraId}`);
+            const data = response.data || [];
+            
             // Ordenar por data (mais recentes primeiro)
-            data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            this.setState({ manifestacoes: data, loading: false });
-        });
+            if (Array.isArray(data)) {
+                data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                this.setState({ manifestacoes: data, loading: false });
+            } else {
+                this.setState({ manifestacoes: [], loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar manifestações:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleUpdateStatus = async (id, newStatus) => {
-        const { camaraId } = this.state;
         try {
-            await update(ref(db, `${camaraId}/ouvidoria/manifestacoes/${id}`), { 
-                status: newStatus,
-                updatedAt: new Date().toISOString()
+            await api.patch(`/ombudsman/${id}`, { 
+                status: newStatus
             });
             alert(`Protocolo atualizado para: ${newStatus}`);
+            this.fetchManifestacoes();
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             alert("Erro ao processar alteração.");

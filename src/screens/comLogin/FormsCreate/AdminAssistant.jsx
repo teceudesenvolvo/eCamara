@@ -3,11 +3,10 @@ import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone,
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { sendMessageToAIPrivate, startAtaGenerationJob, listenToAtaJob } from '../../../aiService.js';
+import { sendMessageToAIPrivate } from '../../../aiService.ts';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { auth, db } from '../../../firebaseConfig.js';
-import { ref, push, get } from 'firebase/database';
+import api from '../../../services/api.js';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -83,24 +82,22 @@ const AdminAssistant = () => {
         setGeneratedContent(''); // Limpa o conteúdo gerado ao trocar de tipo
     }, [docType]);
 
-    // Carregar configurações do Firebase ao iniciar
+    // Carregar configurações do Backend ao iniciar
     useEffect(() => {
         const fetchConfigs = async () => {
-            if (!auth.currentUser) return;
-            const user = auth.currentUser;
+            const token = localStorage.getItem('@CamaraAI:token');
+            const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+            if (!token || !user.id) return;
+
+            // Pega o camaraId do usuário ou da URL
+            const camaraId = user.camaraId || window.location.pathname.split('/').pop() || 'camara-teste';
+
             try {
-                const userIndexRef = ref(db, `users_index/${user.uid}`);
-                const indexSnap = await get(userIndexRef);
-                const camaraId = indexSnap.exists() ? indexSnap.val().camaraId : 'camara-teste';
-
-                const [baseSnap, layoutSnap, homeSnap, footerSnap] = await Promise.all([
-                    get(ref(db, `${camaraId}/dados-config/base-conhecimento`)),
-                    get(ref(db, `${camaraId}/dados-config/layout`)),
-                    get(ref(db, `${camaraId}/dados-config/home`)),
-                    get(ref(db, `${camaraId}/dados-config/footer`))
-                ]);
-
-                const layoutData = layoutSnap.val() || {};
+                const response = await api.get(`/councils/${camaraId}`);
+                const configData = response.data || {};
+                
+                const layoutData = configData.layout || {};
                 let logoB64 = null;
                 if (layoutData.logoLight) {
                     logoB64 = await getBase64(layoutData.logoLight);
@@ -108,10 +105,10 @@ const AdminAssistant = () => {
 
                 setCamaraConfigs({
                     camaraId,
-                    baseConhecimento: baseSnap.val() || {},
+                    baseConhecimento: configData["base-conhecimento"] || {},
                     layout: layoutData,
-                    home: homeSnap.val() || {},
-                    footer: footerSnap.val() || {},
+                    home: configData.home || {},
+                    footer: configData.footer || {},
                     logoBase64: logoB64
                 });
             } catch (error) {
@@ -230,6 +227,8 @@ const AdminAssistant = () => {
             return;
         }
 
+        alert('A geração de ata por áudio está em processo de migração para a nova API Node.js. Por favor, utilize a geração manual ou anexe o texto da transcrição.');
+        /*
         setAudioLoading(true);
         setProgressStep(1); // Job iniciado
         setStatusMessage('Iniciando upload...');
@@ -282,6 +281,7 @@ const AdminAssistant = () => {
             setAudioLoading(false);
             setProgressStep(0);
         }
+        */
     };
 
     const formatTime = (seconds) => {
@@ -317,7 +317,8 @@ const AdminAssistant = () => {
         const today = new Date();
         const formattedDate = today.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
         const cityName = home.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
-        const signatoryName = formData.de || auth.currentUser?.displayName || '_________________________';
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        const signatoryName = formData.de || user.name || '_________________________';
 
         // Adiciona bloco de encerramento e assinatura
         content.push(
@@ -396,7 +397,10 @@ const AdminAssistant = () => {
     };
 
     const handleSave = async () => {
-        if (!auth.currentUser) {
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        if (!token || !user.id) {
             alert("Você precisa estar logado para salvar.");
             return;
         }
@@ -407,22 +411,22 @@ const AdminAssistant = () => {
         const { camaraId } = camaraConfigs;
 
         const docData = {
-            userId: auth.currentUser.uid,
+            userId: user.id,
             tipo: docType.charAt(0).toUpperCase() + docType.slice(1),
             titulo: formData.assunto || formData.reuniao || 'Documento Sem Título',
             conteudo: generatedContent,
             createdAt: new Date().toISOString(),
             status: isSigned ? 'Assinado' : 'Rascunho',
-            metadata: formData, // Salva os dados do formulário para exibição
-            attachment: attachment // Salva o anexo em base64
+            metadata: formData,
+            attachment: attachment
         };
 
         try {
-            await push(ref(db, `${camaraId}/documentos_administrativos`), docData);
+            await api.post(`/administrative-documents/${camaraId}`, docData);
             alert("Documento salvo com sucesso!");
         } catch (error) {
             console.error("Erro ao salvar:", error);
-            alert("Erro ao salvar documento.");
+            alert("Erro ao salvar documento. Verifique sua conexão.");
         }
     };
 

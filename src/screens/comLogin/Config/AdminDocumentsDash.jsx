@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import { FaPlus, FaFileAlt, FaSearch, FaSpinner, FaFilePdf } from 'react-icons/fa';
-import { ref, query, orderByChild, equalTo, get } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
+import api from '../../../services/api.js';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 
 class AdminDocumentsDash extends Component {
@@ -16,36 +15,44 @@ class AdminDocumentsDash extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                const userIndexRef = ref(db, `users_index/${user.uid}`);
-                const snapshot = await get(userIndexRef);
-                const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
-                this.setState({ camaraId }, () => this.fetchDocumentos(user));
-            }
-        });
+        this.checkAuthAndFetch();
     }
 
-    fetchDocumentos = async (user) => {
-        const { camaraId } = this.state;
-        if (user) {
-            try {
-                const docsRef = ref(db, `${camaraId}/documentos_administrativos/`);
-                const q = query(docsRef, orderByChild('userId'), equalTo(user.uid));
-                const snapshot = await get(q);
-                const documentos = [];
-                if (snapshot.exists()) {
-                    snapshot.forEach((childSnapshot) => {
-                        documentos.push({ id: childSnapshot.key, ...childSnapshot.val() });
-                    });
-                }
-                // Ordenar por data (mais recente primeiro)
-                documentos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                this.setState({ documentos, loading: false });
-            } catch (error) {
-                console.error("Erro ao buscar documentos:", error);
-                this.setState({ loading: false });
+    checkAuthAndFetch = async () => {
+        try {
+            const token = localStorage.getItem('@CamaraAI:token');
+            if (!token) {
+                this.props.history.push(`/login/${this.state.camaraId}`);
+                return;
             }
+
+            // A verificação de sessão já deve ter sido feita no App.jsx, 
+            // mas aqui garantimos que temos os dados necessários.
+            const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+            if (user && user.id) {
+                await this.fetchDocumentos(user.id);
+            }
+        } catch (error) {
+            console.error("Erro na autenticação:", error);
+            this.props.history.push(`/login/${this.state.camaraId}`);
+        }
+    };
+
+    fetchDocumentos = async (userId) => {
+        const { camaraId } = this.state;
+        try {
+            const response = await api.get(`/administrative-documents/${camaraId}`);
+            const allDocs = response.data || [];
+            
+            // Filtra documentos do usuário atual se necessário (ou o backend já deve retornar o correto se houver permissões)
+            const documentos = allDocs.filter(doc => doc.userId === userId);
+
+            // Ordenar por data (mais recente primeiro)
+            documentos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            this.setState({ documentos, loading: false });
+        } catch (error) {
+            console.error("Erro ao buscar documentos:", error);
+            this.setState({ loading: false });
         }
     };
 

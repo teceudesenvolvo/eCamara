@@ -15,9 +15,7 @@ import Box from '@mui/material/Box';
 import SearchIcon from '@mui/icons-material/Search';
 import PageHeader from '../../componets/PageHeader.jsx';
 
-// Firebase
-import { db } from '../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../../services/api.js';
 
 class Comissoes extends Component {
     constructor(props) {
@@ -45,27 +43,22 @@ class Comissoes extends Component {
         }
 
         try {
-            const comissoesRef = ref(db, `${camaraId}/comissoes`);
-            const snapshot = await get(comissoesRef);
-            const fetchedComissoes = [];
+            const response = await api.get(`/commissions/${camaraId}`);
+            const data = response.data || [];
+            
+            const fetchedComissoes = data.map((val) => ({
+                id: val.id,
+                nome: val.nome || 'Comissão sem nome',
+                sigla: val.sigla || val.nome?.substring(0, 4).toUpperCase() || 'COM',
+                criacao: val.createdAt ? new Date(val.createdAt).toLocaleDateString('pt-BR') : '-',
+                tipo: val.tipo || 'Permanente',
+                situacao: val.status || 'Ativa',
+                descricao: val.descricao || '',
+                imagem: val.imagem || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=500&q=60',
+                membros: val.membros ? (Array.isArray(val.membros) ? val.membros : Object.values(val.membros)) : [],
+                reunioes: val.reunioes ? (Array.isArray(val.reunioes) ? val.reunioes : Object.values(val.reunioes)) : []
+            }));
 
-            if (snapshot.exists()) {
-                snapshot.forEach((child) => {
-                    const val = child.val();
-                    fetchedComissoes.push({
-                        id: child.key,
-                        nome: val.nome || 'Comissão sem nome',
-                        sigla: val.sigla || val.nome?.substring(0, 4).toUpperCase() || 'COM',
-                        criacao: val.createdAt ? new Date(val.createdAt).toLocaleDateString('pt-BR') : '-',
-                        tipo: val.tipo || 'Permanente',
-                        situacao: val.status || 'Ativa',
-                        descricao: val.descricao || '',
-                        imagem: val.imagem || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=500&q=60',
-                        membros: val.membros ? Object.values(val.membros) : [],
-                        reunioes: val.reunioes ? Object.values(val.reunioes) : []
-                    });
-                });
-            }
             this.setState({ comissoes: fetchedComissoes, loading: false });
         } catch (error) {
             console.error("Erro ao buscar comissões:", error);

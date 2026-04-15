@@ -7,8 +7,7 @@ import { FaSpinner } from 'react-icons/fa';
 import Chip from '@mui/material/Chip';
 
 // Firebase
-import { db } from '../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../../services/api.js';
 
 class MateriaDetalhesPublico extends Component {
     constructor(props) {
@@ -26,13 +25,11 @@ class MateriaDetalhesPublico extends Component {
     }
 
     fetchMateriaDetails = async () => {
-        const { camaraId, materiaId } = this.state;
+        const { materiaId } = this.state;
         try {
-            const materiaRef = ref(db, `${camaraId}/materias/${materiaId}`);
-            const snapshot = await get(materiaRef);
-
-            if (snapshot.exists()) {
-                this.setState({ materia: snapshot.val(), loading: false });
+            const response = await api.get(`/legislative-matters/id/${materiaId}`);
+            if (response.data) {
+                this.setState({ materia: response.data, loading: false });
             } else {
                 this.setState({ loading: false });
             }

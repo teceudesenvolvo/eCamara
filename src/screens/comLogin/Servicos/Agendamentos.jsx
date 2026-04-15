@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
-import { FaCalendarCheck, FaClock, FaUser, FaCheck, FaTimes, FaSearch, FaFilter, FaSpinner, FaBuilding } from 'react-icons/fa';
-import { ref, onValue, update, get } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
+import { FaCalendarCheck, FaClock, FaUser, FaCheck, FaTimes, FaSearch, FaFilter, FaSpinner, FaBuilding, FaCheckCircle } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class Agendamentos extends Component {
     constructor(props) {
@@ -18,37 +17,38 @@ class Agendamentos extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchAgendamentos();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchAgendamentos();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchAgendamentos = () => {
+    fetchAgendamentos = async () => {
         const { camaraId } = this.state;
-        const agendamentosRef = ref(db, `${camaraId}/agendamentos`);
-
-        onValue(agendamentosRef, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
-            }
+        try {
+            const response = await api.get(`/appointments/${camaraId}`);
+            const data = response.data || [];
+            
             // Ordenar por data e hora (mais próximos primeiro)
-            data.sort((a, b) => new Date(`${a.data} ${a.hora}`) - new Date(`${b.data} ${b.hora}`));
-            this.setState({ agendamentos: data, loading: false });
-        });
+            if (Array.isArray(data)) {
+                data.sort((a, b) => new Date(`${a.data} ${a.hora}`) - new Date(`${b.data} ${b.hora}`));
+                this.setState({ agendamentos: data, loading: false });
+            } else {
+                this.setState({ agendamentos: [], loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar agendamentos:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleUpdateStatus = async (id, newStatus) => {
-        const { camaraId } = this.state;
         try {
-            await update(ref(db, `${camaraId}/agendamentos/${id}`), { status: newStatus });
+            await api.patch(`/appointments/${id}`, { status: newStatus });
             alert(`Status atualizado para ${newStatus}`);
+            this.fetchAgendamentos();
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
         }

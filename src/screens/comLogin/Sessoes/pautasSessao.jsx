@@ -5,9 +5,7 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import GerenciarSessao from './GerenciarSessao.jsx'; // Importa o novo componente
 import { sendMessageToAIPrivate } from '../../../aiService.js';
-import { db } from '../../../firebaseConfig.js';
-import { ref, onValue, push, update, get } from 'firebase/database';
-import { auth } from '../../../firebaseConfig.js';
+import api from '../../../services/api.js';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -46,49 +44,37 @@ class PautasSessao extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                const userIndexRef = ref(db, `users_index/${user.uid}`);
-                const snapshot = await get(userIndexRef);
-                const camaraId = snapshot.exists() ? snapshot.val().camaraId : this.props.match.params.camaraId;
-                this.setState({ camaraId }, () => { this.fetchConfigsAndLogo();
-                    this.fetchSessoes();
-                    this.fetchMateriasDisponiveis();
-                    this.fetchDocumentosAcessorios();
-                });
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        if (token && user.id) {
+            const camaraId = user.camaraId || this.props.match.params.camaraId || 'camara-teste';
+            this.setState({ camaraId }, () => {
+                this.fetchConfigsAndLogo();
+                this.fetchSessoes();
+                this.fetchMateriasDisponiveis();
+                this.fetchDocumentosAcessorios();
+            });
+        }
     }
 
-    fetchSessoes = () => {
+    fetchSessoes = async () => {
         const { camaraId } = this.state;
-        const sessoesRef = ref(db, `${this.props.match.params.camaraId}/sessoes`);
-        onValue(sessoesRef, (snapshot) => {
-            const sessoes = [];
-            if (snapshot.exists()) {
-                snapshot.forEach((childSnapshot) => {
-                    sessoes.push({ id: childSnapshot.key, ...childSnapshot.val() });
-                });
-            }
+        try {
+            const response = await api.get(`/sessions/${camaraId}`);
+            const sessoes = response.data || [];
             this.setState({ sessoes });
-        });
+        } catch (error) {
+            console.error("Erro ao buscar sessões:", error);
+        }
     };
 
     fetchMateriasDisponiveis = async () => {
         const { camaraId } = this.state;
-        const materiasRef = ref(db, `${this.props.match.params.camaraId}/materias`);
         try {
-            const snapshot = await get(materiasRef);
-            const materiasDisponiveis = [];
-            if (snapshot.exists()) {
-                snapshot.forEach((childSnapshot) => {
-                    const materia = childSnapshot.val();
-                    // Condição para matéria estar apta para pauta (ex: status favorável ou aguardando plenário)
-                    if (materia.status === 'Enviado para Plenário') {
-                        materiasDisponiveis.push({ id: childSnapshot.key, ...materia });
-                    }
-                });
-            }
+            const response = await api.get(`/legislative-matters/${camaraId}`);
+            const materias = response.data || [];
+            const materiasDisponiveis = materias.filter(m => m.status === 'Enviado para Plenário');
             this.setState({ materiasDisponiveis });
         } catch (error) {
             console.error("Erro ao buscar matérias disponíveis:", error);
@@ -97,19 +83,10 @@ class PautasSessao extends Component {
 
     fetchDocumentosAcessorios = async () => {
         const { camaraId } = this.state;
-        const docsRef = ref(db, `${camaraId}/documentos_acessorios`);
         try {
-            const snapshot = await get(docsRef);
-            const disponiveis = [];
-            if (snapshot.exists()) {
-                snapshot.forEach((child) => {
-                    const doc = child.val();
-                    // Apenas documentos protocolados e que não estão em outras pautas
-                    if (doc.status === 'Protocolado') {
-                        disponiveis.push({ id: child.key, ...doc });
-                    }
-                });
-            }
+            const response = await api.get(`/legislative-matters/${camaraId}/accessories`);
+            const docs = response.data || [];
+            const disponiveis = docs.filter(doc => doc.status === 'Protocolado');
             this.setState({ documentosAcessoriosDisponiveis: disponiveis });
         } catch (error) {
             console.error("Erro ao buscar documentos acessórios:", error);
@@ -119,13 +96,9 @@ class PautasSessao extends Component {
     fetchConfigsAndLogo = async () => {
         const { camaraId } = this.state;
         try {
-            const [layoutSnap, homeSnap, footerSnap] = await Promise.all([
-                get(ref(db, `${camaraId}/dados-config/layout`)),
-                get(ref(db, `${camaraId}/dados-config/home`)),
-                get(ref(db, `${camaraId}/dados-config/footer`))
-            ]);
-
-            const layoutData = layoutSnap.val() || {};
+            const response = await api.get(`/councils/${camaraId}`);
+            const configData = response.data || {};
+            const layoutData = configData.layout || {};
             
             if (layoutData.logoLight) {
                 this.getBase64(layoutData.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
@@ -134,8 +107,8 @@ class PautasSessao extends Component {
             }
 
             this.setState({
-                homeConfig: homeSnap.val() || {},
-                footerConfig: footerSnap.val() || {}
+                homeConfig: configData.home || {},
+                footerConfig: configData.footer || {}
             });
         } catch (error) {
             console.error("Erro ao carregar configurações:", error);
@@ -178,7 +151,7 @@ class PautasSessao extends Component {
 
         let finalTransmissaoUrl = novaTransmissaoUrl || '';
         if ((novoTipoDeSessao === 'Remota' || novoTipoDeSessao === 'Híbrida') && !finalTransmissaoUrl) {
-            const jitsiRoomName = `e-camara-${this.props.match.params.camaraId}-${Date.now()}`;
+            const jitsiRoomName = `e-camara-${camaraId}-${Date.now()}`;
             finalTransmissaoUrl = `https://meet.jit.si/${jitsiRoomName}`;
         }
 
@@ -186,7 +159,7 @@ class PautasSessao extends Component {
         const nomeSessaoFormatado = `${novoNumeroPlenaria}ª Sessão Plenária da ${novaLegislatura}ª Legislatura da Câmara Municipal de ${cityName}`;
 
         const newSessao = {
-            data: novaData.split('-').reverse().join('/'), // Formata para DD/MM/AAAA
+            data: novaData.split('-').reverse().join('/'),
             tipo: nomeSessaoFormatado,
             categoria: novoTipo,
             numero: `${sessoesDoAno + 1}/${year}`,
@@ -196,13 +169,12 @@ class PautasSessao extends Component {
             transmissaoUrl: finalTransmissaoUrl,
             status: 'Em Elaboração',
             itens: [],
-            edital: '',
-            createdAt: Date.now()
+            edital: ''
         };
         try {
-            const sessoesRef = ref(db, `${this.props.match.params.camaraId}/sessoes`);
-            await push(sessoesRef, newSessao);
-            this.setState({ showModal: false }); // O listener onValue atualizará a lista
+            await api.post(`/sessions/${camaraId}`, newSessao);
+            this.setState({ showModal: false });
+            this.fetchSessoes();
         } catch (error) {
             console.error("Erro ao criar sessão:", error);
             alert("Erro ao criar sessão.");
@@ -223,8 +195,8 @@ class PautasSessao extends Component {
         });
     };
 
-    handleAddItem = async (materiaIdFromParam = null) => { // Agora recebe materiaId como parâmetro
-        const { selectedSessaoId, sessoes, selectedMateriaToAdd, materiasDisponiveis } = this.state;
+    handleAddItem = async (materiaIdFromParam = null) => {
+        const { selectedSessaoId, sessoes, selectedMateriaToAdd, materiasDisponiveis, camaraId } = this.state;
         const materiaId = materiaIdFromParam || selectedMateriaToAdd;
         if (!materiaId || !selectedSessaoId) return;
 
@@ -233,7 +205,6 @@ class PautasSessao extends Component {
 
         const materia = materiasDisponiveis.find(m => m.id.toString() === materiaId.toString());
         if (materia) {
-            // Verifica se a matéria já está nesta pauta
             const currentItens = selectedSessao.itens || [];
             if (currentItens.some(item => item.id === materia.id)) {
                 alert("Esta matéria já foi adicionada a esta sessão.");
@@ -241,19 +212,14 @@ class PautasSessao extends Component {
             }
 
             const updatedItens = [...currentItens, materia];
-            
-            const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
-            const materiaRef = ref(db, `${this.props.match.params.camaraId}/materias/${materia.id}`);
 
             try {
-                // Atualiza a sessão com a nova lista de itens
-                await update(sessaoRef, { itens: updatedItens });
-                // Atualiza o status da matéria para "Em Pauta"
-                await update(materiaRef, { status: 'Em Pauta' });
+                await api.patch(`/sessions/id/${selectedSessaoId}`, { itens: updatedItens });
+                await api.patch(`/legislative-matters/id/${materia.id}`, { status: 'Em Pauta' });
 
-                // O listener onValue atualizará o estado, mas podemos atualizar localmente para feedback imediato
                 this.setState(prevState => ({
-                    selectedMateriaToAdd: '', // Limpa a seleção
+                    sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s),
+                    selectedMateriaToAdd: '',
                     materiaSearchTerm: ''
                 }));
             } catch (error) {
@@ -278,7 +244,6 @@ class PautasSessao extends Component {
                 return;
             }
 
-            // Padroniza o item para o formato esperado na lista de pauta
             const itemNormalizado = {
                 id: doc.id,
                 titulo: doc.titulo || 'Requerimento de Urgência',
@@ -289,13 +254,15 @@ class PautasSessao extends Component {
             };
 
             const updatedItens = [...currentItens, itemNormalizado];
-            const sessaoRef = ref(db, `${camaraId}/sessoes/${selectedSessaoId}`);
-            const docRef = ref(db, `${camaraId}/documentos_acessorios/${doc.id}`);
 
             try {
-                await update(sessaoRef, { itens: updatedItens });
-                await update(docRef, { status: 'Em Pauta' });
-                this.setState({ selectedDocumentoToAdd: '' });
+                await api.patch(`/sessions/id/${selectedSessaoId}`, { itens: updatedItens });
+                await api.patch(`/legislative-matters/accessory/id/${doc.id}`, { status: 'Em Pauta' });
+                
+                this.setState(prevState => ({
+                    sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s),
+                    selectedDocumentoToAdd: ''
+                }));
             } catch (error) {
                 console.error("Erro ao adicionar acessório:", error);
             }
@@ -309,23 +276,24 @@ class PautasSessao extends Component {
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!selectedSessao) return;
 
-        // Encontra o item a ser removido para ter referência dele
         const itemToRemove = (selectedSessao.itens || []).find(i => i.id === itemId);
-        const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId); // Remove da lista local
-
-        const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
+        const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId);
 
         try {
-            await update(sessaoRef, { itens: updatedItens });
-            
-            // Verifica se é uma matéria ou documento acessório para restaurar o status correto
-            const isAcessorio = itemToRemove?.isAcessorio;
-            const targetPath = isAcessorio ? `documentos_acessorios/${itemId}` : `materias/${itemId}`;
-            const materiaRef = ref(db, `${this.props.match.params.camaraId}/${targetPath}`);
+            await api.patch(`/sessions/id/${selectedSessaoId}`, { itens: updatedItens });
             
             if (itemToRemove) {
-                await update(materiaRef, { status: 'Enviado para Plenário' });
+                const isAcessorio = itemToRemove.isAcessorio;
+                if (isAcessorio) {
+                    await api.patch(`/legislative-matters/accessory/id/${itemId}`, { status: 'Protocolado' });
+                } else {
+                    await api.patch(`/legislative-matters/id/${itemId}`, { status: 'Enviado para Plenário' });
+                }
             }
+
+            this.setState(prevState => ({
+                sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s)
+            }));
         } catch (error) {
             console.error("Erro ao remover item:", error);
             alert("Erro ao remover item da sessão.");
@@ -337,9 +305,11 @@ class PautasSessao extends Component {
         if (!selectedSessaoId) return;
 
         if (window.confirm("Tem certeza que deseja ABRIR esta sessão? Ela ficará visível publicamente como 'Aberta' e permitirá a interação dos vereadores.")) {
-            const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
             try {
-                await update(sessaoRef, { status: 'Aberta' });
+                await api.patch(`/sessions/id/${selectedSessaoId}`, { status: 'Aberta' });
+                this.setState(prevState => ({
+                    sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, status: 'Aberta' } : s)
+                }));
                 alert('Sessão aberta com sucesso!');
             } catch (error) {
                 console.error("Erro ao abrir sessão:", error);
@@ -471,11 +441,12 @@ class PautasSessao extends Component {
         const { selectedSessaoId, editedTransmissaoUrl, camaraId } = this.state;
         if (!selectedSessaoId) return;
 
-        const sessaoRef = ref(db, `${this.props.match.params.camaraId}/sessoes/${selectedSessaoId}`);
         try {
-            await update(sessaoRef, { transmissaoUrl: editedTransmissaoUrl });
-            this.setState({ isEditingUrl: false });
-            // O listener onValue cuidará da atualização da UI.
+            await api.patch(`/sessions/id/${selectedSessaoId}`, { transmissaoUrl: editedTransmissaoUrl });
+            this.setState(prevState => ({
+                isEditingUrl: false,
+                sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, transmissaoUrl: editedTransmissaoUrl } : s)
+            }));
             alert('URL da transmissão atualizada com sucesso!');
         } catch (error) {
             console.error("Erro ao atualizar URL:", error);

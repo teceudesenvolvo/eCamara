@@ -20,10 +20,7 @@ import Chip from '@mui/material/Chip';
 // Components
 import HistoricoSessao from '../../componets/HistoricoSessao.jsx';
 
-// Firebase
-import { db } from '../../firebaseConfig';
-import { ref, get, onValue, update } from 'firebase/database';
-import { auth } from '../../firebaseConfig';
+import api from '../../services/api.js';
 
 class SessaoVirtual extends Component {
   constructor(props) {
@@ -40,6 +37,12 @@ class SessaoVirtual extends Component {
 
   componentDidMount() {
     this.fetchSessaoData();
+    // Inicia polling para dados em tempo real
+    this.pollingInterval = setInterval(this.fetchSessaoData, 3000);
+    
+    this.uiTimer = setInterval(() => {
+        this.forceUpdate();
+    }, 1000);
   }
 
   fetchSessaoData = async () => {
@@ -48,27 +51,26 @@ class SessaoVirtual extends Component {
     const sessaoId = state ? state.sessaoId : null;
 
     if (!sessaoId) {
-      this.setState({ loading: false });
+      if (this.state.loading) this.setState({ loading: false });
       return;
     }
 
-    const sessaoRef = ref(db, `${camaraId}/sessoes/${sessaoId}`);
-    onValue(sessaoRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        this.setState({ sessao: { id: snapshot.key, ...data }, loading: false });
+    try {
+      const response = await api.get(`/sessions/id/${sessaoId}`);
+      if (response.data) {
+        this.setState({ sessao: response.data, loading: false });
       } else {
-        this.setState({ loading: false });
+        if (this.state.loading) this.setState({ loading: false });
       }
-    });
-
-    this.uiTimer = setInterval(() => {
-        this.forceUpdate();
-    }, 1000);
+    } catch (error) {
+      console.error("Erro ao buscar dados da sessão:", error);
+      if (this.state.loading) this.setState({ loading: false });
+    }
   }
 
   componentWillUnmount() {
       if (this.uiTimer) clearInterval(this.uiTimer);
+      if (this.pollingInterval) clearInterval(this.pollingInterval);
   }
 
   countVotes = (votos) => {

@@ -1,9 +1,6 @@
 import React, { Component } from 'react';
 import { FaPlus, FaCog, FaFileAlt, FaCalendarAlt, FaUserTie, FaExchangeAlt, FaSearch, FaSpinner, FaFileSignature, FaTimes, FaLayerGroup } from 'react-icons/fa';
-import { ref, query, orderByChild, equalTo, get } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
-
-// Components
+import api from '../../../services/api';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 
 class loginDashboard extends Component {
@@ -23,59 +20,57 @@ class loginDashboard extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                // Prioriza o ID da URL, mas pode validar com o do usuário se necessário
-                let camaraId = this.state.camaraId;
-                if (!camaraId) {
-                    const userIndexRef = ref(db, `users_index/${user.uid}`);
-                    const snapshot = await get(userIndexRef);
-                    camaraId = this.props.match.params.camaraId;
-                    this.setState({ camaraId: this.props.match.params.camaraId });
-                }
-                this.fetchMaterias(user, camaraId);
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
-            } else {
-                this.props.history.push('/login');
-            }
-        });
+        if (token && user.id) {
+            this.fetchMaterias(user, this.state.camaraId);
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
     fetchMaterias = async (user, camaraIdParam) => {
         const camaraId = camaraIdParam || this.state.camaraId;
-        if (user && camaraId) {
-            try {
-                const allMateriasRef = ref(db, `${camaraId}/materias`);
-                const allMateriasSnapshot = await get(allMateriasRef);
+        this.setState({ loading: true });
 
-                const myMaterias = [];
-                const subscribedMaterias = [];
+        try {
+            const response = await api.get(`/legislative-matters/${camaraId}`);
+            const allMaterias = response.data;
 
-                if (allMateriasSnapshot.exists()) {
-                    allMateriasSnapshot.forEach((childSnapshot) => {
-                        const materia = { id: childSnapshot.key, ...childSnapshot.val() };
+            const myMaterias = [];
+            const subscribedMaterias = [];
 
-                        // Se a matéria é do usuário logado
-                        if (materia.userId === user.uid) {
-                            myMaterias.push(materia);
-                        }
+            if (Array.isArray(allMaterias)) {
+                allMaterias.forEach((materia) => {
+                    // Adaptando para os nomes de campos prováveis do backend (authorId ou userId)
+                    const mAuthorId = materia.authorId || materia.userId;
 
-                        // Se o usuário subscreveu a matéria (e não é a própria matéria dele)
-                        if (materia.subscricoes && materia.subscricoes[user.uid] && materia.userId !== user.uid) {
-                            subscribedMaterias.push(materia);
-                        }
-                    });
-                }
+                    // Se a matéria é do usuário logado
+                    if (mAuthorId === user.id) {
+                        myMaterias.push(materia);
+                    }
 
-                // Ordenar as matérias por data de criação (mais recente primeiro)
-                myMaterias.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                subscribedMaterias.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    // Se o usuário subscreveu a matéria (e não é a própria matéria dele)
+                    // Nota: O backend pode retornar subscricoes como um array ou objeto
+                    const hasSubscribed = Array.isArray(materia.subscricoes)
+                        ? materia.subscricoes.some(s => s.userId === user.id)
+                        : (materia.subscricoes && materia.subscricoes[user.id]);
 
-                this.setState({ materias: myMaterias, subscribedMaterias, loading: false });
-            } catch (error) {
-                console.error("Erro ao buscar matérias:", error);
-                this.setState({ loading: false });
+                    if (hasSubscribed && mAuthorId !== user.id) {
+                        subscribedMaterias.push(materia);
+                    }
+                });
             }
+
+            // Ordenar as matérias por data de criação (mais recente primeiro)
+            myMaterias.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            subscribedMaterias.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+            this.setState({ materias: myMaterias, subscribedMaterias, loading: false });
+        } catch (error) {
+            console.error("Erro ao buscar matérias:", error);
+            this.setState({ loading: false });
         }
     };
 
@@ -114,7 +109,7 @@ class loginDashboard extends Component {
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
 
-                <div className="dashboard-content" style={{marginLeft: '5%', marginRight: '2%'}}>
+                <div className="dashboard-content" style={{ marginLeft: '5%', marginRight: '2%' }}>
 
                     {/* Header da Página */}
                     <div className="dashboard-header">
@@ -243,8 +238,8 @@ class loginDashboard extends Component {
                                     style={{ width: '100%', boxSizing: 'border-box' }}
                                 />
                             </div>
-                            <button 
-                                className="btn-secondary" 
+                            <button
+                                className="btn-secondary"
                                 style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', height: '45px' }}
                                 onClick={() => this.setState({ searchTerm: '', filterStatus: 'Todos os Status', filterType: 'Todos', filterYear: 'Todos' })}
                             >

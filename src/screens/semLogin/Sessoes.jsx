@@ -12,9 +12,7 @@ import Box from '@mui/material/Box';
 import SearchIcon from '@mui/icons-material/Search';
 import PageHeader from '../../componets/PageHeader';
 
-// Firebase
-import { db } from '../../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../../services/api';
 
 class Sessoes extends Component {
     constructor(props) {
@@ -40,20 +38,19 @@ class Sessoes extends Component {
 
     fetchSessoes = async () => {
         const { camaraId } = this.state;
-        const sessoesRef = ref(db, `${camaraId}/sessoes`);
         
         try {
-            const snapshot = await get(sessoesRef);
-            const sessoes = [];
-            if (snapshot.exists()) {
-                snapshot.forEach(child => sessoes.push({ id: child.key, ...child.val() }));
-            }
-            // Ordena manualmente: primeiro as abertas, depois por data de criação decrescente
-            const sortedSessoes = sessoes.sort((a, b) => {
+            const response = await api.get(`/sessions/${camaraId}`);
+            const sessoes = response.data;
+
+            // O backend já retorna ordenado por data de criação decrescente
+            // Se precisarmos manter a prioridade de "Abertas" no topo, fazemos aqui:
+            const sortedSessoes = Array.isArray(sessoes) ? sessoes.sort((a, b) => {
                 if (a.status === 'Aberta' && b.status !== 'Aberta') return -1;
                 if (a.status !== 'Aberta' && b.status === 'Aberta') return 1;
-                return (b.createdAt || 0) - (a.createdAt || 0);
-            });
+                return 0; // Mantém a ordem do backend para o resto
+            }) : [];
+
             this.setState({ sessoes: sortedSessoes, loading: false });
         } catch (error) {
             console.error("Erro ao buscar sessões:", error);

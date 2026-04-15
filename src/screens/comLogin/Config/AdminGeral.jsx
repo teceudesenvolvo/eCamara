@@ -1,7 +1,5 @@
 import React, { Component } from 'react';
-import { auth, db } from '../../../firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { ref, set, get, remove, push, update } from 'firebase/database';
+import api from '../../../services/api.js';
 import { FaBuilding, FaPlus, FaLock, FaSignOutAlt, FaCheckCircle, FaTrash, FaExternalLinkAlt, FaUserPlus, FaUsers, FaTimes, FaCopy, FaCogs } from 'react-icons/fa';
 
 class AdminGeral extends Component {
@@ -16,14 +14,14 @@ class AdminGeral extends Component {
             password: '',
             error: '',
             loading: false,
-            
+
             // Formulário de Nova Câmara
             camaraName: '',
             camaraCity: '',
             camaraState: '',
             camaraId: '', // Slug (ID do banco de dados)
             creating: false,
-            
+
             existingCamaras: [],
 
             // Formulário de Admin Local
@@ -39,7 +37,7 @@ class AdminGeral extends Component {
             loadingUsers: false,
             modalAdminName: '',
             modalAdminEmail: '',
-            modalInviteLink: '',
+            modalAdminPassword: '',
 
             // Modal de Módulos (Páginas de Serviço)
             showModulesModal: false,
@@ -52,40 +50,35 @@ class AdminGeral extends Component {
     }
 
     checkAuth = () => {
-        auth.onAuthStateChanged(user => {
-            if (user && user.email === 'admin@blutecnologias.com.br') {
-                this.setState({ isAuthenticated: true, showLoginModal: false });
-                this.fetchCamaras();
-            } else {
-                this.setState({ isAuthenticated: false, showLoginModal: true });
-            }
-        });
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        const token = localStorage.getItem('@CamaraAI:token');
+
+        if (token && (user.role === 'superadmin' || user.email === 'root@blutecnologias.com.br' || user.email === 'admin@blutecnologias.com.br')) {
+            this.setState({ isAuthenticated: true, showLoginModal: false });
+            this.fetchCamaras();
+        } else {
+            this.setState({ isAuthenticated: false, showLoginModal: true });
+        }
     }
 
     fetchCamaras = async () => {
-        const rootRef = ref(db, '/');
         try {
-            const snapshot = await get(rootRef);
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                // Filtra chaves que parecem ser câmaras (exclui nós de sistema se houver)
-                const camarasList = Object.keys(data).map(key => {
-                    const camaraData = data[key];
-                    // Verifica se tem a estrutura básica de uma câmara
-                    if (camaraData && camaraData['dados-config']) {
-                        return {
-                            id: key,
-                            name: camaraData['dados-config']?.home?.titulo || key,
-                            city: camaraData['dados-config']?.home?.cidade || '',
-                            state: camaraData['dados-config']?.home?.estado || '',
-                            createdAt: camaraData.createdAt
-                        };
-                    }
-                    return null;
-                }).filter(Boolean);
-                
-                this.setState({ existingCamaras: camarasList });
-            }
+            const response = await api.get('/councils');
+            const data = response.data || [];
+
+            const camarasList = data.map(camara => {
+                const config = camara.config || camara.dadosConfig || {};
+                return {
+                    id: camara.id,
+                    slug: camara.slug,
+                    name: config.home?.titulo || camara.name || camara.slug,
+                    city: config.home?.cidade || '',
+                    state: config.home?.estado || '',
+                    createdAt: camara.createdAt
+                };
+            });
+
+            this.setState({ existingCamaras: camarasList });
         } catch (error) {
             console.error("Erro ao buscar câmaras:", error);
         }
@@ -94,24 +87,34 @@ class AdminGeral extends Component {
     handleLogin = async (e) => {
         e.preventDefault();
         const { email, password } = this.state;
-        
-        if (email !== 'admin@blutecnologias.com.br') {
-            this.setState({ error: 'Acesso negado. Apenas o administrador geral pode acessar esta página.' });
+
+        if (!email || !password) {
+            this.setState({ error: 'Preencha usuário e senha.' });
             return;
         }
 
         this.setState({ loading: true, error: '' });
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // checkAuth atualizará o estado automaticamente
+            const response = await api.post('/login', { email, password });
+            const { token, user } = response.data;
+
+            if (user.role === 'superadmin' || user.email === 'root@blutecnologias.com.br' || user.email === 'admin@blutecnologias.com.br') {
+                localStorage.setItem('@CamaraAI:token', token);
+                localStorage.setItem('@CamaraAI:user', JSON.stringify(user));
+                this.setState({ isAuthenticated: true, showLoginModal: false, loading: false });
+                this.fetchCamaras();
+            } else {
+                this.setState({ error: 'Acesso negado. Apenas o super admin pode acessar esta página.', loading: false });
+            }
         } catch (error) {
             this.setState({ error: 'Erro ao fazer login. Verifique suas credenciais.', loading: false });
         }
     };
 
     handleLogout = async () => {
-        await signOut(auth);
+        localStorage.removeItem('@CamaraAI:token');
+        localStorage.removeItem('@CamaraAI:user');
         this.setState({ isAuthenticated: false, showLoginModal: true, email: '', password: '' });
     }
 
@@ -125,15 +128,15 @@ class AdminGeral extends Component {
 
     handleNameChange = (e) => {
         const name = e.target.value;
-        this.setState({ 
-            camaraName: name, 
-            camaraId: this.generateId(name) 
+        this.setState({
+            camaraName: name,
+            camaraId: this.generateId(name)
         });
     }
 
     handleCreateCamara = async () => {
         const { camaraName, camaraCity, camaraState, camaraId } = this.state;
-        
+
         if (!camaraName || !camaraCity || !camaraState || !camaraId) {
             alert("Preencha todos os campos.");
             return;
@@ -141,29 +144,22 @@ class AdminGeral extends Component {
 
         this.setState({ creating: true });
 
-        const camaraRef = ref(db, camaraId);
-        
         try {
-            const snapshot = await get(camaraRef);
-            if (snapshot.exists()) {
-                alert("Já existe uma câmara com este ID (Slug). Por favor, altere o nome ou o ID.");
-                this.setState({ creating: false });
-                return;
-            }
-
             // Estrutura Inicial da Nova Câmara
             const newCamaraData = {
-                "dados-config": {
+                name: camaraName,
+                slug: camaraId,
+                config: {
                     "home": {
                         "titulo": camaraName,
                         "slogan": "Transparência e Inovação Legislativa com IA.",
                         "cidade": camaraCity,
-                        "estado": camaraState
+                        "state": camaraState
                     },
                     "layout": {
                         "corPrimaria": "#126B5E",
                         "corDestaque": "#FF740F",
-                        "logo": "https://via.placeholder.com/150?text=Logo" // Logo placeholder
+                        "logo": "https://via.placeholder.com/150?text=Logo"
                     },
                     "footer": {
                         "address": `${camaraCity} - ${camaraState}`,
@@ -173,33 +169,32 @@ class AdminGeral extends Component {
                         "regimentoText": "Insira o regimento interno aqui...",
                         "leiOrganicaText": "Insira a lei orgânica aqui..."
                     }
-                },
-                "createdAt": new Date().toISOString()
+                }
             };
 
-            await set(camaraRef, newCamaraData);
-            
+            await api.post('/councils', newCamaraData);
+
             alert(`Câmara "${camaraName}" criada com sucesso!`);
-            this.setState({ 
-                camaraName: '', 
-                camaraCity: '', 
-                camaraState: '', 
-                camaraId: '', 
-                creating: false 
+            this.setState({
+                camaraName: '',
+                camaraCity: '',
+                camaraState: '',
+                camaraId: '',
+                creating: false
             });
-            this.fetchCamaras(); // Atualiza a lista
+            this.fetchCamaras();
 
         } catch (error) {
             console.error("Erro ao criar câmara:", error);
-            alert("Erro ao criar câmara.");
+            alert("Erro ao criar câmara: " + (error.response?.data?.message || error.message));
             this.setState({ creating: false });
         }
     }
 
     handleDeleteCamara = async (id) => {
-        if (window.confirm(`Tem certeza que deseja EXCLUIR a câmara "${id}"? Esta ação não pode ser desfeita e apagará TODOS os dados (matérias, usuários, sessões).`)) {
+        if (window.confirm(`Tem certeza que deseja EXCLUIR a câmara "${id}"? Esta ação não pode ser desfeita e apagará TODOS os dados.`)) {
             try {
-                await remove(ref(db, id));
+                await api.delete(`/councils/id/${id}`);
                 alert("Câmara excluída com sucesso.");
                 this.fetchCamaras();
             } catch (error) {
@@ -221,67 +216,27 @@ class AdminGeral extends Component {
         this.setState({ creating: true });
 
         try {
-            // 1. Criar usuário no Firebase Auth
-            // Nota: Isso fará o login automático com o novo usuário, então precisamos tratar isso ou usar uma Cloud Function idealmente.
-            // Como estamos no front-end, uma abordagem comum é criar e depois deslogar, ou usar um app secundário.
-            // Por simplicidade aqui, vamos criar e avisar que o admin geral será deslogado ou alertar sobre isso.
-            // POREM, para não derrubar o admin geral, o ideal seria usar uma Cloud Function. 
-            // Vamos assumir que aqui criamos apenas o registro no Realtime Database se o Auth for bloqueado, 
-            // mas o correto é criar o Auth. 
-            
-            // WORKAROUND FRONTEND: Criar usuário desloga o atual. 
-            // Melhor fluxo para MVP: Criar apenas o registro no DB e instruir a criar o Auth no primeiro login ou usar uma função auxiliar.
-            // Mas para funcionar AGORA, vamos criar o Auth e relogar o admin geral, ou alertar.
-            
-            // Melhor abordagem sem Cloud Function:
-            // Apenas salvar no banco como 'pré-cadastro' ou instruir o admin geral a criar via console.
-            // MAS, vamos tentar criar via Auth e recuperar a sessão se possível, ou apenas criar no DB.
-            
-            // Vamos criar no DB e assumir que o Auth será criado separadamente ou que este painel gerencia apenas dados.
-            // SE quisermos criar o Auth REAL, o admin geral será desconectado.
-            // Vamos criar o registro no banco em 'users' com tipo 'admin' e um flag 'needsAuth' se necessário.
-            
-            // TENTATIVA DE CRIAÇÃO AUTH (CUIDADO: Desloga o usuário atual)
-            // Para evitar isso em produção sem backend, precisaríamos de uma segunda instância do Firebase App.
-            // Vou seguir com a criação no DB para definir a permissão, assumindo que o usuário fará o registro ou que já existe.
-            
-            // ATUALIZAÇÃO: Vamos criar um registro completo em `camaraId/users` que o sistema reconheça.
-            // O UID seria o do Auth. Sem o UID do Auth, o login não cruza.
-            // Solução prática para este painel: Criar apenas o registro de convite/permissão ou alertar.
-            
-            // Vamos simplificar: Criar um convite de admin que permite o registro na tela de registro público.
-            const convitesRef = ref(db, `${selectedCamaraForAdmin}/convites`);
-            const newInviteRef = push(convitesRef);
-            const inviteId = newInviteRef.key;
-            const inviteLink = `${window.location.origin}/register?invite=${inviteId}&camara=${selectedCamaraForAdmin}`;
-            
-            await set(newInviteRef, {
+            await api.post('/auth/register', {
                 email: adminEmail,
-                tipo: 'admin', // Força o tipo Admin
-                nome: adminName,
-                link: inviteLink,
-                used: false,
-                createdAt: new Date().toISOString(),
-                createdBy: 'AdminGeral'
+                name: adminName,
+                password: adminPassword,
+                role: 'admin',
+                councilSlug: selectedCamaraForAdmin
             });
 
-            // Opcional: Criar usuário placeholder
-            // const userRef = push(ref(db, `${selectedCamaraForAdmin}/users`));
-            // await set(userRef, { nome: adminName, email: adminEmail, tipo: 'admin' });
+            alert(`Administrador criado com sucesso!`);
 
-            alert(`Convite de Administrador criado com sucesso!\n\nEnvie este link para o novo administrador:\n${inviteLink}`);
-            
-            this.setState({ 
-                adminName: '', 
-                adminEmail: '', 
-                adminPassword: '', 
-                selectedCamaraForAdmin: '', 
-                creating: false 
+            this.setState({
+                adminName: '',
+                adminEmail: '',
+                adminPassword: '',
+                selectedCamaraForAdmin: '',
+                creating: false
             });
 
         } catch (error) {
             console.error("Erro ao criar admin:", error);
-            alert("Erro ao criar administrador: " + error.message);
+            alert("Erro ao criar administrador: " + (error.response?.data?.message || error.message));
             this.setState({ creating: false });
         }
     }
@@ -293,14 +248,14 @@ class AdminGeral extends Component {
             <div style={{ textAlign: 'left', animation: 'fadeIn 0.5s' }}>
                 <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '25px', color: '#333' }}>Criar Administrador Local</h3>
                 <p style={{ color: '#666', marginBottom: '20px', fontSize: '0.9rem' }}>
-                    Gera um link de convite exclusivo com privilégios de <strong>Administrador</strong> para a câmara selecionada.
+                    Cria uma conta com privilégios de <strong>Administrador</strong> para a câmara selecionada e atritua uma senha inicial.
                 </p>
 
                 <div style={{ maxWidth: '600px' }}>
                     <div className="mb-4" style={{ marginBottom: '15px' }}>
                         <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Selecione a Câmara</label>
-                        <select 
-                            className="modal-input" 
+                        <select
+                            className="modal-input"
                             value={selectedCamaraForAdmin}
                             onChange={(e) => this.setState({ selectedCamaraForAdmin: e.target.value })}
                         >
@@ -311,71 +266,76 @@ class AdminGeral extends Component {
 
                     <div className="mb-4" style={{ marginBottom: '15px' }}>
                         <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Nome do Responsável</label>
-                        <input 
-                            type="text" 
-                            className="modal-input" 
+                        <input
+                            type="text"
+                            className="modal-input"
                             placeholder="Nome Completo"
                             value={adminName}
                             onChange={(e) => this.setState({ adminName: e.target.value })}
                         />
                     </div>
 
-                    <div className="mb-4" style={{ marginBottom: '25px' }}>
+                    <div className="mb-4" style={{ marginBottom: '15px' }}>
                         <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>E-mail Institucional</label>
-                        <input 
-                            type="email" 
-                            className="modal-input" 
+                        <input
+                            type="email"
+                            className="modal-input"
                             placeholder="admin@camara.leg.br"
                             value={adminEmail}
                             onChange={(e) => this.setState({ adminEmail: e.target.value })}
                         />
                     </div>
 
+                    <div className="mb-4" style={{ marginBottom: '25px' }}>
+                        <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Senha Inicial</label>
+                        <input
+                            type="password"
+                            className="modal-input"
+                            placeholder="Senha forte"
+                            value={adminPassword}
+                            onChange={(e) => this.setState({ adminPassword: e.target.value })}
+                        />
+                    </div>
+
                     <button className="btn-primary" onClick={this.handleCreateLocalAdmin} disabled={creating} style={{ padding: '12px 25px' }}>
-                        {creating ? 'Gerando...' : <><FaUserPlus /> Gerar Convite Admin</>}
+                        {creating ? 'Criando...' : <><FaUserPlus /> Cadastrar Administrador</>}
                     </button>
                 </div>
             </div>
         );
     }
 
-    handleOpenUserModal = (camaraId) => {
-        this.setState({ 
-            showUserModal: true, 
-            selectedCamaraForUsers: camaraId, 
-            camaraUsers: [], 
+    handleOpenUserModal = async (camaraId) => {
+        this.setState({
+            showUserModal: true,
+            selectedCamaraForUsers: camaraId,
+            camaraUsers: [],
             loadingUsers: true,
             modalAdminName: '',
             modalAdminEmail: '',
-            modalInviteLink: ''
-        });
-
-        const usersRef = ref(db, `${camaraId}/users`);
-        get(usersRef).then((snapshot) => {
-            const users = [];
-            if (snapshot.exists()) {
-                snapshot.forEach((child) => {
-                    users.push({ id: child.key, ...child.val() });
-                });
-            }
-            this.setState({ camaraUsers: users, loadingUsers: false });
-        }).catch((error) => {
-            console.error("Erro ao buscar usuários:", error);
-            this.setState({ loadingUsers: false });
-        });
-    }
-
-    handleOpenModulesModal = async (camaraId) => {
-        this.setState({ 
-            showModulesModal: true, 
-            selectedCamaraForModules: camaraId,
-            loadingModules: true 
+            modalAdminPassword: ''
         });
 
         try {
-            const modulesRef = ref(db, `${camaraId}/dados-config/modulos_ativos`);
-            const snapshot = await get(modulesRef);
-            const modulesConfig = snapshot.exists() ? snapshot.val() : {
+            const response = await api.get(`/users/council/${camaraId}`);
+            this.setState({ camaraUsers: response.data || [], loadingUsers: false });
+        } catch (error) {
+            console.error("Erro ao buscar usuários:", error);
+            this.setState({ loadingUsers: false });
+        }
+    }
+
+    handleOpenModulesModal = async (camaraId) => {
+        this.setState({
+            showModulesModal: true,
+            selectedCamaraForModules: camaraId,
+            loadingModules: true
+        });
+
+        try {
+            const response = await api.get(`/councils/${camaraId}`);
+            const config = response.data?.config || response.data?.dadosConfig || {};
+            const modulesConfig = config.modulos_ativos || {
                 agendamentos: false,
                 assistenciaJuridica: false,
                 balcaoCidadao: false,
@@ -406,8 +366,11 @@ class AdminGeral extends Component {
     handleSaveModules = async () => {
         const { selectedCamaraForModules, modulesConfig } = this.state;
         try {
-            const modulesRef = ref(db, `${selectedCamaraForModules}/dados-config/modulos_ativos`);
-            await set(modulesRef, modulesConfig);
+            const response = await api.get(`/councils/${selectedCamaraForModules}`);
+            const currentConfig = response.data?.config || response.data?.dadosConfig || {};
+            const updatedConfig = { ...currentConfig, modulos_ativos: modulesConfig };
+
+            await api.patch(`/councils/${selectedCamaraForModules}`, { config: updatedConfig });
             alert("Configurações de módulos salvas com sucesso!");
             this.setState({ showModulesModal: false });
         } catch (error) {
@@ -420,38 +383,32 @@ class AdminGeral extends Component {
         this.setState({ showUserModal: false, selectedCamaraForUsers: null });
     }
 
-    handleGenerateAdminInviteModal = async () => {
-        const { selectedCamaraForUsers, modalAdminName, modalAdminEmail } = this.state;
-        if (!modalAdminName || !modalAdminEmail) {
-            alert("Preencha nome e email.");
+    handleCreateAdminModal = async () => {
+        const { selectedCamaraForUsers, modalAdminName, modalAdminEmail, modalAdminPassword } = this.state;
+        if (!modalAdminName || !modalAdminEmail || !modalAdminPassword) {
+            alert("Preencha nome, email e senha.");
             return;
         }
 
         try {
-            const convitesRef = ref(db, `${selectedCamaraForUsers}/convites`);
-            const newInviteRef = push(convitesRef);
-            const inviteId = newInviteRef.key;
-            const inviteLink = `${window.location.origin}/register?invite=${inviteId}&camara=${selectedCamaraForUsers}`;
-            
-            await set(newInviteRef, {
+            await api.post('/auth/register', {
                 email: modalAdminEmail,
-                tipo: 'admin',
-                nome: modalAdminName,
-                link: inviteLink,
-                used: false,
-                createdAt: new Date().toISOString(),
-                createdBy: 'AdminGeral'
+                name: modalAdminName,
+                password: modalAdminPassword,
+                role: 'admin',
+                councilSlug: selectedCamaraForUsers
             });
-
-            this.setState({ modalInviteLink: inviteLink });
+            alert("Administrador criado com sucesso.");
+            this.setState({ modalAdminName: '', modalAdminEmail: '', modalAdminPassword: '' });
+            this.handleOpenUserModal(selectedCamaraForUsers);
         } catch (error) {
-            console.error("Erro ao gerar convite:", error);
-            alert("Erro ao gerar convite.");
+            console.error("Erro ao criar admin:", error);
+            alert("Erro ao criar admin.");
         }
     }
 
     render() {
-        const { isAuthenticated, showLoginModal, email, password, error, loading, camaraName, camaraCity, camaraState, camaraId, creating, existingCamaras, activeTab, showUserModal, camaraUsers, loadingUsers, modalAdminName, modalAdminEmail, modalInviteLink, selectedCamaraForUsers } = this.state;
+        const { isAuthenticated, showLoginModal, email, password, error, loading, camaraName, camaraCity, camaraState, camaraId, creating, existingCamaras, activeTab, showUserModal, camaraUsers, loadingUsers, modalAdminName, modalAdminEmail, modalAdminPassword, selectedCamaraForUsers } = this.state;
 
         if (!isAuthenticated) {
             return (
@@ -461,26 +418,26 @@ class AdminGeral extends Component {
                             <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '40px' }}>
                                 <h2 style={{ color: '#126B5E', marginBottom: '10px' }}><FaLock /> Admin Geral</h2>
                                 <p style={{ marginBottom: '25px', color: '#666' }}>Área restrita à Blu Tecnologias.</p>
-                                
+
                                 <form onSubmit={this.handleLogin}>
-                                    <input 
-                                        type="email" 
-                                        className="modal-input" 
-                                        placeholder="admin@blutecnologias.com.br"
+                                    <input
+                                        type="email"
+                                        className="modal-input"
+                                        placeholder="root@blutecnologias.com.br"
                                         value={email}
                                         onChange={(e) => this.setState({ email: e.target.value })}
                                         style={{ marginBottom: '15px' }}
                                     />
-                                    <input 
-                                        type="password" 
-                                        className="modal-input" 
+                                    <input
+                                        type="password"
+                                        className="modal-input"
                                         placeholder="Senha de Acesso"
                                         value={password}
                                         onChange={(e) => this.setState({ password: e.target.value })}
                                         style={{ marginBottom: '20px' }}
                                     />
                                     {error && <p style={{ color: '#d32f2f', fontSize: '0.9rem', marginBottom: '15px' }}>{error}</p>}
-                                    
+
                                     <button type="submit" className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
                                         {loading ? 'Autenticando...' : 'Acessar Painel'}
                                     </button>
@@ -508,7 +465,7 @@ class AdminGeral extends Component {
 
                     {/* --- Navegação por Abas Superior --- */}
                     <div style={{ display: 'flex', borderBottom: '1px solid #eee', marginBottom: '30px' }}>
-                        <button 
+                        <button
                             onClick={() => this.setState({ activeTab: 'camaras' })}
                             style={{
                                 padding: '12px 25px',
@@ -524,7 +481,7 @@ class AdminGeral extends Component {
                         >
                             <FaBuilding /> Câmaras
                         </button>
-                        <button 
+                        <button
                             onClick={() => this.setState({ activeTab: 'admins' })}
                             style={{
                                 padding: '12px 25px',
@@ -545,25 +502,25 @@ class AdminGeral extends Component {
                     {activeTab === 'camaras' ? (
                         <div style={{ animation: 'fadeIn 0.5s' }}>
                             <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '25px', color: '#333', textAlign: 'left' }}>Criar Nova Câmara</h3>
-                            
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px', textAlign: 'left' }}>
                                 <div style={{ gridColumn: '1 / -1' }}>
                                     <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Nome da Câmara</label>
-                                    <input 
-                                        type="text" 
-                                        className="modal-input" 
-                                        placeholder="Ex: Câmara Municipal de Salvador" 
+                                    <input
+                                        type="text"
+                                        className="modal-input"
+                                        placeholder="Ex: Câmara Municipal de Salvador"
                                         value={camaraName}
                                         onChange={this.handleNameChange}
                                     />
                                 </div>
-                                
+
                                 <div>
                                     <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Cidade</label>
-                                    <input 
-                                        type="text" 
-                                        className="modal-input" 
-                                        placeholder="Salvador" 
+                                    <input
+                                        type="text"
+                                        className="modal-input"
+                                        placeholder="Salvador"
                                         value={camaraCity}
                                         onChange={(e) => this.setState({ camaraCity: e.target.value })}
                                     />
@@ -571,10 +528,10 @@ class AdminGeral extends Component {
 
                                 <div>
                                     <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>Estado (UF)</label>
-                                    <input 
-                                        type="text" 
-                                        className="modal-input" 
-                                        placeholder="BA" 
+                                    <input
+                                        type="text"
+                                        className="modal-input"
+                                        placeholder="BA"
                                         value={camaraState}
                                         onChange={(e) => this.setState({ camaraState: e.target.value })}
                                         maxLength={2}
@@ -583,9 +540,9 @@ class AdminGeral extends Component {
 
                                 <div style={{ gridColumn: '1 / -1' }}>
                                     <label className="label-form" style={{ display: 'block', marginBottom: '8px' }}>ID do Sistema (Slug)</label>
-                                    <input 
-                                        type="text" 
-                                        className="modal-input" 
+                                    <input
+                                        type="text"
+                                        className="modal-input"
                                         value={camaraId}
                                         readOnly
                                         style={{ background: '#f5f5f5', color: '#666' }}
@@ -601,7 +558,7 @@ class AdminGeral extends Component {
                             </div>
 
                             <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '25px', marginTop: '50px', color: '#333', textAlign: 'left' }}>Câmaras Gerenciadas ({existingCamaras.length})</h3>
-                            
+
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                                 {existingCamaras.map(camara => (
                                     <div key={camara.id} className="dashboard-card" style={{ padding: '20px', margin: 0, borderLeft: '4px solid #126B5E' }}>
@@ -614,27 +571,27 @@ class AdminGeral extends Component {
                                         <p style={{ fontSize: '0.9rem', color: '#666', margin: '0 0 5px 0' }}>ID: <strong>{camara.id}</strong></p>
                                         <p style={{ fontSize: '0.9rem', color: '#666', margin: '0 0 15px 0' }}>
                                             {camara.city && `${camara.city} - ${camara.state}`}
-                                            {camara.createdAt && <span style={{display: 'block', fontSize: '0.8rem', color: '#999', marginTop: '5px'}}>Criada em: {new Date(camara.createdAt).toLocaleDateString()}</span>}
+                                            {camara.createdAt && <span style={{ display: 'block', fontSize: '0.8rem', color: '#999', marginTop: '5px' }}>Criada em: {new Date(camara.createdAt).toLocaleDateString()}</span>}
                                         </p>
-                                        
+
                                         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '10px' }}>
-                                            <button 
+                                            <button
                                                 onClick={() => this.handleOpenUserModal(camara.id)}
-                                                className="btn-secondary" 
+                                                className="btn-secondary"
                                                 style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}
                                             >
                                                 <FaUsers /> Usuários
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => this.handleOpenModulesModal(camara.id)}
-                                                className="btn-secondary" 
+                                                className="btn-secondary"
                                                 style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', background: '#e3f2fd', color: '#1565c0', borderColor: '#bbdefb' }}
                                             >
                                                 <FaCogs /> Módulos
                                             </button>
-                                            <button 
-                                                onClick={() => this.handleDeleteCamara(camara.id)} 
-                                                className="btn-danger" 
+                                            <button
+                                                onClick={() => this.handleDeleteCamara(camara.id)}
+                                                className="btn-danger"
                                                 style={{ padding: '5px 10px', fontSize: '0.8rem' }}
                                             >
                                                 <FaTrash /> Excluir
@@ -664,24 +621,13 @@ class AdminGeral extends Component {
 
                             {/* Seção Criar Admin */}
                             <div style={{ background: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #eee' }}>
-                                <h4 style={{ margin: '0 0 10px 0', color: '#126B5E' }}>Convidar Novo Admin</h4>
+                                <h4 style={{ margin: '0 0 10px 0', color: '#126B5E' }}>Criar Novo Admin</h4>
                                 <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
                                     <input type="text" className="modal-input" placeholder="Nome" value={modalAdminName} onChange={(e) => this.setState({ modalAdminName: e.target.value })} style={{ flex: 1 }} />
                                     <input type="email" className="modal-input" placeholder="Email" value={modalAdminEmail} onChange={(e) => this.setState({ modalAdminEmail: e.target.value })} style={{ flex: 1 }} />
+                                    <input type="password" className="modal-input" placeholder="Senha" value={modalAdminPassword} onChange={(e) => this.setState({ modalAdminPassword: e.target.value })} style={{ flex: 1 }} />
                                 </div>
-                                <button className="btn-primary" onClick={this.handleGenerateAdminInviteModal} style={{ width: '100%' }}>Gerar Link de Convite</button>
-                                
-                                {modalInviteLink && (
-                                    <div style={{ marginTop: '10px', background: '#e0f2f1', padding: '10px', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '10px' }}>{modalInviteLink}</span>
-                                        <button 
-                                            onClick={() => { navigator.clipboard.writeText(modalInviteLink); alert("Copiado!"); }} 
-                                            style={{ background: 'none', border: 'none', color: '#126B5E', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-                                        >
-                                            <FaCopy /> Copiar
-                                        </button>
-                                    </div>
-                                )}
+                                <button className="btn-primary" onClick={this.handleCreateAdminModal} style={{ width: '100%' }}>Cadastrar Administrador</button>
                             </div>
 
                             {/* Lista de Usuários */}
@@ -721,7 +667,7 @@ class AdminGeral extends Component {
                                 </h2>
                                 <button onClick={() => this.setState({ showModulesModal: false })} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}><FaTimes /></button>
                             </div>
-                            
+
                             <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '20px', textAlign: 'left' }}>
                                 Selecione quais páginas do módulo de <strong>Serviços</strong> estarão disponíveis para esta câmara:
                             </p>
@@ -737,8 +683,8 @@ class AdminGeral extends Component {
                                     { id: 'assistente', label: 'Assistente Legislativo IA' },
                                 ].map(module => (
                                     <label key={module.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '10px', cursor: 'pointer' }}>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={this.state.modulesConfig[module.id] || false}
                                             onChange={() => this.handleToggleModule(module.id)}
                                             style={{ width: '18px', height: '18px' }}
@@ -761,8 +707,8 @@ class AdminGeral extends Component {
                                     { id: 'tvCamara', label: 'TV Câmara' }
                                 ].map(module => (
                                     <label key={module.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '10px', cursor: 'pointer' }}>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={this.state.modulesConfig[module.id] || false}
                                             onChange={() => this.handleToggleModule(module.id)}
                                             style={{ width: '18px', height: '18px' }}

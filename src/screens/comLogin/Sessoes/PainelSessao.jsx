@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
-import { db, auth } from '../../../firebaseConfig';
-import { ref, onValue, get } from 'firebase/database';
+import api from '../../../services/api.js';
 import { FaUsers, FaVoteYea, FaClock, FaDesktop, FaMicrophone, FaVideo, FaVideoSlash } from "react-icons/fa";
 import '../../../styles/FuturisticPanel.css';
 
@@ -19,8 +18,8 @@ class PainelSessao extends Component {
   }
 
   componentDidMount() {
-    this.fetchSessaoData();
     this.fetchParlamentares();
+    this.startPolling();
 
     this.timer = setInterval(() => {
       this.setState({ currentTime: new Date() });
@@ -30,8 +29,13 @@ class PainelSessao extends Component {
 
   componentWillUnmount() {
     if (this.timer) clearInterval(this.timer);
-    if (this.sessaoUnsubscribe) this.sessaoUnsubscribe();
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
   }
+
+  startPolling = () => {
+    this.fetchSessaoData(); // Initial fetch
+    this.pollingInterval = setInterval(this.fetchSessaoData, 3000); // Poll every 3 seconds
+  };
 
   toggleVideo = () => {
     this.setState(prevState => ({ showVideo: !prevState.showVideo }));
@@ -39,31 +43,32 @@ class PainelSessao extends Component {
 
   fetchParlamentares = async () => {
     const { camaraId } = this.state;
-    const usersRef = ref(db, `${camaraId}/users`);
-    const snapshot = await get(usersRef);
-    if (snapshot.exists()) {
-      const allUsers = [];
-      snapshot.forEach(child => {
-        allUsers.push({ id: child.key, ...child.val() });
-      });
+    try {
+      const response = await api.get(`/users/council/${camaraId}`);
+      const allUsers = response.data || [];
       const parlamentares = allUsers.filter(u => u.tipo === 'vereador' || u.tipo === 'presidente');
       this.setState({ parlamentares });
+    } catch (error) {
+      console.error("Erro ao buscar parlamentares:", error);
     }
-  }
+  };
 
-  fetchSessaoData = () => {
-    const { camaraId, sessaoId } = this.state;
+  fetchSessaoData = async () => {
+    const { sessaoId } = this.state;
     if (!sessaoId) return;
 
-    const sessaoRef = ref(db, `${camaraId}/sessoes/${sessaoId}`);
-    this.sessaoUnsubscribe = onValue(sessaoRef, (snapshot) => {
-      if (snapshot.exists()) {
-        this.setState({ sessao: { id: snapshot.key, ...snapshot.val() }, loading: false });
+    try {
+      const response = await api.get(`/sessions/id/${sessaoId}`);
+      if (response.data) {
+        this.setState({ sessao: response.data, loading: false });
       } else {
         this.setState({ loading: false });
       }
-    });
-  }
+    } catch (error) {
+      console.error("Erro ao buscar dados da sessão:", error);
+      // Don't set loading to false here to avoid flashing content if it's already loaded
+    }
+  };
 
   formatCountdown = (seconds) => {
     const mins = Math.floor(seconds / 60);

@@ -5,8 +5,7 @@ import {
 } from '@mui/material';
 import { FaFileSignature, FaSearch, FaEye, FaArrowLeft, FaHistory, FaUserTie, FaTimes, FaPlus } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { db, auth } from '../../../firebaseConfig';
-import { ref, get, onValue } from 'firebase/database';
+import api from '../../../services/api';
 
 class AccessoryDocumentsDash extends Component {
     constructor(props) {
@@ -22,41 +21,39 @@ class AccessoryDocumentsDash extends Component {
     }
 
     componentDidMount() {
-        this.unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                const userIndexRef = ref(db, `users_index/${user.uid}`);
-                const snapshot = await get(userIndexRef);
-                const camaraId = snapshot.exists() ? snapshot.val().camaraId : (this.props.match.params.camaraId || this.state.camaraId);
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
-                this.setState({ camaraId }, () => {
-                    this.fetchDocuments(user.uid);
-                });
-            } else {
-                this.props.history.push(`/login/${this.props.match.params.camaraId || ''}`);
-            }
-        });
+        if (token && user.id) {
+            this.setState({ camaraId: this.state.camaraId }, () => {
+                this.fetchDocuments(user.id);
+            });
+        } else {
+            this.props.history.push(`/login/${this.state.camaraId || ''}`);
+        }
     }
 
-    componentWillUnmount() {
-        if (this.unsubscribeAuth) this.unsubscribeAuth();
-    }
-
-    fetchDocuments = (uid) => {
-        const docsRef = ref(db, `${this.state.camaraId}/documentos_acessorios`);
-        onValue(docsRef, (snapshot) => {
+    fetchDocuments = async (userId) => {
+        try {
+            const response = await api.get(`/legislative-matters/${this.state.camaraId}/accessories`);
+            const allDocs = response.data;
+            
             const data = [];
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    const val = child.val();
+            if (Array.isArray(allDocs)) {
+                allDocs.forEach(val => {
                     // Mostra documentos de autoria própria ou que permitem subscrição
-                    if (val.autorId === uid || val.permiteSubscricao) {
-                        data.push({ id: child.key, ...val });
+                    const authorId = val.authorId || val.userId;
+                    if (authorId === userId || val.permiteSubscricao) {
+                        data.push({ ...val });
                     }
                 });
                 data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             }
             this.setState({ documents: data, loading: false });
-        });
+        } catch (error) {
+            console.error("Erro ao buscar documentos acessórios:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleOpenDoc = (doc) => {

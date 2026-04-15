@@ -6,8 +6,7 @@ import {
 } from 'react-icons/fa';
 import logoCamaraAI from '../assets/logo-camara-ai-sf.png';
 import '../App.css';
-import { db } from '../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../services/api.js';
 
 const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
     const location = useLocation();
@@ -21,10 +20,10 @@ const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
 
         const fetchModules = async () => {
             try {
-                const modulesRef = ref(db, `${camaraId}/dados-config/modulos_ativos`);
-                const snapshot = await get(modulesRef);
-                if (snapshot.exists()) {
-                    setActiveModules(snapshot.val());
+                const response = await api.get(`/councils/id/${camaraId}`);
+                if (response.data) {
+                    const config = response.data.config || response.data.dadosConfig || {};
+                    setActiveModules(config.modulos_ativos || {});
                 }
             } catch (error) {
                 console.error("Erro ao carregar módulos ativos:", error);

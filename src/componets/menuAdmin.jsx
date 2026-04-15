@@ -26,8 +26,7 @@ import {
 import logoCamaraAI from '../assets/logo-camara-ai-vertical.png';
 import '../App.css';
 import { useState, useEffect } from 'react';
-import { db, auth } from '../firebaseConfig';
-import { ref, get } from 'firebase/database';
+import api from '../services/api.js';
 
 const MenuDashboard = ({ logo: propLogo }) => {
     const location = useLocation();
@@ -42,83 +41,49 @@ const MenuDashboard = ({ logo: propLogo }) => {
     const isActive = (path) => location.pathname.includes(path) ? 'link-desktop-active' : '';
 
     useEffect(() => {
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        if (!token || !user.id) return;
+
         const fetchUserPermissions = async (uid, cId) => {
             try {
-                const userRef = ref(db, `${cId}/users/${uid}`);
-                const permRef = ref(db, `${cId}/dados-config/permissoes`);
-                const modulesRef = ref(db, `${cId}/dados-config/modulos_ativos`);
-                
-                const [userSnap, permSnap, modulesSnap] = await Promise.all([get(userRef), get(permRef), get(modulesRef)]);
-                
-                if (userSnap.exists()) {
-                    setUserType(userSnap.val().tipo);
-                    setUserCargo(userSnap.val().cargo);
+                // Fetch council data which should include configuration
+                const councilResponse = await api.get(`/councils/id/${cId}`);
+                if (councilResponse.data) {
+                    const config = councilResponse.data.config || councilResponse.data.dadosConfig || {};
+                    setPermissions(config.permissoes || {});
+                    setActiveModules(config.modulos_ativos || {});
+                    if (config.layout?.logo) setLogo(config.layout.logo);
                 }
-                if (permSnap.exists()) {
-                    setPermissions(permSnap.val());
-                }
-                if (modulesSnap.exists()) {
-                    setActiveModules(modulesSnap.val());
+
+                // Fetch specific user data for role/cargo
+                const userResponse = await api.get(`/users/id/${uid}`);
+                if (userResponse.data) {
+                    setUserType(userResponse.data.tipo);
+                    setUserCargo(userResponse.data.cargo);
                 }
             } catch (error) {
                 console.error("Erro ao carregar permissões do menu:", error);
             }
         };
 
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
-            // Tenta pegar da URL primeiro
-            const pathParts = location.pathname.split('/').filter(Boolean);
-            let currentCamaraId = pathParts[pathParts.length - 1];
-            
-            // Se parecer um ID de recurso (muito longo ou numérico) ou for uma rota conhecida sem ID no final
-            if (currentCamaraId === 'perfil' || currentCamaraId === 'admin') {
-                currentCamaraId = null;
-            }
+        // Get camaraId from URL or User
+        const pathParts = location.pathname.split('/').filter(Boolean);
+        let currentCamaraId = pathParts[pathParts.length - 1];
+        
+        if (currentCamaraId === 'perfil' || currentCamaraId === 'admin' || !currentCamaraId.includes('-')) {
+             currentCamaraId = user.camaraId || 'pacatuba';
+        }
 
-            if (currentCamaraId && currentCamaraId !== 'perfil') {
-                setCamaraId(currentCamaraId);
-                if (user) {
-                    fetchUserPermissions(user.uid, currentCamaraId);
-                }
-            } else {
-                // Se não tiver na URL, busca do usuário logado
-                if (user) {
-                    try {
-                        const userIndexRef = ref(db, `users_index/${user.uid}`);
-                        const snapshot = await get(userIndexRef);
-                        if (snapshot.exists()) {
-                            const cId = snapshot.val().camaraId;
-                            setCamaraId(cId);
-                            fetchUserPermissions(user.uid, cId);
-                        }
-                    } catch (error) {
-                        console.error("Erro ao buscar camaraId do usuário:", error);
-                    }
-                }
-            }
-        });
+        setCamaraId(currentCamaraId);
+        fetchUserPermissions(user.id, currentCamaraId);
 
         if (propLogo) {
             setLogo(propLogo);
         }
-
-        return () => unsubscribe();
     }, [location.pathname, propLogo]);
 
-    // Novo useEffect para carregar o logo quando o camaraId for definido
-    useEffect(() => {
-        if (propLogo) return;
-        
-        const fetchLogo = async () => {
-            try {
-                const snapshot = await get(ref(db, `${camaraId}/dados-config/layout/logo`));
-                if (snapshot.exists()) setLogo(snapshot.val());
-            } catch (e) {
-                console.error("Erro ao carregar logo do dashboard", e);
-            }
-        };
-        fetchLogo();
-    }, [camaraId, propLogo]);
 
     // Validador de Acesso
     const hasAccess = (permissionId) => {

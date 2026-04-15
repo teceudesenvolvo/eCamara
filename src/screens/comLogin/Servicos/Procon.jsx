@@ -4,9 +4,8 @@ import {
     FaFileInvoiceDollar, FaHandshake, FaUserTie, FaBuilding,
     FaInfoCircle, FaDownload, FaBook, FaCheckCircle
 } from 'react-icons/fa';
-import { ref, onValue, update } from 'firebase/database';
-import { auth, db } from '../../../firebaseConfig';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import api from '../../../services/api.js';
 
 class Procon extends Component {
     constructor(props) {
@@ -21,40 +20,40 @@ class Procon extends Component {
     }
 
     componentDidMount() {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.fetchReclamacoes();
-            } else {
-                this.props.history.push('/login/' + this.state.camaraId);
-            }
-        });
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (token) {
+            this.fetchReclamacoes();
+        } else {
+            this.props.history.push('/login/' + this.state.camaraId);
+        }
     }
 
-    fetchReclamacoes = () => {
+    fetchReclamacoes = async () => {
         const { camaraId } = this.state;
-        const proconRef = ref(db, `${camaraId}/procon/reclamacoes`);
-
-        onValue(proconRef, (snapshot) => {
-            const data = [];
-            if (snapshot.exists()) {
-                Object.entries(snapshot.val()).forEach(([key, val]) => {
-                    data.push({ id: key, ...val });
-                });
-            }
+        try {
+            const response = await api.get(`/procon/${camaraId}`);
+            const data = response.data || [];
+            
             // Ordenar por data (mais recentes primeiro)
-            data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            this.setState({ reclamacoes: data, loading: false });
-        });
+            if (Array.isArray(data)) {
+                data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                this.setState({ reclamacoes: data, loading: false });
+            } else {
+                this.setState({ reclamacoes: [], loading: false });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar reclamações:", error);
+            this.setState({ loading: false });
+        }
     };
 
     handleUpdateStatus = async (id, newStatus) => {
-        const { camaraId } = this.state;
         try {
-            await update(ref(db, `${camaraId}/procon/reclamacoes/${id}`), { 
-                status: newStatus,
-                updatedAt: new Date().toISOString()
+            await api.patch(`/procon/${id}`, { 
+                status: newStatus
             });
             alert(`Status da reclamação atualizado para: ${newStatus}`);
+            this.fetchReclamacoes();
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             alert("Erro ao processar alteração.");

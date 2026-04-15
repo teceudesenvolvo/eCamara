@@ -7,9 +7,7 @@ import {
 import { FaFileSignature, FaRobot, FaArrowLeft, FaSave, FaMagic, FaInfoCircle, FaLightbulb, FaPencilAlt } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import MenuDashboard from '../../../componets/menuAdmin.jsx';
-import { db, auth } from '../../../firebaseConfig';
-import { ref, get, push, set } from 'firebase/database';
+import api from '../../../services/api';
 import { sendMessageToAIPrivate } from '../../../aiService';
 
 class CreateAccessoryDocument extends Component {
@@ -31,67 +29,48 @@ class CreateAccessoryDocument extends Component {
         };
     }
 
-    componentDidMount() {
-        this.unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                // Resolução robusta do camaraId (URL -> Index -> Props)
-                const userIndexRef = ref(db, `users_index/${user.uid}`);
-                const snapshot = await get(userIndexRef);
-                const camaraId = snapshot.exists() ? snapshot.val().camaraId : (this.props.match.params.camaraId || this.state.camaraId);
+    async componentDidMount() {
+        const token = localStorage.getItem('@CamaraAI:token');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
-                // Busca o nome oficial do usuário no banco de dados da câmara
-                const userRef = ref(db, `${camaraId}/users/${user.uid}`);
-                const userSnap = await get(userRef);
-                const nomeReal = userSnap.exists() ? (userSnap.val().nome || userSnap.val().name) : user.displayName;
-
-                this.setState({ camaraId, autorNome: nomeReal || 'Parlamentar' }, () => {
-                    this.fetchMaterias(user.uid, camaraId);
-                    this.generateNextNumber(camaraId);
-                });
-            } else {
-                this.props.history.push(`/login/${this.props.match.params.camaraId || ''}`);
-            }
-        });
+        if (token && user.id) {
+            // No backend novo, as permissões e dados da câmara já vêm no perfil do usuário ou via API
+            this.setState({ 
+                autorNome: user.name || 'Parlamentar',
+                camaraId: this.state.camaraId 
+            }, () => {
+                this.fetchMaterias(user.id, this.state.camaraId);
+                this.generateNextNumber(this.state.camaraId);
+            });
+        } else {
+            this.props.history.push(`/login/${this.state.camaraId || ''}`);
+        }
     }
 
-    componentWillUnmount() {
-        if (this.unsubscribeAuth) this.unsubscribeAuth();
-    }
-
-    fetchMaterias = async (uid, camaraId) => {
+    fetchMaterias = async (userId, camaraId) => {
         try {
             const targetCamara = camaraId || this.state.camaraId;
-            console.log(`[Debug] Buscando matérias para UID: ${uid} na câmara: ${targetCamara}`);
-            
-            const materiasRef = ref(db, `${targetCamara}/materias`);
-            const snapshot = await get(materiasRef);
+            const response = await api.get(`/legislative-matters/${targetCamara}`);
+            const allMaterias = response.data;
             
             const data = [];
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    const val = child.val();
-                    
-                    // Filtragem manual (seguindo o padrão do materiasDash.jsx que funciona)
-                    if (val.userId !== uid) return;
+            if (Array.isArray(allMaterias)) {
+                allMaterias.forEach(val => {
+                    // Filtragem (seguindo o padrão original adaptado para o novo backend)
+                    if ((val.authorId || val.userId) !== userId) return;
 
                     const status = val.status || '';
-                    // Verifica se está em comissão ou se já possui parecer favorável (Jurídico ou Comissão)
                     const isInCommission = status.includes('Encaminhado à') || status.includes('Relator') || status.includes('Aguardando Votação');
                     const hasFavorableOpinion = status === 'Parecer Favorável' || status === 'Aprovado na Comissão';
 
-                    // Se não atender a nenhum dos critérios de tramitação avançada, ignora
                     if (!isInCommission && !hasFavorableOpinion) return;
 
                     const tipo = (val.tipoMateria || '').toLowerCase();
-                    
-                    // Filtro de tipos permitidos para acessórios
                     if (tipo.includes('lei') || tipo.includes('indica') || tipo.includes('projeto') || tipo.includes('requerimento')) {
-                        data.push({ id: child.key, ...val });
+                        data.push({ ...val });
                     }
                 });
 
-                console.log(`[Debug] Matérias encontradas após filtro: ${data.length}`);
-                
                 // Ordenar por data de criação (mais recentes primeiro)
                 data.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
             }
@@ -103,11 +82,14 @@ class CreateAccessoryDocument extends Component {
     };
 
     generateNextNumber = async (camaraId) => {
-        const targetCamara = camaraId || this.state.camaraId;
-        const docsRef = ref(db, `${targetCamara}/documentos_acessorios`);
-        const snapshot = await get(docsRef);
-        const count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
-        this.setState({ documentNumber: (count + 1).toString() });
+        try {
+            const response = await api.get(`/legislative-matters/${camaraId}/accessory-count`);
+            const count = response.data.count || 0;
+            this.setState({ documentNumber: (count + 1).toString() });
+        } catch (error) {
+            console.error("Erro ao gerar número:", error);
+            this.setState({ documentNumber: "1" });
+        }
     };
 
     handleMateriaChange = (event, newValue) => {
@@ -169,22 +151,20 @@ class CreateAccessoryDocument extends Component {
 
         this.setState({ saving: true });
         try {
-            const newDocRef = push(ref(db, `${camaraId}/documentos_acessorios`));
-            await set(newDocRef, {
+            await api.post(`/legislative-matters/${camaraId}/accessory`, {
                 titulo: `Requerimento de Urgência ${documentNumber}/${new Date().getFullYear()}`,
                 materiaReferenciaId: selectedMateria.id,
                 conteudo: content,
-                autorId: auth.currentUser.uid,
-                autorNome: this.state.autorNome, // Usa o nome garantido pelo banco
+                autorNome: this.state.autorNome,
                 status: 'Protocolado',
-                permiteSubscricao: isSubscriptionEnabled,
-                createdAt: new Date().toISOString()
+                permiteSubscricao: isSubscriptionEnabled
             });
             alert("Documento gerado e protocolado com sucesso!");
             this.props.history.push(`/admin/materias-dash/${camaraId}`);
         } catch (error) {
             console.error("Erro ao salvar:", error);
             this.setState({ saving: false });
+            alert("Erro ao protocolar o documento acessório.");
         }
     };
 

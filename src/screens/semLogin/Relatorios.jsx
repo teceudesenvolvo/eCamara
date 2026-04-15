@@ -1,167 +1,168 @@
 import React, { Component } from 'react';
+import api from '../../services/api.js';
+import { FaSpinner } from 'react-icons/fa';
 
-// Removido os componentes de ícone, pois o menu sidebar foi removido.
-
-class Relatórios extends Component {
+class Relatorios extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      // Dados simulados para as matérias. Em um cenário real, isso viria de uma API.
-      materials: [
-        {
-          id: 'PL542/2010',
-          code: 'PL 542/2010',
-          ementa: 'DENOMINA RUA FRANCISCO FERNANDES DE OLIVEIRA O LOGRADOURO PÚBLICO INOMINADO: TRAVESSA DA RUA OTELO AUGUSTO RIBEIRO, ALTURA DO Nº 1158, GUAMANASES.',
-          observations: 'FASE DA DISCUSSÃO: 2°',
-          promoter: 'SENIVAL MOURA',
-          voteDetails: {
-            majority: 'Maioria Simples',
-            yes: 41,
-            no: 1,
-            abs: 0,
-            plFls: 0,
-            total: 42,
-          },
-          status: 'Aprovado', // 'Aprovado', 'Rejeitado', 'Pendente', etc.
-        },
-        {
-          id: 'REQ123/2023',
-          code: 'REQ 123/2023',
-          ementa: 'REQUERIMENTO PARA IMPLANTAÇÃO DE POSTO DE SAÚDE NO BAIRRO ALTO ALEGRE.',
-          observations: 'Aguardando parecer da comissão de saúde.',
-          promoter: 'Vereador João Silva',
-          voteDetails: {
-            majority: 'Maioria Simples',
-            yes: 30,
-            no: 10,
-            abs: 2,
-            plFls: 0,
-            total: 42,
-          },
-          status: 'Aprovado',
-        },
-        {
-          id: 'PDL005/2024',
-          code: 'PDL 005/2024',
-          ementa: 'PROJETO DE DECRETO LEGISLATIVO QUE CONCEDE TÍTULO DE CIDADÃO HONORÁRIO AO SR. ANTONIO CARLOS PEREIRA.',
-          observations: 'Em fase de discussão inicial.',
-          promoter: 'Vereadora Maria Souza',
-          voteDetails: {
-            majority: 'Maioria Qualificada (2/3)',
-            yes: 25,
-            no: 15,
-            abs: 2,
-            plFls: 0,
-            total: 42,
-          },
-          status: 'Pendente', // Um exemplo de status diferente
-        },
-      ],
+      sessions: [],
+      selectedSessionId: '',
+      materials: [],
+      loading: true,
+      sessionsLoading: true,
+      camaraId: this.props.match.params.camaraId || '',
     };
   }
 
-  // Se você quiser carregar os dados de uma API, pode usar componentDidMount
-  /*
   componentDidMount() {
-    this.fetchMaterials();
+    this.fetchSessions();
   }
 
-  fetchMaterials = async () => {
+  fetchSessions = async () => {
+    const { camaraId } = this.state;
+    if (!camaraId) {
+      this.setState({ sessionsLoading: false, loading: false });
+      return;
+    }
+
     try {
-      // const response = await fetch('/api/materials');
-      // const data = await response.json();
-      // this.setState({ materials: data });
-      // Ou use os dados mockados temporariamente aqui também
+      const response = await api.get(`/sessions/${camaraId}`);
+      const sessions = response.data || [];
+      this.setState({ 
+        sessions: sessions.sort((a,b) => new Date(b.data) - new Date(a.data)), 
+        sessionsLoading: false,
+        loading: false 
+      });
     } catch (error) {
-      console.error("Erro ao buscar matérias:", error);
+      console.error("Erro ao buscar sessões:", error);
+      this.setState({ sessionsLoading: false, loading: false });
     }
   };
-  */
+
+  handleSessionChange = (e) => {
+    const sessionId = e.target.value;
+    this.setState({ selectedSessionId: sessionId, loading: true }, () => {
+      if (sessionId) {
+        this.fetchSessionDetails(sessionId);
+      } else {
+        this.setState({ materials: [], loading: false });
+      }
+    });
+  };
+
+  fetchSessionDetails = async (sessionId) => {
+    try {
+      const response = await api.get(`/sessions/id/${sessionId}`);
+      const session = response.data;
+      if (session && session.itens) {
+        this.setState({ materials: session.itens, loading: false });
+      } else {
+        this.setState({ materials: [], loading: false });
+      }
+    } catch (error) {
+      console.error("Erro ao buscar detalhes da sessão:", error);
+      this.setState({ materials: [], loading: false });
+    }
+  };
 
   render() {
-    const { materials } = this.state; // Desestrutura materials do estado
+    const { materials, sessions, selectedSessionId, loading, sessionsLoading } = this.state;
+    const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
     return (
       <div className='app-container'>
-        {/* Main Content */}
         <div className='main-content'>
-          {/* Header - Removido conforme sua instrução anterior. Se precisar de um, reintroduza aqui. */}
-          {/* <header className='header'>
-            <img src="/câmara_municipal_logo.png" alt="Câmara Municipal Logo" className="logo" />
-          </header> */}
-
-          {/* Session and Filter Section */}
           <div className='filter-section'>
             <div className='session-selector'>
-              <select>
-                <option>Selecionar Sessão</option>
-                {/* Add more options here */}
+              <select value={selectedSessionId} onChange={this.handleSessionChange} disabled={sessionsLoading}>
+                <option value="">{sessionsLoading ? 'Carregando sessões...' : 'Selecionar Sessão'}</option>
+                {sessions.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.tipo} nº {s.numero} ({new Date(s.data).toLocaleDateString()})
+                  </option>
+                ))}
               </select>
             </div>
-            <div className='status-indicators'>
-              <div className='status-item gray'>0</div>
-              <div className='status-item green'>10</div>
-              <div className='status-item red'>5</div>
-              <div className='status-text'>Finalizada</div>
-              <div className='status-text'>Ordinária</div>
-              <div className='status-text'>2023</div>
-              <div className='status-text'>10/10/2023</div>
-            </div>
+            {selectedSession && (
+              <div className='status-indicators'>
+                <div className={`status-item ${selectedSession.status === 'Encerrada' ? 'gray' : 'green'}`}>
+                  {materials.length}
+                </div>
+                <div className='status-text'>{selectedSession.status}</div>
+                <div className='status-text'>{selectedSession.tipo}</div>
+                <div className='status-text'>{new Date(selectedSession.data).getFullYear()}</div>
+                <div className='status-text'>{new Date(selectedSession.data).toLocaleDateString()}</div>
+              </div>
+            )}
           </div>
 
-          {/* Materials Section */}
-          <div className='materials-section'>
-            <h2>Matérias</h2>
-            {/* Mapeia sobre o array 'materials' no estado para renderizar cada card */}
-            {materials.map((material) => (
-              <div className='material-card' key={material.id}>
-                {/* Note que no seu JSX original para "material-card" havia um "material-description"
-                    que continha o "material-code" e um "material-details" separado com o "<p>".
-                    Ajustei isso para ser mais lógico, com "material-details" contendo ambos.
-                    Ajuste o seu CSS se a estrutura não corresponder exatamente ao que você espera.
-                */}
-                <div className='material-details'> {/* Contém o código e a descrição */}
-                  <a href={`/materia/${material.id}`} className='material-code'>
-                    {material.code}
-                  </a>
-                  <p className='material-description'>
-                    {material.ementa}
-                    <br />
-                    OBSERVAÇÕES: {material.observations}
-                    <br />
-                    PROMOVENTE: {material.promoter}
-                  </p>
-                </div>
-
-                <div className='vote-summary'>
-                  <p>{material.voteDetails.majority}</p>
-                  <p>Sim: {material.voteDetails.yes}</p>
-                  <p>Não: {material.voteDetails.no}</p>
-                  <p>Abs: {material.voteDetails.abs}</p>
-                  <p>PL_Fls: {material.voteDetails.plFls}</p>
-                  <p>Total: {material.voteDetails.total}</p>
-                </div>
-
-                <div className='voting-results'>
-                  <div className='vote-actions'>
-                    {/* A classe 'button-aprovado' é usada. Para status diferentes,
-                        você precisaria de classes adicionais no seu CSS,
-                        ex: .button-pendente, .button-rejeitado, e aplicá-las condicionalmente.
-                        Ex: className={`button-aprovado ${material.status === 'Pendente' ? 'button-pendente' : ''}`}
-                    */}
-                    <button
-                      className={`button-aprovado ${material.status === 'Pendente' ? 'button-pendente' : ''}`}
-                      disabled={material.status === 'Pendente'}
-                    >
-                      {material.status}
-                    </button>
-                    <a href={`/votos/${material.id}`} className='link-ver-votos'>
-                      Ver votos
-                    </a>
-                  </div>
-                </div>
+          <div className='materials-section' style={{ minHeight: '400px', position: 'relative' }}>
+            <h2 style={{ color: '#126B5E', borderBottom: '2px solid #126B5E', paddingBottom: '10px' }}>Matérias da Sessão</h2>
+            
+            {loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
+                <FaSpinner className="animate-spin" size={40} color="#126B5E" />
               </div>
-            ))}
+            ) : materials.length > 0 ? (
+              materials.map((material, index) => {
+                const votos = material.votos || {};
+                const sim = Object.values(votos).filter(v => v.voto === 'sim').length;
+                const nao = Object.values(votos).filter(v => v.voto === 'nao').length;
+                const abs = Object.values(votos).filter(v => v.voto === 'abstencao').length;
+                
+                return (
+                  <div className='material-card' key={material.id || index}>
+                    <div className='material-details'>
+                      <a href={`/materia/${this.state.camaraId}/${material.id}`} className='material-code'>
+                        {material.tipoMateria} {material.numero}/{material.ano}
+                      </a>
+                      <p className='material-description'>
+                        <strong>Ementa:</strong> {material.ementa}
+                        <br />
+                        <span style={{ fontSize: '0.85rem', color: '#666' }}>PROMOVENTE: {material.autor || material.tipoAutor || '-'}</span>
+                      </p>
+                    </div>
+
+                    <div className='vote-summary'>
+                      <p style={{ fontWeight: 'bold', color: '#126B5E' }}>Resultado da Votação</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', fontSize: '0.9rem' }}>
+                        <span>Sim: <strong>{sim}</strong></span>
+                        <span>Não: <strong>{nao}</strong></span>
+                        <span>Abst: <strong>{abs}</strong></span>
+                        <span>Total: <strong>{sim + nao + abs}</strong></span>
+                      </div>
+                    </div>
+
+                    <div className='voting-results'>
+                      <div className='vote-actions'>
+                        <button
+                          className={`button-aprovado ${material.status === 'Rejeitada' ? 'button-rejeitado' : material.status === 'Pendente' ? 'button-pendente' : ''}`}
+                          style={{
+                            backgroundColor: material.status === 'Aprovada' ? '#4caf50' : material.status === 'Rejeitada' ? '#f44336' : '#ffa000',
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 15px',
+                            borderRadius: '5px',
+                            fontWeight: 'bold',
+                            width: '120px'
+                          }}
+                        >
+                          {material.status || 'Pendente'}
+                        </button>
+                        <a href={`/materia/${this.state.camaraId}/${material.id}`} className='link-ver-votos' style={{ fontSize: '0.85rem', marginTop: '5px', display: 'block', textAlign: 'center' }}>
+                          Ver detalhes
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div style={{ textAlign: 'center', padding: '100px', color: '#999' }}>
+                {selectedSessionId ? 'Nenhuma matéria encontrada nesta sessão.' : 'Selecione uma sessão para visualizar os relatórios.'}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -169,4 +170,4 @@ class Relatórios extends Component {
   }
 }
 
-export default Relatórios;
+export default Relatorios;
