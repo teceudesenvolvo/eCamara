@@ -69,15 +69,26 @@ class Configuracoes extends Component {
                 api.get(`/commissions/${camaraId}`)
             ]);
 
-            const councilData = councilResponse.data || {};
+            const councilData = Array.isArray(councilResponse.data) ? councilResponse.data[0] : (councilResponse.data || {});
             const config = councilData.config || councilData.dadosConfig || {};
             
             const baseData = config['base-conhecimento'] || {};
             const layoutData = { ...this.state.layoutConfig, ...(config.layout || {}) };
             const permissoesData = config.permissoes || {};
             
-            const usersList = usersResponse.data || [];
-            const comissoesList = comissoesResponse.data || [];
+            // Extração robusta de usuários e comissões
+            const rawUsers = usersResponse.data;
+            const usersList = (Array.isArray(rawUsers) ? rawUsers : (rawUsers?.users || Object.values(rawUsers || {})))
+                .filter(u => u).map(u => ({ ...u, id: u.id || u._id }));
+
+            const rawComissoes = comissoesResponse.data;
+            const comissoesList = (Array.isArray(rawComissoes) ? rawComissoes : (rawComissoes?.commissions || Object.values(rawComissoes || {})))
+                .filter(c => c).map(c => ({
+                    ...c,
+                    id: c.id || c._id,
+                    nome: c.name || c.nome || 'Comissão sem nome', // Mapeia name do backend para nome do frontend
+                    membros: c.membros ? (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)) : [] // Normalize membros to array
+                }));
 
             this.setState({
                 regimentoText: baseData.regimentoText || '',
@@ -134,21 +145,35 @@ class Configuracoes extends Component {
 
     // --- User and Commission Handlers (Moved from LayoutManager) ---
 
-    handleUpdateUserType = async (userId, newType) => {
-        try {
-            await api.patch(`/users/${userId}`, { tipo: newType });
-            this.fetchConfig();
-        } catch (error) {
-            console.error("Erro ao atualizar tipo de usuário:", error);
-        }
+    handleUpdateUserType = (userId, newType) => {
+        this.setState(prevState => ({
+            users: prevState.users.map(u => u.id === userId ? { ...u, role: newType } : u)
+        }));
     };
 
-    handleUpdateUserCargo = async (userId, newCargo) => {
+    handleUpdateUserCargo = (userId, newCargo) => {
+        this.setState(prevState => ({
+            users: prevState.users.map(u => u.id === userId ? { ...u, cargo: newCargo } : u)
+        }));
+    };
+
+    handleSaveUserChanges = async (user) => {
+        this.setState({ isSaving: true });
         try {
-            await api.patch(`/users/${userId}`, { cargo: newCargo });
-            this.fetchConfig();
+            // Envia tanto o nível de acesso (role) quanto o cargo institucional em uma única chamada
+            await api.patch(`/users/${user.id}`, { 
+                role: user.role || user.tipo, 
+                cargo: user.cargo 
+            });
+            
+            alert(`Alterações para ${user.name || user.nome} salvas com sucesso!`);
+            // Opcional: recarrega para garantir sincronia completa com o banco
+            // this.fetchConfig(); 
         } catch (error) {
-            console.error("Erro ao atualizar cargo do usuário:", error);
+            console.error("Erro ao salvar alterações do usuário:", error);
+            alert("Erro ao salvar as alterações do usuário.");
+        } finally {
+            this.setState({ isSaving: false });
         }
     };
 
@@ -170,10 +195,18 @@ class Configuracoes extends Component {
                 camaraId
             });
             
-            const inviteLink = `${window.location.origin}/register?invite=${response.data.id}&camara=${camaraId}`;
+            // O token do convite pode vir como .id ou .token
+            const token = response.data.token || response.data.id;
+            const inviteLink = `${window.location.origin}/register?invite=${token}&camara=${camaraId}`;
             
-            await navigator.clipboard.writeText(inviteLink);
-            alert(`Link de convite criado e copiado!\n\nEnvie este link para o novo usuário.`);
+            try {
+                await navigator.clipboard.writeText(inviteLink);
+                alert(`Link de convite criado e copiado para a área de transferência!\n\nEnvie este link para o novo usuário.`);
+            } catch (clipboardError) {
+                console.warn("Cópia automática negada pelo navegador:", clipboardError);
+                // Fallback para quando o navegador bloqueia o acesso assíncrono ao clipboard
+                window.prompt("Link gerado com sucesso! O navegador bloqueou a cópia automática. Copie o link abaixo manualmente (Ctrl+C):", inviteLink);
+            }
             
             this.handleCloseInviteModal();
             this.fetchConfig();
@@ -220,11 +253,19 @@ class Configuracoes extends Component {
             alert("O nome da comissão é obrigatório.");
             return;
         }
+
+        const payload = {
+            name: comissaoFormData.nome, // Chave principal para o novo backend
+            nome: comissaoFormData.nome, // Fallback
+            descricao: comissaoFormData.descricao,
+            tipo: comissaoFormData.tipo
+        };
+
         try {
             if (editingComissao) {
-                await api.patch(`/commissions/${editingComissao.id}`, comissaoFormData);
+                await api.patch(`/commissions/id/${editingComissao.id}`, payload);
             } else {
-                await api.post('/commissions', { ...comissaoFormData, camaraId });
+                await api.post(`/commissions/${camaraId}`, payload);
             }
             alert('Comissão salva com sucesso!');
             this.handleCloseComissaoModal();
@@ -258,15 +299,16 @@ class Configuracoes extends Component {
         }
 
         try {
-            const currentMembers = commissionToUpdateMembers.membros || {};
-            const updatedMembers = {
-                ...currentMembers,
-                [user.id]: { id: user.id, nome: user.nome, foto: user.foto || '', cargo: newRoleForCommission }
-            };
+            const currentMembers = commissionToUpdateMembers.membros || [];
+            const updatedMembers = [
+                ...currentMembers.filter(m => m.id !== user.id), // Remove if already exists to avoid duplicates
+                { id: user.id, name: user.name || user.nome, avatar: user.avatar || user.foto || user.photoURL, cargo: newRoleForCommission } // Use name/avatar for new backend
+            ];
 
             await api.patch(`/commissions/${commissionToUpdateMembers.id}`, { membros: updatedMembers });
             this.fetchConfig();
             this.handleCloseAddMemberModal();
+            alert("Membro adicionado com sucesso!");
         } catch (error) {
             console.error("Erro ao adicionar membro:", error);
             alert("Erro ao adicionar membro.");
@@ -278,13 +320,14 @@ class Configuracoes extends Component {
             const comissao = this.state.comissoes.find(c => c.id === comissaoId);
             if (!comissao) return;
 
-            const updatedMembers = { ...comissao.membros };
-            delete updatedMembers[memberId];
+            const updatedMembers = comissao.membros.filter(membro => membro.id !== memberId);
 
             await api.patch(`/commissions/${comissaoId}`, { membros: updatedMembers });
             this.fetchConfig();
+            alert("Membro removido com sucesso!");
         } catch (error) {
             console.error("Erro ao remover membro:", error);
+            alert("Erro ao remover membro.");
         }
     };
 
@@ -356,11 +399,11 @@ class Configuracoes extends Component {
                     {users && users.length > 0 ? users.map(user => (
                         <div key={user.id} className="matter-item" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1fr', alignItems: 'center' }}>
                             <div style={{ textAlign: 'left' }}>
-                                <p style={{ margin: 0, fontWeight: 'bold', color: '#333' }}>{user.nome || 'Usuário sem nome'}</p>
+                                <p style={{ margin: 0, fontWeight: 'bold', color: '#333' }}>{user.name || user.nome || 'Usuário sem nome'}</p>
                                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>{user.email}</p>
                             </div>
                             <div>
-                                <select className="modal-input" style={{ padding: '5px', fontSize: '0.85rem' }} value={user.tipo || 'cidadao'} onChange={(e) => this.handleUpdateUserType(user.id, e.target.value)}>
+                                <select className="modal-input" style={{ padding: '5px', fontSize: '0.85rem' }} value={user.role || user.tipo || 'cidadao'} onChange={(e) => this.handleUpdateUserType(user.id, e.target.value)}>
                                     <option value="cidadao">Cidadão</option>
                                     <option value="vereador">Vereador</option>
                                     <option value="procurador">Procuradoria</option>
@@ -400,7 +443,13 @@ class Configuracoes extends Component {
                                 </select>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#666' }}>Ativo</span>
+                                <button 
+                                    className="btn-primary" 
+                                    style={{ width: 'auto', padding: '6px 12px', fontSize: '0.8rem' }}
+                                    onClick={() => this.handleSaveUserChanges(user)}
+                                >
+                                    {this.state.isSaving ? <FaSpinner className="animate-spin" /> : <FaSave />} Salvar
+                                </button>
                             </div>
                         </div>
                     )) : <p style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Nenhum usuário encontrado nesta câmara.</p>}
@@ -504,10 +553,10 @@ class Configuracoes extends Component {
                             <div style={{ width: '100%', borderTop: '1px solid #eee', marginTop: '15px', paddingTop: '15px' }}>
                                 <h5 style={{ margin: '0 0 10px 0', color: '#555' }}>Membros</h5>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
-                                    {comissao.membros && Object.values(comissao.membros).length > 0 ? Object.values(comissao.membros).map(membro => (
-                                        <div key={membro.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f5', padding: '5px 10px', borderRadius: '8px' }}>
-                                            <img src={membro.foto} alt={membro.nome} style={{ width: '25px', height: '25px', borderRadius: '50%' }} />
-                                            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{membro.nome} ({membro.cargo})</span>
+                                    {comissao.membros && comissao.membros.length > 0 ? comissao.membros.map(membro => (
+                                        <div key={membro.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f5', padding: '5px 10px', borderRadius: '8px', border: '1px solid #eee' }}>
+                                            <img src={membro.avatar || membro.foto || 'https://via.placeholder.com/25'} alt={membro.name || membro.nome} style={{ width: '25px', height: '25px', borderRadius: '50%', objectFit: 'cover' }} />
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{membro.name || membro.nome} ({membro.cargo})</span>
                                             <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }} onClick={() => this.handleRemoveMember(comissao.id, membro.id)}><FaTimes size={12} /></button>
                                         </div>
                                     )) : (
@@ -812,9 +861,10 @@ class Configuracoes extends Component {
                                         onChange={(e) => this.setState({ newUserForCommission: e.target.value })}
                                     >
                                         <option value="">-- Escolha um usuário --</option>
-                                        {users.filter(u => u.tipo === 'vereador').map(user => {
-                                            const isMember = this.state.commissionToUpdateMembers.membros && Object.values(this.state.commissionToUpdateMembers.membros).some(m => m.id === user.id);
-                                            return <option key={user.id} value={user.id} disabled={isMember}>{user.nome} {isMember ? '(Já é membro)' : ''}</option>
+                                        {users.filter(u => ['vereador', 'presidente'].includes((u.role || u.tipo || '').toLowerCase())).map(user => {
+                                            const currentMembers = this.state.commissionToUpdateMembers.membros || [];
+                                            const isMember = currentMembers.some(m => m.id === user.id);
+                                            return <option key={user.id} value={user.id} disabled={isMember}>{user.name || user.nome} {isMember ? '(Já é membro)' : ''}</option>
                                         })}
                                     </select>
                                 </div>

@@ -200,8 +200,8 @@ function App() {
           <Route path="/admin/comissao-detalhes/:camaraId" component={ComissaoDetails} />
           <Route path="/admin/reuniao-virtual/:camaraId/:comissaoId/:reuniaoId" component={VirtualMeetingPage} />
           <Route path="/admin/pautas-sessao/:camaraId" component={PautasSessao} />
-          <Route path="/admin/sessao-plenaria/:camaraId" component={SessaoPlenariaRestrita} />
-          <Route path="/admin/resumo-sessao/:camaraId" component={ResumoSessao} />
+          <Route path="/admin/sessao-plenaria/:camaraId/:sessaoId" component={SessaoPlenariaRestrita} />
+          <Route path="/admin/resumo-sessao/:camaraId/:sessaoId" component={ResumoSessao} />
           <Route path="/admin/painel-sessao/:camaraId/:sessaoId" component={PainelSessao} />
           <Route path="/admin/configuracoes/:camaraId" component={Configuracoes} />
           <Route exact path="/admin/assistente-admin/:camaraId" component={AdminDocumentsDash} />

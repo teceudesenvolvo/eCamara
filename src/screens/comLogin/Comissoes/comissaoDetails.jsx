@@ -73,9 +73,10 @@ class ComissaoDetails extends Component {
         this.setState({ loading: true });
         
         try {
-            const response = await api.get(`/commissions/id/${comissaoId}`);
+            const response = await api.get(`/commission-detail/${comissaoId}`);
             if (response.data) {
-                const comissaoData = response.data;
+                const data = Array.isArray(response.data) ? response.data[0] : response.data;
+                const comissaoData = { ...data, nome: data.name || data.nome };
                 
                 let userRole = 'Visitante';
                 if (currentUser && comissaoData.membros) {
@@ -84,7 +85,13 @@ class ComissaoDetails extends Component {
                 }
 
                 this.setState({ comissao: comissaoData, userRole }, () => {
-                    this.fetchReunioes();
+                    // Se o endpoint commission-detail já trouxer as reuniões, 
+                    // podemos extraí-las diretamente para evitar uma segunda chamada.
+                    if (comissaoData.reunioes) {
+                        this.setState({ reunioes: comissaoData.reunioes });
+                    } else {
+                        this.fetchReunioes();
+                    }
                     this.fetchMaterias();
                 });
             } else {
@@ -102,7 +109,7 @@ class ComissaoDetails extends Component {
         if (!comissao) return;
 
         try {
-            const response = await api.get(`/legislative-matters/council/${camaraId}`);
+            const response = await api.get(`/legislative-matters/${camaraId}`);
             const allMaterias = response.data || [];
             
             const materiasDaComissao = allMaterias.filter(m => {

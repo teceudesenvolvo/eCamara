@@ -135,10 +135,10 @@ class Perfil extends Component {
 
             this.setState({
                 user: userData,
-                editNome: userData.nome || '',
-                editCargo: userData.cargo || '',
+                editNome: userData.name || userData.nome || '',
+                editCargo: userData.role || userData.cargo || '',
                 editBio: userData.bio || '',
-                editFoto: userData.foto || userData.photoURL || '',
+                editFoto: userData.foto || userData.photoURL || userData.avatar || '',
                 materias,
                 comissoesUsuario,
                 sessoesParticipadas,
@@ -210,7 +210,7 @@ class Perfil extends Component {
 
         try {
             await api.patch(`/users/${user.id}`, {
-                nome: editNome,
+                name: editNome,
                 bio: editBio,
                 foto: editFoto
             });
@@ -219,7 +219,7 @@ class Perfil extends Component {
             this.setState(prevState => ({
                 user: {
                     ...prevState.user,
-                    nome: editNome,
+                    name: editNome,
                     bio: editBio,
                     foto: editFoto
                 },
@@ -412,9 +412,9 @@ class Perfil extends Component {
                                     <FaUser />
                                 </div>
                             </div>
-                            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: '0 0 5px 0', color: '#1d1d1f' }}>{user?.nome || 'Usuário'}</h2>
+                            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: '0 0 5px 0', color: '#1d1d1f' }}>{user?.name || user?.nome || 'Usuário'}</h2>
                             <p style={{ fontSize: '0.95rem', color: '#86868b', margin: '0 0 15px 0' }}>{user?.email || 'email@example.com'}</p>
-                            <span style={{ background: '#e0e0e0', color: '#555', padding: '5px 15px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, marginBottom: '30px' }}>{user?.tipo || 'Cargo não informado'}</span>
+                            <span style={{ background: '#e0e0e0', color: '#555', padding: '5px 15px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, marginBottom: '30px' }}>{user?.role || user?.tipo || 'Cargo não informado'}</span>
 
                             {/* Navegação entre abas integrada ao card */}
                             <div style={{ 

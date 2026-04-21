@@ -674,8 +674,8 @@ class PautasSessao extends Component {
                             style={{ cursor: 'pointer', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
                             onClick={() => {
                                 const isClosed = ['Publicada', 'Encerrada'].includes(sessao.status);
-                                const path = isClosed ? `/admin/resumo-sessao/${camaraId}` : `/admin/sessao-plenaria/${camaraId}`;
-                                this.props.history.push(path, { sessaoId: sessao.id });
+                                const path = isClosed ? `/admin/resumo-sessao/${camaraId}/${sessao.id}` : `/admin/sessao-plenaria/${camaraId}/${sessao.id}`;
+                                this.props.history.push(path);
                             }}
                         >
                             <div className="card-content-openai">

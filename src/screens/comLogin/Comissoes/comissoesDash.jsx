@@ -34,8 +34,12 @@ class ComissoesDash extends Component {
             
             // Filtra para mostrar apenas as comissões das quais o usuário é membro
             const myComissoes = allComissoes.filter(c => 
-                c.membros && Object.values(c.membros).some(m => m.id === userId)
-            );
+                c.membros && (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)).some(m => m.id === userId)
+            ).map(c => ({
+                ...c,
+                // Normaliza membros para ser sempre um array
+                membros: c.membros ? (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)) : [],
+            }));
             this.setState({ comissoes: myComissoes, loading: false });
         } catch (error) {
             console.error("Erro ao buscar comissões:", error);
@@ -78,18 +82,33 @@ class ComissoesDash extends Component {
                                     <h3 style={{ margin: '0 0 10px 0', color: '#126B5E', fontSize: '1.2rem' }}>{comissao.nome}</h3>
                                     <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>{comissao.descricao}</p>
                                     
-                                    <h4 style={{ margin: '0 0 15px 0', color: '#333', fontSize: '1rem', borderTop: '1px solid #eee', paddingTop: '15px' }}>Membros</h4>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        {comissao.membros && Object.values(comissao.membros).length > 0 ? Object.values(comissao.membros).map(membro => (
-                                            <div key={membro.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <img src={membro.foto} alt={membro.nome} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #07551a', background: '#fff' }} />
-                                                <div>
-                                                    <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{membro.nome}</p>
-                                                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#888' }}>{membro.cargo || 'Membro'}</p>
-                                                </div>
-                                            </div>
-                                        )) : (
-                                            <p style={{ color: '#999', fontStyle: 'italic', fontSize: '0.9rem' }}>Nenhum membro adicionado.</p>
+                                    {/* Grupo de Avatares (Apenas Imagens) */}
+                                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                        {comissao.membros && comissao.membros.length > 0 ? (
+                                            <>
+                                                {comissao.membros.slice(0, 6).map((membro, index) => (
+                                                    <img 
+                                                        key={membro.id || index} 
+                                                        src={membro.avatar || membro.foto || 'https://via.placeholder.com/35'} 
+                                                        alt={membro.name || membro.nome} 
+                                                        title={`${membro.name || membro.nome} - ${membro.cargo}`}
+                                                        style={{ 
+                                                            width: '35px', height: '35px', borderRadius: '50%', 
+                                                            objectFit: 'cover', border: '2px solid #fff', 
+                                                            marginLeft: index > 0 ? '-12px' : 0, 
+                                                            boxShadow: '0 2px 5px rgba(0,0,0,0.1)', 
+                                                            zIndex: 10 - index 
+                                                        }} 
+                                                    />
+                                                ))}
+                                                {comissao.membros.length > 6 && (
+                                                    <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', color: '#126B5E', border: '2px solid #fff', marginLeft: '-12px', zIndex: 0 }}>
+                                                        +{comissao.membros.length - 6}
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <p style={{ color: '#999', fontStyle: 'italic', fontSize: '0.85rem', margin: 0 }}>Sem membros vinculados</p>
                                         )}
                                     </div>
                                 </div>

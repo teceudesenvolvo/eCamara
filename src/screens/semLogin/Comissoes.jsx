@@ -48,8 +48,8 @@ class Comissoes extends Component {
             
             const fetchedComissoes = data.map((val) => ({
                 id: val.id,
-                nome: val.nome || 'Comissão sem nome',
-                sigla: val.sigla || val.nome?.substring(0, 4).toUpperCase() || 'COM',
+                nome: val.name || val.nome || 'Comissão sem nome',
+                sigla: val.sigla || (val.name || val.nome)?.substring(0, 4).toUpperCase() || 'COM',
                 criacao: val.createdAt ? new Date(val.createdAt).toLocaleDateString('pt-BR') : '-',
                 tipo: val.tipo || 'Permanente',
                 situacao: val.status || 'Ativa',

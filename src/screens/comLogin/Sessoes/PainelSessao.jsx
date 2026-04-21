@@ -59,8 +59,9 @@ class PainelSessao extends Component {
 
     try {
       const response = await api.get(`/session-detail/${sessaoId}`);
-      if (response.data) {
-        this.setState({ sessao: response.data, loading: false });
+      const data = Array.isArray(response.data) ? response.data[0] : response.data;
+      if (data) {
+        this.setState({ sessao: { ...data, id: data.id || data._id }, loading: false });
       } else {
         this.setState({ loading: false });
       }

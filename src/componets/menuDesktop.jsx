@@ -69,7 +69,7 @@ const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
 
             <div className="menuDesktop color-navMenu-public">
                 <div className="logoDesktop">
-                    <img src={logoUrl} alt="Camara AI Logo" className="logo-sidebar" />
+                    <img src={logoUrl} alt="Camara AI Logo" style={{width: '70%'}} className="logo-sidebar" />
                 </div>
 
                 <nav className="nav-desktop">

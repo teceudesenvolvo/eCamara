@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import logo from '../../assets/logo-camara-ai-font-verde.png';
+import logo from '../../assets/logo-camaraai-icon.png';
 class Register extends Component {
     constructor(props) {
         super(props);
