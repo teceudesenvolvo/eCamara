@@ -11,27 +11,34 @@ import api from '../services/api.js';
 const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
     const location = useLocation();
     const [activeModules, setActiveModules] = useState({});
+    const [logoUrl, setLogoUrl] = useState(logo || logoCamaraAI);
 
     // Função auxiliar para verificar se a rota está ativa
     const isActive = (path) => location.pathname === path ? 'link-desktop-active' : '';
 
     useEffect(() => {
+        if (logo) setLogoUrl(logo);
+    }, [logo]);
+
+    useEffect(() => {
         if (!camaraId) return;
 
-        const fetchModules = async () => {
+        const fetchConfig = async () => {
             try {
                 const response = await api.get(`/councils/${camaraId}`);
                 if (response.data) {
                     const config = response.data.config || response.data.dadosConfig || {};
                     setActiveModules(config.modulos_ativos || {});
+                    const dbLogo = config.layout?.logo || config.layout?.logoLight;
+                    if (dbLogo && !logo) setLogoUrl(dbLogo);
                 }
             } catch (error) {
-                console.error("Erro ao carregar módulos ativos:", error);
+                console.error("Erro ao carregar configuração da câmara:", error);
             }
         };
 
-        fetchModules();
-    }, [camaraId]);
+        fetchConfig();
+    }, [camaraId, logo]);
 
     // Lista de serviços para renderização dinâmica (mesma lógica do menu admin)
     const publicServices = [
@@ -62,7 +69,7 @@ const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
 
             <div className="menuDesktop color-navMenu-public">
                 <div className="logoDesktop">
-                    <img src={logo || logoCamaraAI} alt="Camara AI Logo" className="logo-sidebar" />
+                    <img src={logoUrl} alt="Camara AI Logo" className="logo-sidebar" />
                 </div>
 
                 <nav className="nav-desktop">

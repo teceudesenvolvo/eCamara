@@ -75,25 +75,36 @@ class Perfil extends Component {
 
             // Busca os dados do usuário, matérias, comissões e sessões via API
             const [userResponse, materiasResponse, comissoesResponse, sessoesResponse] = await Promise.all([
-                api.get(`/users/id/${userId}`),
+                api.get(`/users/${userId}`),
                 api.get(`/legislative-matters/${camaraId}`),
                 api.get(`/commissions/${camaraId}`),
                 api.get(`/sessions/${camaraId}`)
             ]);
 
-            const userData = userResponse.data || {};
-            const allMaterias = materiasResponse.data || [];
-            const allComissoes = comissoesResponse.data || [];
-            const allSessoes = sessoesResponse.data || [];
+            // Extração robusta de dados lidando com diferentes padrões de API
+            const userData = Array.isArray(userResponse.data) ? userResponse.data[0] : (userResponse.data || {});
+            
+            const rawMaterias = materiasResponse.data;
+            const allMaterias = (Array.isArray(rawMaterias) ? rawMaterias : (rawMaterias?.matters || rawMaterias?.materias || Object.values(rawMaterias || {})))
+                .filter(m => m).map(m => ({ ...m, id: m.id || m._id }));
+
+            const rawComissoes = comissoesResponse.data;
+            const allComissoes = (Array.isArray(rawComissoes) ? rawComissoes : (rawComissoes?.commissions || rawComissoes?.comissoes || Object.values(rawComissoes || {})))
+                .filter(c => c).map(c => ({ ...c, id: c.id || c._id }));
+
+            const rawSessoes = sessoesResponse.data;
+            const allSessoes = (Array.isArray(rawSessoes) ? rawSessoes : (rawSessoes?.sessions || rawSessoes?.sessoes || Object.values(rawSessoes || {})))
+                .filter(s => s).map(s => ({ ...s, id: s.id || s._id }));
 
             // Processa Matérias do Usuário
-            let materias = allMaterias.filter(m => m.userId === userId);
+            let materias = allMaterias.filter(m => (m.userId || m.authorId) === userId);
             materias.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
             // Processa Comissões (onde o usuário é membro)
             let comissoesUsuario = allComissoes.filter(com => {
                 if (com.membros) {
-                    return Object.values(com.membros).some(m => (m.id || m.uid) === userId);
+                    const membrosList = Array.isArray(com.membros) ? com.membros : Object.values(com.membros);
+                    return membrosList.some(m => (m.id || m.uid) === userId);
                 }
                 return false;
             });
@@ -106,11 +117,18 @@ class Perfil extends Component {
                 return false;
             });
 
-            // Ordena por data (DD/MM/YYYY) decrescente
+            // Helper para data (DD/MM/YYYY ou ISO)
+            const parseDate = (d) => {
+                if (!d) return new Date(0);
+                if (typeof d === 'string' && d.includes('/')) {
+                    const [day, month, year] = d.split('/');
+                    return new Date(year, month - 1, day);
+                }
+                return new Date(d);
+            };
+
             sessoesParticipadas.sort((a, b) => {
-                const dateA = a.data.split('/').reverse().join('');
-                const dateB = b.data.split('/').reverse().join('');
-                return dateB.localeCompare(dateA);
+                return parseDate(b.data) - parseDate(a.data);
             });
 
             const stats = this.calculateStats(materias);
@@ -191,7 +209,7 @@ class Perfil extends Component {
         this.setState({ loading: true });
 
         try {
-            await api.patch(`/users/id/${user.id}`, {
+            await api.patch(`/users/${user.id}`, {
                 nome: editNome,
                 bio: editBio,
                 foto: editFoto
@@ -231,10 +249,10 @@ class Perfil extends Component {
                         <p className='widget-summary'>Recentes • {materias.length} matérias protocoladas</p>
                         <ul className='widget-list'>
                             {materias.slice(0, 3).map(m => (
-                                <li key={m.id} className='widget-list-item' onClick={() => this.props.history.push(`/admin/materia-detalhes/${this.props.match.params.camaraId}`, { materiaId: m.id })} style={{ cursor: 'pointer' }}>
+                                <li key={m.id} className='widget-list-item' onClick={() => this.props.history.push(`/admin/materia-detalhes/${this.props.match.params.camaraId}?materiaId=${m.id}`)} style={{ cursor: 'pointer' }}>
                                     <div className='item-details'>
                                         <p className='item-title'>{m.tipoMateria} {m.numero}</p>
-                                        <p className='item-subtitle' style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{m.ementa}</p>
+                                        <p className='item-subtitle' style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{m.ementa || m.titulo}</p>
                                     </div>
                                     <span className='item-date'>{m.dataApresenta}</span>
                                 </li>
@@ -280,7 +298,7 @@ class Perfil extends Component {
                             {sessoesParticipadas.slice(0, 4).map(s => (
                                 <li key={s.id} className='widget-list-item'>
                                     <div className='item-details'>
-                                        <p className='item-title' style={{ fontSize: '0.85rem' }}>{s.tipo.split('da')[0]}</p>
+                                        <p className='item-title' style={{ fontSize: '0.85rem' }}>{(s.tipo || 'Sessão').split('da')[0]}</p>
                                     </div>
                                     <span className='item-date' style={{ fontSize: '0.75rem' }}>{s.data}</span>
                                 </li>

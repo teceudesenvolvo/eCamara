@@ -27,7 +27,7 @@ class MateriaDetalhesPublico extends Component {
     fetchMateriaDetails = async () => {
         const { materiaId } = this.state;
         try {
-            const response = await api.get(`/legislative-matters/${materiaId}`);
+            const response = await api.get(`/legislative-matter-detail/${materiaId}`);
             if (response.data) {
                 this.setState({ materia: response.data, loading: false });
             } else {

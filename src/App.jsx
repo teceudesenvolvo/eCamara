@@ -73,20 +73,9 @@ import CamaraSelector from './screens/semLogin/CamaraSelector.jsx';
 import ChatAI from './screens/semLogin/ChatAI.jsx';
 import TopBar from './componets/topBarSearch.jsx';
 import MenuDesktop from './componets/menuDesktop.jsx';
+import Footer from './componets/Footer.jsx';
 
 function App() {
-  const [footerConfig, setFooterConfig] = useState({
-    slogan: "Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.",
-    address: "Endereço não informado",
-    phone: "Telefone não informado",
-    email: "Email não informado",
-  });
-
-  const [homeConfig, setHomeConfig] = useState({
-    titulo: 'Camara AI',
-    slogan: "Governança Legislativa 4.0: Inteligência Artificial, Transparência e Participação Cidadã.",
-  });
-
   const [layoutConfig, setLayoutConfig] = useState({
     corPrimaria: '#126B5E', // Default primary color
     corDestaque: '#FF740F', // Default highlight color
@@ -137,18 +126,6 @@ function App() {
           const council = response.data;
 
           if (council) {
-            setHomeConfig({
-              titulo: council.name || 'Camara AI',
-              slogan: council.slogan || homeConfig.slogan
-            });
-
-            setFooterConfig({
-              slogan: council.slogan || footerConfig.slogan,
-              address: council.address || footerConfig.address,
-              phone: council.phone || footerConfig.phone,
-              email: council.email || footerConfig.email,
-            });
-
             // Se o backend retornar cores, usamos elas. Caso contrário, mantemos os defaults.
             setLayoutConfig({
               corPrimaria: council.corPrimaria || '#126B5E',
@@ -249,50 +226,7 @@ function App() {
         </Switch>
 
         {!hideMenuDesktop && (
-        <footer className='footer'>
-          <div className='footer-content'>
-            <div className='footer-section footer-about'>
-              <h4 className='footer-logo-text'>{homeConfig.titulo}</h4>
-              <p>{footerConfig.slogan}</p>
-              {/* <div className='social-icons'>
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"><FaTwitter /></a>
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
-                <a href="https://youtube.com" target="_blank" rel="noopener noreferrer"><FaYoutube /></a>
-              </div> */}
-            </div>
-            
-            <div className='footer-section footer-links-section'>
-              <h4>Legislativo</h4>
-              <ul>
-                <li><a href={`/sessoes/${camaraId}`}>Sessões</a></li>
-                <li><a href={`/materias/${camaraId}`}>Matérias</a></li>
-                <li><a href={`/normas/${camaraId}`}>Normas Jurídicas</a></li>
-                <li><a href={`/comissoes/${camaraId}`}>Comissões</a></li>
-              </ul>
-            </div>  
-            
-            {/* <div className='footer-section footer-links-section'>
-              <h4>Transparência</h4>
-              <ul>
-                <li><a href={`/sessao-virtual/${camaraId}`}>Sessão Virtual</a></li>
-              </ul>
-            </div>
-             */}
-            <div className='footer-section footer-contact'>
-              <h4>Contato</h4>
-              <p>📍 {footerConfig.address}</p>
-              <p>📞 {footerConfig.phone}</p>
-              <p>📧 {footerConfig.email}</p>
-            </div>
-          </div>
-          
-          <div className='footer-bottom-wrapper'>
-            <div className='footer-bottom'>
-              <p>&copy; 2026 Camara AI - Todos os direitos reservados. Desenvolvido por <strong>Blu Tecnologias</strong></p>
-            </div>
-          </div>
-        </footer>
+          <Footer camaraId={camaraId} />
         )}
       </div>
 

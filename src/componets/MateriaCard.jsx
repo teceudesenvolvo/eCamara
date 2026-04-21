@@ -74,7 +74,7 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
                         texto: `${subData.nome} subscreveu a matéria ${materia.tipoMateria} ${materia.numero} como ${tipo}`,
                         timestamp: subData.timestamp
                     };
-                    await api.patch(`/sessions/${sessaoId}`, { logs: [...currentLogs, newLog] });
+                    await api.patch(`/sessions/id/${sessaoId}`, { logs: [...currentLogs, newLog] });
                 } catch (logError) {
                     console.error("Erro ao salvar log da sessão:", logError);
                 }

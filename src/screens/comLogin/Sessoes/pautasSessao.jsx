@@ -236,7 +236,7 @@ class PautasSessao extends Component {
 
             try {
                 await api.patch(`/sessions/${selectedSessaoId}`, { itens: updatedItens });
-                await api.patch(`/legislative-matters/${materia.id}`, { status: 'Em Pauta' });
+                await api.patch(`/legislative-matters/id/${materia.id}`, { status: 'Em Pauta' });
 
                 this.setState(prevState => ({
                     sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s),
@@ -308,7 +308,7 @@ class PautasSessao extends Component {
                 if (isAcessorio) {
                     await api.patch(`/legislative-matters/accessory/${itemId}`, { status: 'Protocolado' });
                 } else {
-                    await api.patch(`/legislative-matters/${itemId}`, { status: 'Enviado para Plenário' });
+                    await api.patch(`/legislative-matters/id/${itemId}`, { status: 'Enviado para Plenário' });
                 }
             }
 

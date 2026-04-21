@@ -163,7 +163,7 @@ class SessaoPlenariaRestrita extends Component {
             // Sincronizar status global das matérias envolvidas
             const targetMateria = sessao.itens[index];
             if (targetMateria.id) {
-                await api.patch(`/legislative-matters/${targetMateria.id}`, { status: 'Em Discussão' });
+                await api.patch(`/legislative-matters/id/${targetMateria.id}`, { status: 'Em Discussão' });
             }
 
             this.setState(prevState => ({ 
@@ -189,11 +189,11 @@ class SessaoPlenariaRestrita extends Component {
         });
 
         try {
-            await api.patch(`/sessions/${sessao.id}`, { itens: updatedItens });
+            await api.patch(`/sessions/id/${sessao.id}`, { itens: updatedItens });
 
             const targetMateria = sessao.itens[index];
             if (targetMateria.id) {
-                await api.patch(`/legislative-matters/${targetMateria.id}`, { status: 'Em Votação' });
+                await api.patch(`/legislative-matters/id/${targetMateria.id}`, { status: 'Em Votação' });
             }
 
             this.setState(prevState => ({ sessao: { ...prevState.sessao, itens: updatedItens } }));
@@ -211,7 +211,7 @@ class SessaoPlenariaRestrita extends Component {
         const updatedItens = sessao.itens.map((m, idx) => idx === index ? { ...m, votos: updatedVotos } : m);
 
         try {
-            await api.patch(`/sessions/${sessao.id}`, { itens: updatedItens });
+            await api.patch(`/sessions/id/${sessao.id}`, { itens: updatedItens });
             this.setState(prevState => ({ sessao: { ...prevState.sessao, itens: updatedItens } }));
         } catch (error) {
             console.error("Erro ao votar:", error);
@@ -246,7 +246,7 @@ class SessaoPlenariaRestrita extends Component {
             const { camaraId, sessao } = this.state;
             if (!sessao) return;
             try {
-                await api.patch(`/sessions/${sessao.id}`, { status: 'Encerrada' });
+                await api.patch(`/sessions/id/${sessao.id}`, { status: 'Encerrada' });
                 alert("Sessão encerrada com sucesso.");
                 this.props.history.push(`/admin/sessoes/${camaraId}`);
             } catch (error) {
@@ -284,7 +284,7 @@ class SessaoPlenariaRestrita extends Component {
                     const newStatus = voteCounts.sim > voteCounts.nao ? 'Aprovada' : 'Rejeitada';
                     
                     if (materia.id) {
-                        await api.patch(`/legislative-matters/${materia.id}`, { status: newStatus });
+                        await api.patch(`/legislative-matters/id/${materia.id}`, { status: newStatus });
                     }
                     sessionUpdated = true;
                     return { ...materia, status: newStatus };
@@ -295,7 +295,7 @@ class SessaoPlenariaRestrita extends Component {
 
         if (sessionUpdated) {
             try {
-                await api.patch(`/sessions/${sessao.id}`, { itens: updatedItens });
+                await api.patch(`/sessions/id/${sessao.id}`, { itens: updatedItens });
                 this.setState(prevState => ({ sessao: { ...prevState.sessao, itens: updatedItens } }));
             } catch (error) {
                 console.error("Erro ao sincronizar status final:", error);
@@ -333,7 +333,7 @@ class SessaoPlenariaRestrita extends Component {
         const newQueue = (sessao.filaDeInscritos || []).filter(s => s.uid !== targetVereador.id);
 
         try {
-            await api.patch(`/sessions/${sessao.id}`, { 
+            await api.patch(`/sessions/id/${sessao.id}`, { 
                 itens: updatedItens,
                 oradorAtual: oradorData,
                 filaDeInscritos: newQueue
@@ -358,7 +358,7 @@ class SessaoPlenariaRestrita extends Component {
         const newQueue = (sessao.filaDeInscritos || []).filter(s => s.uid !== speaker.uid);
         
         try {
-            await api.patch(`/sessions/${sessao.id}`, { oradorAtual: oradorData, filaDeInscritos: newQueue });
+            await api.patch(`/sessions/id/${sessao.id}`, { oradorAtual: oradorData, filaDeInscritos: newQueue });
             this.setState(prevState => ({ sessao: { ...prevState.sessao, oradorAtual: oradorData, filaDeInscritos: newQueue } }));
         } catch (error) {
             console.error("Erro ao conceder palavra:", error);
@@ -370,7 +370,7 @@ class SessaoPlenariaRestrita extends Component {
         if (sessao.oradorAtual) {
             const newTime = (sessao.oradorAtual.tempo || 0) + 60;
             try {
-                await api.patch(`/sessions/${sessao.id}`, { oradorAtual: { ...sessao.oradorAtual, tempo: newTime } });
+                await api.patch(`/sessions/id/${sessao.id}`, { oradorAtual: { ...sessao.oradorAtual, tempo: newTime } });
                 this.setState(prevState => ({ sessao: { ...prevState.sessao, oradorAtual: { ...prevState.sessao.oradorAtual, tempo: newTime } } }));
             } catch (error) {
                 console.error("Erro ao adicionar tempo:", error);
@@ -385,7 +385,7 @@ class SessaoPlenariaRestrita extends Component {
         if (sessao.oradorAtual && sessao.oradorAtual.uid === speakerUid) updates.oradorAtual = null;
         
         try {
-            await api.patch(`/sessions/${sessao.id}`, updates);
+            await api.patch(`/sessions/id/${sessao.id}`, updates);
             this.setState(prevState => ({ sessao: { ...prevState.sessao, ...updates } }));
         } catch (error) {
             console.error("Erro ao remover orador:", error);

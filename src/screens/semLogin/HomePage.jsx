@@ -51,6 +51,8 @@ class HomePage extends Component {
             const councilData = councilResponse.data || {};
             const config = councilData.config || councilData.dadosConfig || {};
             const homeConfig = config.home || {};
+            const layout = config.layout || {};
+            const primaryColor = layout.corPrimaria || '#126B5E';
 
             // 2. Representatives (vereadores)
             const vereadores = (usersResponse.data || []).filter(u => u.tipo === 'vereador');
@@ -81,6 +83,9 @@ class HomePage extends Component {
                 agenda,
                 sessoes: sessoes.slice(0, 3),
                 loading: false,
+            }, () => {
+                // Aplica a cor primária do banco de dados ao root do documento
+                document.documentElement.style.setProperty('--primary-color', primaryColor);
             });
 
         } catch (error) {

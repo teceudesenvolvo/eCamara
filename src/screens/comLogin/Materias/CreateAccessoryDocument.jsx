@@ -52,19 +52,25 @@ class CreateAccessoryDocument extends Component {
         try {
             const targetCamara = camaraId || this.state.camaraId;
             const response = await api.get(`/legislative-matters/${targetCamara}`);
-            const allMaterias = response.data;
+            const rawData = response.data;
+
+            // Garante a extração de um array, lidando com diferentes padrões de retorno da API
+            const allMaterias = Array.isArray(rawData) ? rawData : (rawData?.matters || rawData?.materias || Object.values(rawData || {}));
             
             const data = [];
             if (Array.isArray(allMaterias)) {
                 allMaterias.forEach(val => {
-                    // Filtragem (seguindo o padrão original adaptado para o novo backend)
-                    if ((val.authorId || val.userId) !== userId) return;
+                    // Verifica se a matéria pertence ao usuário logado
+                    const mAuthorId = val.authorId || val.userId;
+                    if (mAuthorId !== userId) return;
 
                     const status = val.status || '';
-                    const isInCommission = status.includes('Encaminhado à') || status.includes('Relator') || status.includes('Aguardando Votação');
-                    const hasFavorableOpinion = status === 'Parecer Favorável' || status === 'Aprovado na Comissão';
+                    
+                    // Permite matérias em tramitação que ainda não foram finalizadas ou arquivadas
+                    const isTramitating = !['Aprovada', 'Rejeitada', 'Sancionado', 'Arquivado'].includes(status);
+                    const hasValidStatus = status.includes('Parecer') || status.includes('Comissão') || status.includes('Aguardando') || status.includes('Plenário') || status === 'Em Tramitação';
 
-                    if (!isInCommission && !hasFavorableOpinion) return;
+                    if (!isTramitating && !hasValidStatus) return;
 
                     const tipo = (val.tipoMateria || '').toLowerCase();
                     if (tipo.includes('lei') || tipo.includes('indica') || tipo.includes('projeto') || tipo.includes('requerimento')) {
