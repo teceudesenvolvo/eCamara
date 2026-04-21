@@ -35,8 +35,8 @@ const ChatAI = ({ onClose, city }) => {
         setIsGenerating(true);
 
         try {
-            // Envia apenas a mensagem do usuário. O prompt do sistema será adicionado no backend.
-            const aiResponse = await sendMessageToAIPublic(currentInputText);
+            // Envia a mensagem do usuário com o slug da cidade (prop 'city').
+            const aiResponse = await sendMessageToAIPublic(currentInputText, city);
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
                 text: aiResponse,

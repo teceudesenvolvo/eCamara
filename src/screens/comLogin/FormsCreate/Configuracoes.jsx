@@ -64,8 +64,8 @@ class Configuracoes extends Component {
 
         try {
             const [councilResponse, usersResponse, comissoesResponse] = await Promise.all([
-                api.get(`/councils/id/${camaraId}`),
-                api.get(`/users/${camaraId}`),
+                api.get(`/councils/${camaraId}`),
+                api.get(`/users/council/${camaraId}`),
                 api.get(`/commissions/${camaraId}`)
             ]);
 
@@ -107,7 +107,7 @@ class Configuracoes extends Component {
 
         try {
             // Fetch current config to merge
-            const response = await api.get(`/councils/id/${camaraId}`);
+            const response = await api.get(`/councils/${camaraId}`);
             const currentConfig = response.data?.config || response.data?.dadosConfig || {};
 
             const updatedConfig = {
@@ -122,7 +122,7 @@ class Configuracoes extends Component {
                 permissoes: permissoes
             };
 
-            await api.patch(`/councils/id/${camaraId}`, { config: updatedConfig });
+            await api.patch(`/councils/${camaraId}`, { config: updatedConfig });
             alert('Configurações atualizadas com sucesso! A IA agora utilizará estas informações para gerar documentos mais precisos.');
         } catch (error) {
             console.error("Erro ao salvar configurações:", error);
@@ -136,7 +136,7 @@ class Configuracoes extends Component {
 
     handleUpdateUserType = async (userId, newType) => {
         try {
-            await api.patch(`/users/id/${userId}`, { tipo: newType });
+            await api.patch(`/users/${userId}`, { tipo: newType });
             this.fetchConfig();
         } catch (error) {
             console.error("Erro ao atualizar tipo de usuário:", error);
@@ -145,7 +145,7 @@ class Configuracoes extends Component {
 
     handleUpdateUserCargo = async (userId, newCargo) => {
         try {
-            await api.patch(`/users/id/${userId}`, { cargo: newCargo });
+            await api.patch(`/users/${userId}`, { cargo: newCargo });
             this.fetchConfig();
         } catch (error) {
             console.error("Erro ao atualizar cargo do usuário:", error);
@@ -222,7 +222,7 @@ class Configuracoes extends Component {
         }
         try {
             if (editingComissao) {
-                await api.patch(`/commissions/id/${editingComissao.id}`, comissaoFormData);
+                await api.patch(`/commissions/${editingComissao.id}`, comissaoFormData);
             } else {
                 await api.post('/commissions', { ...comissaoFormData, camaraId });
             }
@@ -264,7 +264,7 @@ class Configuracoes extends Component {
                 [user.id]: { id: user.id, nome: user.nome, foto: user.foto || '', cargo: newRoleForCommission }
             };
 
-            await api.patch(`/commissions/id/${commissionToUpdateMembers.id}`, { membros: updatedMembers });
+            await api.patch(`/commissions/${commissionToUpdateMembers.id}`, { membros: updatedMembers });
             this.fetchConfig();
             this.handleCloseAddMemberModal();
         } catch (error) {
@@ -281,7 +281,7 @@ class Configuracoes extends Component {
             const updatedMembers = { ...comissao.membros };
             delete updatedMembers[memberId];
 
-            await api.patch(`/commissions/id/${comissaoId}`, { membros: updatedMembers });
+            await api.patch(`/commissions/${comissaoId}`, { membros: updatedMembers });
             this.fetchConfig();
         } catch (error) {
             console.error("Erro ao remover membro:", error);

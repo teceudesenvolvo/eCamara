@@ -53,7 +53,7 @@ class Relatorios extends Component {
 
   fetchSessionDetails = async (sessionId) => {
     try {
-      const response = await api.get(`/sessions/id/${sessionId}`);
+      const response = await api.get(`/session-detail/${sessionId}`);
       const session = response.data;
       if (session && session.itens) {
         this.setState({ materials: session.itens, loading: false });

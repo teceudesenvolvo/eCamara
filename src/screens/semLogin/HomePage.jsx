@@ -17,7 +17,7 @@ class HomePage extends Component {
             sessoes: [],
             isChatOpen: false,
             loading: true,
-            camaraId: this.props.match.params.camaraId || 'camara-teste',
+            camaraId: this.props.match.params.camaraId || 'master',
         };
     }
 
@@ -34,13 +34,15 @@ class HomePage extends Component {
 
     fetchData = async () => {
         const { camaraId } = this.state;
+        if (!camaraId || camaraId === ':camaraId' || camaraId === 'camara-teste') return;
+
         this.setState({ loading: true });
 
         try {
             // Fetch data from multiple endpoints via the new API
             const [councilResponse, usersResponse, mattersResponse, sessionsResponse] = await Promise.all([
-                api.get(`/councils/id/${camaraId}`),
-                api.get(`/users/${camaraId}`),
+                api.get(`/councils/${camaraId}`),
+                api.get(`/users/council/${camaraId}`).catch(() => api.get(`/users/${camaraId}`)),
                 api.get(`/legislative-matters/${camaraId}`),
                 api.get(`/sessions/${camaraId}`)
             ]);
@@ -195,7 +197,7 @@ class HomePage extends Component {
 
                 {/* Popup do Chat AI */}
                 {isChatOpen && (
-                    <ChatAI onClose={this.closeChat} city={homeConfig.cidade || camaraId} />
+                    <ChatAI onClose={this.closeChat} city={camaraId} />
                 )}
             </div>
         );

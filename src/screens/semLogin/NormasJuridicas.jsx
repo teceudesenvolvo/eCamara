@@ -40,7 +40,7 @@ class NormasJuridicas extends Component {
 
         try {
             // Busca da base de conhecimento configurada no painel admin via API
-            const response = await api.get(`/councils/id/${camaraId}`);
+            const response = await api.get(`/councils/${camaraId}`);
             const councilData = response.data || {};
             const config = councilData.config || councilData.dadosConfig || {};
             const baseData = config['base-conhecimento'] || {};

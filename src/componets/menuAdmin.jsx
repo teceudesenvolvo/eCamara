@@ -46,38 +46,45 @@ const MenuDashboard = ({ logo: propLogo }) => {
 
         if (!token || !user.id) return;
 
-        const fetchUserPermissions = async (uid, cId) => {
+        // Usa role/tipo do usuário já salvo no localStorage (vem do login)
+        const userRole = user.role || user.tipo || null;
+        setUserType(userRole);
+        setUserCargo(user.cargo || userRole);
+
+        const fetchCouncilConfig = async (cId) => {
             try {
-                // Fetch council data which should include configuration
-                const councilResponse = await api.get(`/councils/id/${cId}`);
+                const councilResponse = await api.get(`/councils/${cId}`);
                 if (councilResponse.data) {
                     const config = councilResponse.data.config || councilResponse.data.dadosConfig || {};
                     setPermissions(config.permissoes || {});
                     setActiveModules(config.modulos_ativos || {});
                     if (config.layout?.logo) setLogo(config.layout.logo);
                 }
-
-                // Fetch specific user data for role/cargo
-                const userResponse = await api.get(`/users/id/${uid}`);
-                if (userResponse.data) {
-                    setUserType(userResponse.data.tipo);
-                    setUserCargo(userResponse.data.cargo);
-                }
             } catch (error) {
-                console.error("Erro ao carregar permissões do menu:", error);
+                console.error("Erro ao carregar config da câmara:", error);
             }
         };
 
         // Get camaraId from URL or User
         const pathParts = location.pathname.split('/').filter(Boolean);
-        let currentCamaraId = pathParts[pathParts.length - 1];
-        
-        if (currentCamaraId === 'perfil' || currentCamaraId === 'admin' || !currentCamaraId.includes('-')) {
-             currentCamaraId = user.camaraId || 'pacatuba';
+        let currentCamaraId = '';
+
+        if (pathParts[0] === 'admin') {
+            // Rotas Administrativas: /admin/:page/:camaraId/...
+            // O ID da câmara é o terceiro segmento (índice 2) se houver 3 ou mais partes
+            currentCamaraId = (pathParts.length >= 3) ? pathParts[2] : pathParts[pathParts.length - 1];
+        } else {
+            // Rotas Públicas: /home/:camaraId, /materias/:camaraId, etc.
+            currentCamaraId = pathParts[pathParts.length - 1];
+        }
+
+        // Se o parâmetro extraído for reservado ou inválido, usamos fallback
+        if (!currentCamaraId || ['admin', 'perfil', 'materia-detalhes', 'materias-dash'].includes(currentCamaraId)) {
+            currentCamaraId = user.camaraId || user.council || 'pacatuba';
         }
 
         setCamaraId(currentCamaraId);
-        fetchUserPermissions(user.id, currentCamaraId);
+        fetchCouncilConfig(currentCamaraId);
 
         if (propLogo) {
             setLogo(propLogo);
@@ -87,7 +94,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
 
     // Validador de Acesso
     const hasAccess = (permissionId) => {
-        if (userType === 'admin') return true;
+        if (userType === 'admin' || userType === 'superadmin') return true;
         return permissions[userCargo]?.[permissionId] === true;
     };
 
@@ -116,93 +123,93 @@ const MenuDashboard = ({ logo: propLogo }) => {
             <label htmlFor="mobile-menu-toggle-checkbox" className="mobile-menu-overlay"></label>
 
             <div className="menuDesktop"> {/* Reutilizando a classe do menu da home */}
-            <div className="logoDesktop" style={{width: "100%"}}>
-                <img src={logoCamaraAI} alt="Logo" className="logo-sidebar" style={{width: "100%"}} />
-            </div>
+                <div className="logoDesktop" style={{ width: "100%" }}>
+                    <img src={logoCamaraAI} alt="Logo" className="logo-sidebar" style={{ width: "100%" }} />
+                </div>
 
-            <nav className="nav-desktop">
-                
+                <nav className="nav-desktop">
 
-                <Link to={`/admin/materias-dash/${camaraId}`} className={`aDesktop ${isActive('materias-dash')}`}>
-                    <FaAddressBook className="icon-desktop" />
-                    <span className="text-desktop">Minhas Matérias</span>
-                </Link>
 
-                {activeModules['protocolar'] && hasAccess('create_materia') && (
-                    <Link to={`/admin/protocolar-materia/${camaraId}`} className={`aDesktop ${isActive('protocolar-materia')}`}>
-                        <FaPlusCircle className="icon-desktop" />
-                        <span className="text-desktop">Protocolar</span>
+                    <Link to={`/admin/materias-dash/${camaraId}`} className={`aDesktop ${isActive('materias-dash')}`}>
+                        <FaAddressBook className="icon-desktop" />
+                        <span className="text-desktop">Minhas Matérias</span>
                     </Link>
-                )}
 
-                {activeModules['parecer'] && hasAccess('view_parecer') && (
-                    <Link to={`/admin/juizo-materia/${camaraId}`} className={`aDesktop ${isActive('juizo-materia')}`}>
-                        <FaPencilAlt className="icon-desktop" />
-                        <span className="text-desktop">Parecer</span>
-                    </Link>
-                )}
-
-                {activeModules['presidencia'] && hasAccess('sign_despacho') && (
-                    <Link to={`/admin/juizo-presidente/${camaraId}`} className={`aDesktop ${isActive('juizo-presidente')}`}>
-                        <FaBalanceScale className="icon-desktop" />
-                        <span className="text-desktop">Presidência</span>
-                    </Link>
-                )}
-
-                {activeModules['comissoes'] && (
-                    <Link to={`/admin/comissoes-dash/${camaraId}`} className={`aDesktop ${isActive('comissoes-dash')}`}>
-                        <FaUsers className="icon-desktop" />
-                        <span className="text-desktop">Comissões</span>
-                    </Link>
-                )}
-
-                {activeModules['sessoes'] && hasAccess('manage_sessions') && (
-                    <Link to={`/admin/pautas-sessao/${camaraId}`} className={`aDesktop ${isActive('pautas-sessao')}`}>
-                        <FaList className="icon-desktop" />
-                        <span className="text-desktop">Sessões</span>
-                    </Link>
-                )}
-
-                
-                {servicesList.map(service => activeModules[service.id] && (
-                    <Link 
-                        key={service.id} 
-                        to={`/admin/servicos/${service.path}/${camaraId}`} 
-                        className={`aDesktop ${isActive(service.path)}`}
-                    >
-                        {service.icon}
-                        <span className="text-desktop">{service.label}</span>
-                    </Link>
-                ))}
-
-                {hasAccess('admin_config') && (
-                    <>
-                        <Link to={`/admin/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
-                            <FaCog className="icon-desktop" />
-                            <span className="text-desktop">Configurações</span>
+                    {activeModules['protocolar'] && hasAccess('create_materia') && (
+                        <Link to={`/admin/protocolar-materia/${camaraId}`} className={`aDesktop ${isActive('protocolar-materia')}`}>
+                            <FaPlusCircle className="icon-desktop" />
+                            <span className="text-desktop">Protocolar</span>
                         </Link>
+                    )}
 
-                        {activeModules['assistente'] && (
-                            <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
-                                <FaRobot className="icon-desktop" />
-                                <span className="text-desktop">Assistente</span>
+                    {activeModules['parecer'] && hasAccess('view_parecer') && (
+                        <Link to={`/admin/juizo-materia/${camaraId}`} className={`aDesktop ${isActive('juizo-materia')}`}>
+                            <FaPencilAlt className="icon-desktop" />
+                            <span className="text-desktop">Parecer</span>
+                        </Link>
+                    )}
+
+                    {activeModules['presidencia'] && hasAccess('sign_despacho') && (
+                        <Link to={`/admin/juizo-presidente/${camaraId}`} className={`aDesktop ${isActive('juizo-presidente')}`}>
+                            <FaBalanceScale className="icon-desktop" />
+                            <span className="text-desktop">Presidência</span>
+                        </Link>
+                    )}
+
+                    {activeModules['comissoes'] && (
+                        <Link to={`/admin/comissoes-dash/${camaraId}`} className={`aDesktop ${isActive('comissoes-dash')}`}>
+                            <FaUsers className="icon-desktop" />
+                            <span className="text-desktop">Comissões</span>
+                        </Link>
+                    )}
+
+                    {activeModules['sessoes'] && hasAccess('manage_sessions') && (
+                        <Link to={`/admin/pautas-sessao/${camaraId}`} className={`aDesktop ${isActive('pautas-sessao')}`}>
+                            <FaList className="icon-desktop" />
+                            <span className="text-desktop">Sessões</span>
+                        </Link>
+                    )}
+
+
+                    {servicesList.map(service => activeModules[service.id] && (
+                        <Link
+                            key={service.id}
+                            to={`/admin/servicos/${service.path}/${camaraId}`}
+                            className={`aDesktop ${isActive(service.path)}`}
+                        >
+                            {service.icon}
+                            <span className="text-desktop">{service.label}</span>
+                        </Link>
+                    ))}
+
+                    {hasAccess('admin_config') && (
+                        <>
+                            <Link to={`/admin/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
+                                <FaCog className="icon-desktop" />
+                                <span className="text-desktop">Configurações</span>
                             </Link>
-                        )}
 
-                        <Link to={`/admin/layout-manager/${camaraId}`} className={`aDesktop ${isActive('layout-manager')}`}>
-                            <FaPalette className="icon-desktop" />
-                            <span className="text-desktop">Layouts</span>
-                        </Link>
-                    </>
-                )}
+                            {activeModules['assistente'] && (
+                                <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
+                                    <FaRobot className="icon-desktop" />
+                                    <span className="text-desktop">Assistente</span>
+                                </Link>
+                            )}
 
-                <Link to={`/admin/perfil/${camaraId}`} className={`aDesktop ${isActive('/perfil')}`}>
-                    <FaRegUser className="icon-desktop" />
-                    <span className="text-desktop">Minha Conta</span>
-                </Link>
-                
-            </nav>
-        </div>
+                            <Link to={`/admin/layout-manager/${camaraId}`} className={`aDesktop ${isActive('layout-manager')}`}>
+                                <FaPalette className="icon-desktop" />
+                                <span className="text-desktop">Layouts</span>
+                            </Link>
+                        </>
+                    )}
+
+                    <Link to={`/admin/perfil/${camaraId}`} className={`aDesktop ${isActive('/perfil')}`}>
+                        <FaRegUser className="icon-desktop" />
+                        <span className="text-desktop">Minha Conta</span>
+                    </Link>
+
+                </nav>
+            </div>
         </>
     );
 };

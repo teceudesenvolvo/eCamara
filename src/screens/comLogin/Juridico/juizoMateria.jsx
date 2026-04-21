@@ -4,7 +4,7 @@ import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../../assets/logo.png';
-import { sendMessageToAIPrivate } from '../../../aiService';
+import { generateParecer, sendMessageToAIPrivate } from '../../../aiService';
 import api from '../../../services/api';
 
 pdfMake.vfs = pdfFonts.vfs;
@@ -163,7 +163,7 @@ class JuizoMateria extends Component {
     };
 
     handleGenerateParecerWithAI = async () => {
-        const { selectedMateria } = this.state;
+        const { selectedMateria, camaraId } = this.state;
         if (!selectedMateria) return;
 
         this.setState({ isGeneratingParecer: true, parecerText: '' });
@@ -182,10 +182,10 @@ class JuizoMateria extends Component {
 
         Estruture o parecer com as seções: I - RELATÓRIO, II - ANÁLISE JURÍDICA, e III - CONCLUSÃO.
         Na conclusão, opine de forma clara pela constitucionalidade/legalidade ou inconstitucionalidade/ilegalidade da matéria.
-        Use uma linguagem formal e técnica.`;
+        Use uma linguagem formal e técnica. Não utilize tags HTML (como <p>, <br>, etc) nem formatação Markdown.`;
 
         try {
-            const response = await sendMessageToAIPrivate(prompt);
+            const response = await sendMessageToAIPrivate(prompt, camaraId);
             this.setState({ parecerText: response, isGeneratingParecer: false });
         } catch (error) {
             console.error("Erro na IA:", error);

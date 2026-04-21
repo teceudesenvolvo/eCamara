@@ -27,7 +27,7 @@ class VereadorProfile extends Component {
         try {
             // Fetch data from multiple endpoints via the new API
             const [userResponse, mattersResponse, comissoesResponse] = await Promise.all([
-                api.get(`/users/id/${vereadorId}`),
+                api.get(`/users/${vereadorId}`),
                 api.get(`/legislative-matters/${camaraId}`),
                 api.get(`/commissions/${camaraId}`)
             ]);

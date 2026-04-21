@@ -344,7 +344,8 @@ class ComissaoDetails extends Component {
         `;
 
         try {
-            const response = await sendMessageToAIPrivate(prompt);
+            const { camaraId } = this.state;
+            const response = await sendMessageToAIPrivate(prompt, camaraId);
             this.setState({ parecerText: response, isGeneratingParecer: false });
         } catch (error) {
             console.error("Erro na IA:", error);

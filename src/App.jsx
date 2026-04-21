@@ -101,7 +101,10 @@ function App() {
 
   const location = useLocation();
   const pathParts = location.pathname.split('/').filter(Boolean);
-  const camaraId = pathParts.length > 1 ? pathParts[1] : ''; // slug da câmara
+  
+  // Extração robusta: identifica se é uma rota de detalhes ou lista para pegar o slug correto
+  const isDetailRoute = pathParts.includes('materia') || pathParts.includes('painel-sessao') || pathParts.includes('reuniao-virtual') || pathParts.includes('vereador');
+  const camaraId = pathParts.length > 0 ? (isDetailRoute ? pathParts[pathParts.length - 2] : pathParts[pathParts.length - 1]) : 'master';
 
   // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
   const hideMenuDesktop = ['/', '/login/:camaraId', '/register', '/admin/perfil/:camaraId', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/');
@@ -128,7 +131,7 @@ function App() {
   // 2. Buscar Configurações da Câmara
   useEffect(() => {
     const fetchCamaraConfig = async () => {
-      if (camaraId && camaraId !== ':camaraId') {
+      if (camaraId && camaraId !== ':camaraId' && camaraId !== 'admin') {
         try {
           const response = await api.get(`/councils/${camaraId}`);
           const council = response.data;
@@ -294,7 +297,7 @@ function App() {
       </div>
 
       
-      {isChatOpen && <ChatAI onClose={closeChat} />}
+      {isChatOpen && <ChatAI onClose={closeChat} city={camaraId || 'master'} />}
     </div>
   );
 }

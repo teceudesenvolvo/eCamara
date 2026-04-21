@@ -58,11 +58,26 @@ class PautasSessao extends Component {
         }
     }
 
+    // Helper para converter strings de data (DD/MM/YYYY ou ISO) em objetos Date de forma robusta
+    parseDate = (dateStr) => {
+        if (!dateStr) return new Date(0);
+        if (typeof dateStr !== 'string') return new Date(dateStr);
+        
+        if (dateStr.includes('/')) {
+            const [d, m, y] = dateStr.split('/');
+            return new Date(y, m - 1, d);
+        }
+        return new Date(dateStr);
+    };
+
     fetchSessoes = async () => {
         const { camaraId } = this.state;
         try {
             const response = await api.get(`/sessions/${camaraId}`);
-            const sessoes = response.data || [];
+            const rawData = response.data;
+            // Garante a extração de um array, lidando com diferentes padrões de API
+            const data = Array.isArray(rawData) ? rawData : (rawData?.sessions || rawData?.sessoes || Object.values(rawData || {}));
+            const sessoes = data.filter(s => s).map(s => ({ ...s, id: s.id || s._id }));
             this.setState({ sessoes });
         } catch (error) {
             console.error("Erro ao buscar sessões:", error);
@@ -73,8 +88,11 @@ class PautasSessao extends Component {
         const { camaraId } = this.state;
         try {
             const response = await api.get(`/legislative-matters/${camaraId}`);
-            const materias = response.data || [];
-            const materiasDisponiveis = materias.filter(m => m.status === 'Enviado para Plenário');
+            const rawData = response.data;
+            const data = Array.isArray(rawData) ? rawData : (rawData?.matters || rawData?.materias || Object.values(rawData || {}));
+            
+            const materias = data.filter(m => m).map(m => ({ ...m, id: m.id || m._id }));
+            const materiasDisponiveis = materias.filter(m => ['Enviado para Plenário', 'Parecer Favorável', 'Aprovado na Comissão'].includes(m.status));
             this.setState({ materiasDisponiveis });
         } catch (error) {
             console.error("Erro ao buscar matérias disponíveis:", error);
@@ -84,8 +102,11 @@ class PautasSessao extends Component {
     fetchDocumentosAcessorios = async () => {
         const { camaraId } = this.state;
         try {
-            const response = await api.get(`/legislative-matters/${camaraId}/accessories`);
-            const docs = response.data || [];
+            const response = await api.get(`/legislative-matters/${camaraId}/accessory`);
+            const rawData = response.data;
+            const data = Array.isArray(rawData) ? rawData : (rawData?.accessories || rawData?.acessorios || Object.values(rawData || {}));
+
+            const docs = data.filter(d => d).map(d => ({ ...d, id: d.id || d._id }));
             const disponiveis = docs.filter(doc => doc.status === 'Protocolado');
             this.setState({ documentosAcessoriosDisponiveis: disponiveis });
         } catch (error) {
@@ -187,7 +208,7 @@ class PautasSessao extends Component {
 
     handleSelectSessao = (sessao) => {
         this.setState({
-            selectedSessaoId: sessao.id,
+            selectedSessaoId: sessao.id || sessao._id,
             editalText: sessao.edital || '', 
             roteiroPdfUrl: null, // Reseta o PDF ao selecionar nova sessão
             isEditingUrl: false, // Reseta o modo de edição da URL
@@ -214,8 +235,8 @@ class PautasSessao extends Component {
             const updatedItens = [...currentItens, materia];
 
             try {
-                await api.patch(`/sessions/id/${selectedSessaoId}`, { itens: updatedItens });
-                await api.patch(`/legislative-matters/id/${materia.id}`, { status: 'Em Pauta' });
+                await api.patch(`/sessions/${selectedSessaoId}`, { itens: updatedItens });
+                await api.patch(`/legislative-matters/${materia.id}`, { status: 'Em Pauta' });
 
                 this.setState(prevState => ({
                     sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s),
@@ -256,8 +277,8 @@ class PautasSessao extends Component {
             const updatedItens = [...currentItens, itemNormalizado];
 
             try {
-                await api.patch(`/sessions/id/${selectedSessaoId}`, { itens: updatedItens });
-                await api.patch(`/legislative-matters/accessory/id/${doc.id}`, { status: 'Em Pauta' });
+                await api.patch(`/sessions/${selectedSessaoId}`, { itens: updatedItens });
+                await api.patch(`/legislative-matters/accessory/${doc.id}`, { status: 'Em Pauta' });
                 
                 this.setState(prevState => ({
                     sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s),
@@ -280,14 +301,14 @@ class PautasSessao extends Component {
         const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId);
 
         try {
-            await api.patch(`/sessions/id/${selectedSessaoId}`, { itens: updatedItens });
+            await api.patch(`/sessions/${selectedSessaoId}`, { itens: updatedItens });
             
             if (itemToRemove) {
                 const isAcessorio = itemToRemove.isAcessorio;
                 if (isAcessorio) {
-                    await api.patch(`/legislative-matters/accessory/id/${itemId}`, { status: 'Protocolado' });
+                    await api.patch(`/legislative-matters/accessory/${itemId}`, { status: 'Protocolado' });
                 } else {
-                    await api.patch(`/legislative-matters/id/${itemId}`, { status: 'Enviado para Plenário' });
+                    await api.patch(`/legislative-matters/${itemId}`, { status: 'Enviado para Plenário' });
                 }
             }
 
@@ -306,7 +327,7 @@ class PautasSessao extends Component {
 
         if (window.confirm("Tem certeza que deseja ABRIR esta sessão? Ela ficará visível publicamente como 'Aberta' e permitirá a interação dos vereadores.")) {
             try {
-                await api.patch(`/sessions/id/${selectedSessaoId}`, { status: 'Aberta' });
+                await api.patch(`/sessions/${selectedSessaoId}`, { status: 'Aberta' });
                 this.setState(prevState => ({
                     sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, status: 'Aberta' } : s)
                 }));
@@ -319,7 +340,7 @@ class PautasSessao extends Component {
     };
 
     handleFinalizeSessao = async () => {
-        const { selectedSessaoId, sessoes } = this.state;
+        const { selectedSessaoId, sessoes, camaraId } = this.state;
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!selectedSessao) return;
     
@@ -355,7 +376,7 @@ class PautasSessao extends Component {
         Com base no regimento e na lista de matérias, gere o documento "Roteiro da Sessão" completo, detalhando cada fase e incluindo os nomes das matérias nos locais apropriados da Ordem do Dia. O texto deve ser formal e pronto para ser lido pelo Presidente da Câmara. Não use markdown.`;
     
         try {
-            const roteiroText = await sendMessageToAIPrivate(prompt);
+            const roteiroText = await sendMessageToAIPrivate(prompt, camaraId);
             this.generateRoteiroPDF(selectedSessao, roteiroText, true); // Passa true para armazenar em vez de abrir
         } catch (error) {
             console.error("Erro na IA:", error);
@@ -422,10 +443,11 @@ class PautasSessao extends Component {
         A Ordem do Dia será:
         ${itensTexto || "Nenhuma matéria cadastrada na ordem do dia."}
 
-        O texto deve seguir a estrutura padrão de editais legislativos, convocando os Senhores Vereadores, mencionando o horário regimental (ou definir 19h) e o local (Plenário da Câmara). Finalize com a data e assinatura. Não use markdown.`;
+        O texto deve seguir a estrutura padrão de editais legislativos, convocando os Senhores Vereadores, mencionando o horário regimental (ou definir 19h) e o local (Plenário da Câmara). Finalize com a data e assinatura. Não use markdown nem tags HTML.`;
 
         try {
-            const response = await sendMessageToAIPrivate(prompt);
+            const { camaraId } = this.state;
+            const response = await sendMessageToAIPrivate(prompt, camaraId);
             this.setState({ editalText: response, isGeneratingEdital: false });
         } catch (error) {
             console.error("Erro na IA:", error);
@@ -442,7 +464,7 @@ class PautasSessao extends Component {
         if (!selectedSessaoId) return;
 
         try {
-            await api.patch(`/sessions/id/${selectedSessaoId}`, { transmissaoUrl: editedTransmissaoUrl });
+            await api.patch(`/sessions/${selectedSessaoId}`, { transmissaoUrl: editedTransmissaoUrl });
             this.setState(prevState => ({
                 isEditingUrl: false,
                 sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, transmissaoUrl: editedTransmissaoUrl } : s)
@@ -467,7 +489,7 @@ class PautasSessao extends Component {
             isEditingUrl, editedTransmissaoUrl, materiaSearchTerm, viewingMateriaForDetail
         } = this.state;
 
-        const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
+        const selectedSessao = sessoes.find(s => String(s.id) === String(selectedSessaoId));
         if (selectedSessaoId) {
             return (
                 <GerenciarSessao
@@ -496,16 +518,16 @@ class PautasSessao extends Component {
             );
         }
 
-        const sortedSessoes = [...sessoes].sort((a, b) => {
-            const [dayA, monthA, yearA] = a.data.split('/');
-            const [dayB, monthB, yearB] = b.data.split('/');
-            return new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA);
-        });
+        const sortedSessoes = [...sessoes].sort((a, b) => 
+            this.parseDate(b.data) - this.parseDate(a.data)
+        );
 
         const groupedSessoes = [];
         sortedSessoes.forEach(sessao => {
-            const [day, month, year] = sessao.data.split('/');
-            const key = new Date(year, month - 1, day).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            const date = this.parseDate(sessao.data);
+            if (!date || isNaN(date.getTime())) return;
+
+            const key = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
             const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
             let group = groupedSessoes.find(g => g.month === formattedKey);
             if (!group) { group = { month: formattedKey, sessoes: [] }; groupedSessoes.push(group); }

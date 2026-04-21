@@ -211,7 +211,7 @@ const AdminAssistant = () => {
         `;
 
         try {
-            const response = await sendMessageToAIPrivate(prompt);
+            const response = await sendMessageToAIPrivate(prompt, camaraConfigs.camaraId);
             setGeneratedContent(response);
         } catch (error) {
             console.error("Erro ao gerar documento:", error);

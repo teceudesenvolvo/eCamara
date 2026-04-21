@@ -35,7 +35,7 @@ class AccessoryDocumentsDash extends Component {
 
     fetchDocuments = async (userId) => {
         try {
-            const response = await api.get(`/legislative-matters/${this.state.camaraId}/accessories`);
+            const response = await api.get(`/legislative-matters/${this.state.camaraId}/accessory`);
             const allDocs = response.data;
             
             const data = [];
@@ -124,7 +124,7 @@ class AccessoryDocumentsDash extends Component {
                     ) : (
                         <Grid container spacing={3}>
                             {filteredDocs.map(doc => (
-                                <Grid item xs={12} md={6} lg={4} key={doc.id}>
+                                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={doc.id}>
                                     <Card sx={{ 
                                         borderRadius: '20px', 
                                         boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
@@ -180,7 +180,7 @@ class AccessoryDocumentsDash extends Component {
                                 </Grid>
                             ))}
                             {filteredDocs.length === 0 && (
-                                <Grid item xs={12}>
+                                <Grid size={{ xs: 12 }}>
                                     <Paper sx={{ py: 10, textAlign: 'center', borderRadius: '24px', backgroundColor: 'transparent', border: '2px dashed #e2e8f0' }}>
                                         <FaFileSignature size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
                                         <Typography color="textSecondary">Nenhum documento gerado ainda.</Typography>

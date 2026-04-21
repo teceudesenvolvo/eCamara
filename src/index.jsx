@@ -12,7 +12,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 
 import axios from 'axios'
-axios.defaults.baseURL = 'https://eu-desenvolvo-default-rtdb.firebaseio.com/'
+axios.defaults.baseURL = 'https://camara-ai-backend.onrender.com'
 
 
 

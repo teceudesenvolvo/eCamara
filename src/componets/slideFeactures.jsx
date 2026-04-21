@@ -23,12 +23,12 @@ class slideFeactures extends Component {
 
     fetchVereadores = async () => {
         const { camaraId } = this.props.match.params;
-        if (!camaraId) return;
+        if (!camaraId || camaraId === ':camaraId') return;
 
         try {
             // Buscar usuários, matérias e comissões simultaneamente via API
             const [usersResponse, materiasResponse, comissoesResponse] = await Promise.all([
-                api.get(`/users/${camaraId}`),
+                api.get(`/users/council/${camaraId}`),
                 api.get(`/legislative-matters/${camaraId}`),
                 api.get(`/commissions/${camaraId}`)
             ]);
@@ -61,13 +61,13 @@ class slideFeactures extends Component {
             const fetchedVereadores = usersData
                 .filter(u => {
                     const tipo = (u.tipo || '').toLowerCase();
-                    return tipo === 'vereador' || tipo === 'presidente';
+                    return tipo === 'vereador' || tipo === 'presidente' || u.role === 'parlamentar';
                 })
                 .map(u => ({
                     ...u,
                     id: u.id,
-                    foto: u.foto || u.photoURL || 'https://via.placeholder.com/150',
-                    materiasCount: materiasCountByUserId[u.id] || 0,
+                    foto: u.foto || u.photoURL || u.avatar || 'https://via.placeholder.com/150',
+                    materiasCount: materiasCountByUserId[u.id] || u._count?.matters || 0,
                     comissoesCount: comissoesCountByUserId[u.id] || 0
                 }));
 

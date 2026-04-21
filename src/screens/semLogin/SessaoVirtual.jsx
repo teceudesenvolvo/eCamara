@@ -56,7 +56,7 @@ class SessaoVirtual extends Component {
     }
 
     try {
-      const response = await api.get(`/sessions/id/${sessaoId}`);
+      const response = await api.get(`/session-detail/${sessaoId}`);
       if (response.data) {
         this.setState({ sessao: response.data, loading: false });
       } else {

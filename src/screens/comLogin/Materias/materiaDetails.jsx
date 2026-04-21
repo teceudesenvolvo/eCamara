@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { FaArrowLeft, FaFilePdf, FaHistory, FaCheckCircle, FaClock, FaUserTie, FaCalendarAlt, FaPrint, FaExchangeAlt, FaDownload, FaShareAlt, FaGavel, FaInfoCircle, FaParagraph, FaBalanceScale } from 'react-icons/fa';
 import api from "../../../services/api";
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 
 class MateriaDetails extends Component {
     constructor(props) {
@@ -12,17 +13,22 @@ class MateriaDetails extends Component {
     }
 
     async componentDidMount() {
-        const { state } = this.props.location || {};
-        const materiaId = state ? state.materiaId : null;
+        const { location, match } = this.props;
+        const { state } = location || {};
+        const { camaraId, materiaId: materiaIdParam } = match.params;
 
-        if (!materiaId) {
+        // Identifica o ID da matéria via Query String, fallback para Params ou State
+        const queryParams = new URLSearchParams(location.search);
+        const materiaId = queryParams.get('materiaId') || materiaIdParam || state?.materiaId;
+
+        if (!materiaId || !camaraId) {
             this.setState({ loading: false });
             return;  // Early return to prevent further execution
         }
 
         try {
-            const response = await api.get(`/legislative-matters/id/${materiaId}`);
-            const data = response.data;
+            const response = await api.get(`/legislative-matter-detail/${materiaId}`);
+            const data = Array.isArray(response.data) ? response.data[0] : response.data;
 
             if (data) {
                 // Constrói o histórico com base nos eventos registrados na matéria
@@ -107,7 +113,7 @@ class MateriaDetails extends Component {
         if (materia && materia.pdfBase64) {
             const link = document.createElement('a');
             link.href = `data:application/pdf;base64,${materia.pdfBase64}`;
-            link.download = `Materia_${materia.numero ? materia.numero.replace('/', '-') : 'doc'}.pdf`;
+            link.download = `Materia_${materia.numero ? String(materia.numero).replace('/', '-') : 'doc'}.pdf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -128,13 +134,14 @@ class MateriaDetails extends Component {
         }
 
         if (!materia) {
-        return (
-                
-
-
-                <div className='App-header' style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f0f2f5' }}>
-                    <p>Matéria não encontrada.</p>
-                    <button onClick={() => this.props.history.goBack()} className="btn-back">Voltar</button>
+            return (
+                <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
+                    <MenuDashboard />
+                    <div className="dashboard-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '80vh', width: '100%' }}>
+                        <h2 style={{ color: '#126B5E' }}>Matéria não encontrada</h2>
+                        <p style={{ color: '#666', marginBottom: '20px' }}>O ID da matéria pode ter expirado ou não foi passado corretamente.</p>
+                        <button onClick={() => this.props.history.goBack()} className="btn-secondary" style={{ width: 'auto' }}>Voltar ao Painel</button>
+                    </div>
                 </div>
             );
         }
@@ -240,7 +247,7 @@ class MateriaDetails extends Component {
                                     Resumo da Matéria
                                 </h3>
                                 <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '10px', borderLeft: '4px solid #ccc' }}>
-                                    <p style={{ margin: 0, lineHeight: '1.6', color: '#333', fontSize: '1.05rem', fontStyle: 'italic', textAlign: 'left' }}>"{materia.ementa}"</p>
+                                    <p style={{ margin: 0, lineHeight: '1.6', color: '#333', fontSize: '1.05rem', fontStyle: 'italic', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: `"${materia.ementa}"` }} />
                                 </div>
 
                                 {materia.objeto && (
@@ -319,7 +326,7 @@ class MateriaDetails extends Component {
                                         color: '#333',
                                         fontSize: '0.95rem'
                                     }}>
-                                        {materia.parecer}
+                                        <div dangerouslySetInnerHTML={{ __html: materia.parecer }} />
                                     </div>
                                 </div>
                             )}

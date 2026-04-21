@@ -5,7 +5,7 @@ import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip,
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
-import { sendMessageToAIPrivate } from '../../../aiService';
+import { sendMessageToAIPrivate, analisarMateria } from '../../../aiService';
 import api from '../../../services/api';
 import {
     TextField,
@@ -129,11 +129,11 @@ class AddProducts extends Component {
 
         try {
             const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
-            
+
             // Busca configurações e dados do perfil do usuário em paralelo
             const [configResponse, membersResponse] = await Promise.all([
                 api.get(`/councils/${camaraId}`),
-                api.get(`/councils/${camaraId}/members`).catch(() => ({ data: [] }))
+                api.get(`/users/council/${camaraId}`).catch(() => ({ data: [] }))
             ]);
 
             const configData = configResponse.data || {};
@@ -152,7 +152,7 @@ class AddProducts extends Component {
             // Busca as matérias do usuário para definir o próximo número
             const materiasResponse = await api.get(`/legislative-matters/${camaraId}`);
             const allMaterias = materiasResponse.data || [];
-            
+
             let count = 0;
             if (Array.isArray(allMaterias)) {
                 allMaterias.forEach(materia => {
@@ -346,7 +346,7 @@ class AddProducts extends Component {
             // No backend novo, poderíamos verificar a senha via /auth/login ou similar
             // Por enquanto, validamos que o usuário está autenticado e tem a senha preenchida
             // Em uma implementação real, o backend assinaria o documento
-            
+
             this.setState({ passwordError: '' });
 
             // Coletar metadados
@@ -382,8 +382,8 @@ class AddProducts extends Component {
 
     // Função única para gerar Título, Ementa e Redação após validação
     generateFullMateriaWithAI = async () => {
-        const { objeto, tipoMateria, baseConhecimento } = this.state;
-        
+        const { objeto, tipoMateria, baseConhecimento, camaraId } = this.state;
+
         if (!objeto) {
             alert("Por favor, descreva o Assunto primeiro para que a IA possa validar e sugerir o melhor formato.");
             return;
@@ -393,53 +393,33 @@ class AddProducts extends Component {
 
         try {
             const { regimentoText, materiasText } = baseConhecimento;
-            
-            // --- PASSO 1: VALIDAÇÃO TÉCNICA ---
-            const technicalOpinionPrompt = `Atue como um consultor legislativo especialista e rigoroso. Analise o assunto "${objeto}".
-            ${tipoMateria ? `O usuário já selecionou o tipo "${tipoMateria}".` : 'Identifique qual o melhor tipo de matéria (Projeto de Lei, Indicação, Requerimento, Moção, Projeto de Decreto Legislativo) para este caso.'}
-            
-            CONTEXTO OBRIGATÓRIO (Regimento Interno):
-            ${regimentoText || 'Seguir normas padrão de vício de iniciativa e competência municipal.'}
-            
-            HISTÓRICO DE MATÉRIAS (para verificar duplicidade):
-            ${materiasText || 'Nenhuma matéria anterior cadastrada.'}
-            
-            Verifique impedimentos como vício de iniciativa, duplicidade ou conflito com leis superiores.
-            
-            Responda EXATAMENTE neste formato:
-            TIPO: [Nome do Tipo Sugerido/Confirmado]
-            PARECER: [BLOQUEIO ou PARECER FAVORÁVEL] seguido da justificativa técnica.`;
 
-            const technicalOpinionResponse = await sendMessageToAIPrivate(technicalOpinionPrompt);
-            
-            // Extrair tipo sugerido e status do parecer
-            const typeMatch = technicalOpinionResponse.match(/TIPO:\s*(.*)/i);
-            const suggestedType = typeMatch ? typeMatch[1].split('\n')[0].trim() : tipoMateria;
-            
-            this.setState({ 
-                aiTechnicalOpinion: technicalOpinionResponse,
-                tipoMateria: suggestedType || tipoMateria 
+            // --- PASSO 1: VALIDAÇÃO TÉCNICA ESPECIALIZADA ---
+            const technicalOpinion = await analisarMateria(objeto, `Considere que o tipo sugerido/selecionado é: ${tipoMateria || 'Não definido'}`);
+
+            this.setState({
+                aiTechnicalOpinion: technicalOpinion.analise,
+                tipoMateria: tipoMateria // Mantém o tipo que já estava ou deixa o usuário escolher
             });
 
-            if (technicalOpinionResponse.toUpperCase().includes("BLOQUEIO:")) {
+            if (!technicalOpinion.aprovado) {
                 this.setState({ isGenerating: false });
                 return;
             }
 
-            // --- PASSO 2: GERAÇÃO DOS CAMPOS (Se parecer favorável) ---
-            const finalType = suggestedType || tipoMateria || 'Matéria';
-            const titleResponse = await sendMessageToAIPrivate(`Sugira um título formal e em caixa alta para uma matéria legislativa do tipo "${finalType}" sobre o assunto "${objeto}". Responda APENAS o título sugerido.`);
-            
-            const ementaResponse = await sendMessageToAIPrivate(`Escreva uma ementa legislativa (resumo formal) para uma matéria do tipo "${finalType}" sobre "${objeto}". Comece com verbos como "Dispõe sobre...", "Institui...", etc. Responda APENAS a ementa.`);
-            
+            // --- PASSO 2: GERAÇÃO DOS CAMPOS (Se aprovado na análise) ---
+            const finalType = tipoMateria || 'Matéria';
+            const titleResponse = await sendMessageToAIPrivate(`Sugira um título formal e em caixa alta para uma matéria legislativa do tipo "${finalType}" sobre o assunto "${objeto}". Responda APENAS o título sugerido.`, camaraId);
+
+            const ementaResponse = await sendMessageToAIPrivate(`Escreva uma ementa legislativa (resumo formal) para uma matéria do tipo "${finalType}" sobre "${objeto}". Comece com verbos como "Dispõe sobre...", "Institui...", etc. Responda APENAS a ementa.`, camaraId);
+
             const textoResponse = await sendMessageToAIPrivate(`Atue como consultor legislativo. Escreva a minuta completa de um ${finalType} sobre o assunto "${objeto}".
                 
                 REGRAS:
                 - Use estrutura de artigos (Art. 1º, Art. 2º...).
                 - Formate com tags HTML (<p>, <strong>).
-                - Considere o contexto do Regimento Interno: ${regimentoText || 'Regimento Padrão'}.
                 - Inclua uma justificativa formal ao final.
-                - Responda APENAS o HTML.`);
+                - Responda APENAS o HTML.`, camaraId);
 
             this.setState({
                 titulo: titleResponse.trim(),
@@ -455,13 +435,14 @@ class AddProducts extends Component {
             alert("Erro ao processar a inteligência artificial.");
         }
     };
-// ...
+    // ...
     // Função para gerar conteúdo com IA (Real)
     handleSendMessage = async () => {
-        const { currentInput, messages, chatStep, objeto, tipoMateria, fileName } = this.state;
+        const { currentInput, messages, chatStep, objeto, tipoMateria, fileName, baseConhecimento, camaraId } = this.state;
         if (!currentInput.trim()) return;
 
-        if (!auth.currentUser) {
+        const token = localStorage.getItem('@CamaraAI:token');
+        if (!token) {
             this.setState({
                 messages: [...messages, { id: Date.now(), sender: 'user', text: currentInput }, { id: Date.now() + 1, sender: 'ai', text: "🔒 Você precisa estar autenticado para usar este recurso. Por favor, faça login no sistema." }],
                 currentInput: ''
@@ -550,8 +531,8 @@ class AddProducts extends Component {
                 nextStep = 3;
             }
 
-            // Chamada real à API
-            const response = await sendMessageToAIPrivate(prompt);
+            // Chamada real à API com o slug da câmara
+            const response = await sendMessageToAIPrivate(prompt, camaraId);
 
             if (chatStep === 2) {
                 const isRefusal = response.includes("BLOQUEIO:");
@@ -609,7 +590,7 @@ class AddProducts extends Component {
     handleProtocolar = async () => {
         const { camaraId } = this.state;
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
-        
+
         // Simula a geração de protocolo
         const newProtocol = `${new Date().getFullYear()}/${Math.floor(Math.random() * 100000)}`;
 
@@ -622,8 +603,8 @@ class AddProducts extends Component {
 
             // Identificação
             tipoMateria: this.state.tipoMateria,
-            ano: this.state.ano,
-            numero: this.state.numero,
+            ano: parseInt(this.state.ano) || new Date().getFullYear(),
+            numero: parseInt(this.state.numero) || 0,
             dataApresenta: this.state.dataApresenta,
             tipoApresentacao: this.state.tipoApresentacao,
             tipoAutor: this.state.tipoAutor,
@@ -632,12 +613,13 @@ class AddProducts extends Component {
             // Detalhes
             apelido: this.state.apelido,
             prazo: this.state.prazo,
-            materiaPolemica: this.state.materiaPolemica,
+            materiaPolemica: this.state.materiaPolemica === 'Sim' || this.state.materiaPolemica === true,
             objeto: this.state.objeto,
             regTramita: this.state.regTramita,
             dataPrazo: this.state.dataPrazo,
-            publicacao: this.state.publicacao,
-            isComplementar: this.state.isComplementar,
+            publicacao: Boolean(this.state.publicacao),
+            isComplementar: this.state.isComplementar === 'Sim' || this.state.isComplementar === true,
+            isSigned: this.state.isSigned,
 
             // Conteúdo
             titulo: this.state.titulo,
@@ -853,13 +835,13 @@ class AddProducts extends Component {
         return (
             <div className='App-header' style={{ background: '#f4f7f6', minHeight: '100vh', alignItems: 'flex-start', flexDirection: 'row' }}>
                 <MenuDashboard />
-                
-                <Box component="main" sx={{ 
-                    flexGrow: 1, 
+
+                <Box component="main" sx={{
+                    flexGrow: 1,
                     p: { xs: 2, md: 5 },
                     ml: { xs: 0, md: '65px' }, // Ajustado para a largura do menu lateral
                     width: { xs: '100%', md: 'calc(100% - 65px)' },
-                    maxWidth: '1400px', 
+                    maxWidth: '1400px',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 4
@@ -875,13 +857,13 @@ class AddProducts extends Component {
                             </Typography>
                         </Box>
                         <Box display="flex" gap={2}>
-                            <Button 
-                                variant="outlined" 
-                                color="primary" 
+                            <Button
+                                variant="outlined"
+                                color="primary"
                                 startIcon={<FaFileAlt />}
                                 onClick={this.openPdfPopup}
-                                sx={{ 
-                                    textTransform: 'none', 
+                                sx={{
+                                    textTransform: 'none',
                                     borderRadius: '12px',
                                     borderWidth: '2px',
                                     '&:hover': { borderWidth: '2px' }
@@ -890,13 +872,13 @@ class AddProducts extends Component {
                                 Visualizar PDF
                             </Button>
                             {!this.state.protocolGenerated && (
-                                <Button 
-                                    variant="contained" 
-                                    color="primary" 
+                                <Button
+                                    variant="contained"
+                                    color="primary"
                                     startIcon={<FaCheckCircle />}
                                     onClick={this.openPasswordModal}
-                                    sx={{ 
-                                        textTransform: 'none', 
+                                    sx={{
+                                        textTransform: 'none',
                                         borderRadius: '12px',
                                         px: 3,
                                         backgroundColor: '#126B5E',
@@ -911,8 +893,8 @@ class AddProducts extends Component {
                     </Box>
 
                     {this.state.protocolGenerated && (
-                        <Alert 
-                            severity="success" 
+                        <Alert
+                            severity="success"
                             variant="filled"
                             sx={{ borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
                         >
@@ -932,7 +914,7 @@ class AddProducts extends Component {
                                         </Box>
                                         Dados de Identificação
                                     </Typography>
-                                    
+
                                     <Box display="flex" flexDirection="column" gap={3} mt={3}>
                                         <FormControl fullWidth size="small">
                                             <InputLabel>Autor</InputLabel>
@@ -953,22 +935,22 @@ class AddProducts extends Component {
                                         </FormControl>
 
                                         <Box display="flex" gap={2}>
-                                            <TextField 
-                                                fullWidth 
-                                                size="small" 
-                                                label="Ano/Exercício" 
-                                                name="ano" 
-                                                type="number" 
-                                                value={this.state.ano} 
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Ano/Exercício"
+                                                name="ano"
+                                                type="number"
+                                                value={this.state.ano}
                                                 onChange={this.handleInputChange}
                                                 InputProps={{ sx: { borderRadius: '10px' } }}
                                             />
-                                            <TextField 
-                                                fullWidth 
-                                                size="small" 
-                                                label="Número" 
-                                                name="numero" 
-                                                value={this.state.numero} 
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                label="Número"
+                                                name="numero"
+                                                value={this.state.numero}
                                                 onChange={this.handleInputChange}
                                                 InputProps={{ sx: { borderRadius: '10px' } }}
                                             />
@@ -989,16 +971,16 @@ class AddProducts extends Component {
                                             </Select>
                                         </FormControl>
 
-                                        <TextField 
-                                            fullWidth 
-                                            size="small" 
-                                            label="Principal Assunto / Objeto" 
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            label="Principal Assunto / Objeto"
                                             multiline
                                             rows={2}
-                                            name="objeto" 
+                                            name="objeto"
                                             placeholder="Ex: Pavimentação da Rua X, Criação do Programa Y..."
-                                            value={this.state.objeto} 
-                                            onChange={this.handleInputChange} 
+                                            value={this.state.objeto}
+                                            onChange={this.handleInputChange}
                                             helperText="A IA utilizará este campo como contexto para as gerações."
                                             InputProps={{ sx: { borderRadius: '10px' } }}
                                         />
@@ -1006,8 +988,8 @@ class AddProducts extends Component {
 
                                     {/* Exibição do Parecer Técnico da IA */}
                                     {aiTechnicalOpinion && (
-                                        <Alert 
-                                            severity={aiTechnicalOpinion.startsWith("BLOQUEIO:") ? "error" : "info"} 
+                                        <Alert
+                                            severity={aiTechnicalOpinion.startsWith("BLOQUEIO:") ? "error" : "info"}
                                             variant="outlined"
                                             sx={{ borderRadius: '10px', mt: 2 }}
                                         >
@@ -1025,16 +1007,16 @@ class AddProducts extends Component {
                         <Grid item xs={12} md={8}>
                             <Card sx={{ borderRadius: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
                                 <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                    
+
                                     {/* Botão Único de Geração */}
                                     <Box display="flex" justifyContent="flex-end">
-                                        <Button 
+                                        <Button
                                             variant="contained"
                                             startIcon={isGenerating ? <CircularProgress size={18} color="inherit" /> : <FaRobot />}
                                             onClick={this.generateFullMateriaWithAI}
                                             disabled={isGenerating}
-                                            sx={{ 
-                                                textTransform: 'none', 
+                                            sx={{
+                                                textTransform: 'none',
                                                 borderRadius: '12px',
                                                 py: 1.5,
                                                 px: 4,
@@ -1071,11 +1053,11 @@ class AddProducts extends Component {
                                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
                                             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333' }}>Título da Matéria</Typography>
                                         </Box>
-                                        <TextField 
-                                            fullWidth 
-                                            size="small" 
-                                            name="titulo" 
-                                            value={this.state.titulo} 
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            name="titulo"
+                                            value={this.state.titulo}
                                             onChange={this.handleInputChange}
                                             placeholder="Ex: PROJETO DE LEI Nº 123/2024..."
                                             InputProps={{ sx: { borderRadius: '10px' } }}
@@ -1087,13 +1069,13 @@ class AddProducts extends Component {
                                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
                                             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333' }}>Ementa (Resumo Formal)</Typography>
                                         </Box>
-                                        <TextField 
-                                            fullWidth 
-                                            size="small" 
+                                        <TextField
+                                            fullWidth
+                                            size="small"
                                             multiline
                                             rows={3}
-                                            name="ementa" 
-                                            value={this.state.ementa} 
+                                            name="ementa"
+                                            value={this.state.ementa}
                                             onChange={this.handleInputChange}
                                             placeholder="Dispõe sobre..."
                                             InputProps={{ sx: { borderRadius: '10px' } }}
@@ -1124,12 +1106,12 @@ class AddProducts extends Component {
                 </Box>
 
                 {/* Botão Flutuante de Chat AI com Balão de Sugestão */}
-                <Box sx={{ 
-                    position: 'fixed', 
-                    bottom: 30, 
-                    right: 30, 
-                    zIndex: 5001, 
-                    display: 'flex', 
+                <Box sx={{
+                    position: 'fixed',
+                    bottom: 30,
+                    right: 30,
+                    zIndex: 5001,
+                    display: 'flex',
                     alignItems: 'center',
                     '@keyframes slideHint': {
                         '0%': { transform: 'translateX(0px)', opacity: 0.8 },
@@ -1166,13 +1148,13 @@ class AddProducts extends Component {
                             Crie a matéria com IA.
                         </Box>
                     )}
-                    <Button 
-                        variant="contained" 
+                    <Button
+                        variant="contained"
                         onClick={this.toggleAiChat}
-                        sx={{ 
-                            width: 65, 
-                            height: 65, 
-                            borderRadius: '50%', 
+                        sx={{
+                            width: 65,
+                            height: 65,
+                            borderRadius: '50%',
                             minWidth: 0,
                             p: 0,
                             backgroundColor: '#FF740F',
@@ -1188,7 +1170,7 @@ class AddProducts extends Component {
                 {/* Janela de Chat AI (Widget no Canto Inferior Direito) */}
                 {showAiChat && (
                     <div className="chat-popup-overlay" style={{ background: 'transparent', pointerEvents: 'none' }}>
-                        <div className="chat-ai-container" style={{ 
+                        <div className="chat-ai-container" style={{
                             position: 'fixed',
                             bottom: 110,
                             right: 30,
@@ -1222,9 +1204,9 @@ class AddProducts extends Component {
                                         <div className="message-bubble">
                                             <div dangerouslySetInnerHTML={{ __html: msg.text }} />
                                             {msg.sender === 'ai' && this.state.chatStep === 3 && (
-                                                <Button 
-                                                    variant="contained" 
-                                                    size="small" 
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
                                                     startIcon={<FaCheckCircle />}
                                                     onClick={() => this.setState({ showAiChat: false, showEditor: true }, this.handleGeneratePDF)}
                                                     sx={{ mt: 2, textTransform: 'none', borderRadius: '8px', backgroundColor: '#126B5E' }}
@@ -1245,7 +1227,7 @@ class AddProducts extends Component {
 
                             <div className="chat-input-area" style={{ padding: '15px' }}>
                                 <div className="search-box-wrapper-chat">
-                                    <input 
+                                    <input
                                         type="text"
                                         className="smart-search-input-chat"
                                         placeholder="Digite aqui..."
@@ -1255,8 +1237,8 @@ class AddProducts extends Component {
                                         disabled={isGenerating}
                                         style={{ width: '100%' }}
                                     />
-                                    <button 
-                                        className="smart-search-btn-chat" 
+                                    <button
+                                        className="smart-search-btn-chat"
                                         onClick={this.handleSendMessage}
                                         disabled={isGenerating}
                                     >
@@ -1271,24 +1253,24 @@ class AddProducts extends Component {
                 {/* Preview PDF */}
                 {showPdfPopup && pdfData && (
                     <div className="pdf-popup-overlay">
-                        <Box sx={{ 
-                            width: '94%', 
-                            height: '92%', 
-                            borderRadius: '32px', 
-                            overflow: 'hidden', 
+                        <Box sx={{
+                            width: '94%',
+                            height: '92%',
+                            borderRadius: '32px',
+                            overflow: 'hidden',
                             backgroundColor: 'white',
                             boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                             position: 'relative'
                         }}>
-                            <Button 
+                            <Button
                                 onClick={this.closePdfPopup}
-                                sx={{ 
-                                    position: 'absolute', 
-                                    top: 15, 
-                                    right: 15, 
-                                    minWidth: 40, 
-                                    height: 40, 
-                                    borderRadius: '50%', 
+                                sx={{
+                                    position: 'absolute',
+                                    top: 15,
+                                    right: 15,
+                                    minWidth: 40,
+                                    height: 40,
+                                    borderRadius: '50%',
                                     backgroundColor: 'rgba(0,0,0,0.1)',
                                     color: 'black',
                                     fontWeight: 'bold',
@@ -1311,22 +1293,22 @@ class AddProducts extends Component {
                 {/* Assinatura Digital */}
                 {showPasswordModal && (
                     <div className="pdf-popup-overlay">
-                        <Box sx={{ 
-                            backgroundColor: 'white', 
-                            p: 5, 
-                            borderRadius: '32px', 
-                            maxWidth: '480px', 
+                        <Box sx={{
+                            backgroundColor: 'white',
+                            p: 5,
+                            borderRadius: '32px',
+                            maxWidth: '480px',
                             width: '90%',
                             textAlign: 'center',
                             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
                         }}>
-                            <Box sx={{ 
-                                width: 60, 
-                                height: 60, 
-                                borderRadius: '50%', 
-                                backgroundColor: 'rgba(18, 107, 94, 0.1)', 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                            <Box sx={{
+                                width: 60,
+                                height: 60,
+                                borderRadius: '50%',
+                                backgroundColor: 'rgba(18, 107, 94, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
                                 justifyContent: 'center',
                                 margin: '0 auto 20px'
                             }}>
@@ -1336,7 +1318,7 @@ class AddProducts extends Component {
                             <Typography variant="body2" color="textSecondary" sx={{ mb: 4, px: 2 }}>
                                 Para assinar juridicamente este documento, confirme sua senha de acesso ao ecossistema e-Câmara.
                             </Typography>
-                            
+
                             <TextField
                                 fullWidth
                                 type="password"
@@ -1351,20 +1333,20 @@ class AddProducts extends Component {
                             />
 
                             <Box display="flex" gap={2}>
-                                <Button 
-                                    fullWidth 
-                                    variant="outlined" 
-                                    onClick={this.closePasswordModal} 
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={this.closePasswordModal}
                                     sx={{ borderRadius: '12px', py: 1.2, textTransform: 'none', fontWeight: 600 }}
                                 >
                                     Cancelar
                                 </Button>
-                                <Button 
-                                    fullWidth 
-                                    variant="contained" 
+                                <Button
+                                    fullWidth
+                                    variant="contained"
                                     onClick={this.confirmSignature}
-                                    sx={{ 
-                                        borderRadius: '12px', 
+                                    sx={{
+                                        borderRadius: '12px',
                                         py: 1.2,
                                         textTransform: 'none',
                                         fontWeight: 600,

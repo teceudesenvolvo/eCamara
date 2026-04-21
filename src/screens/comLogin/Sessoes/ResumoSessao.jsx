@@ -40,7 +40,7 @@ class ResumoSessao extends Component {
         }
 
         try {
-            const response = await api.get(`/sessions/id/${sessaoId}`);
+            const response = await api.get(`/session-detail/${sessaoId}`);
             if (response.data) {
                 this.setState({ sessao: response.data, loading: false });
             } else {
@@ -117,7 +117,7 @@ class ResumoSessao extends Component {
                     </div>
 
                     <Grid container spacing={3}>
-                        <Grid item xs={12} md={8}>
+                        <Grid size={{ xs: 12, md: 8 }}>
                             {sessao.transmissaoUrl && (
                                 <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '20px' }}>
                                     <div className='player-wrapper' style={{ borderRadius: 0, width: '100%', background: '#000' }}>
@@ -172,7 +172,7 @@ class ResumoSessao extends Component {
                             </div>
                         </Grid>
 
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <div className="dashboard-card" style={{ marginBottom: '20px' }}>
                                 <h3 style={{ marginTop: 0, color: '#126B5E', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                                     <FaUsers /> Lista de Presença

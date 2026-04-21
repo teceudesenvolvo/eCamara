@@ -23,7 +23,7 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
 
         const fetchSubscriptions = async () => {
             try {
-                const response = await api.get(`/legislative-matters/id/${materia.id}`);
+                const response = await api.get(`/legislative-matter-detail/${materia.id}`);
                 if (response.data && response.data.subscricoes) {
                     setSubscricoes(response.data.subscricoes);
                 } else {
@@ -61,12 +61,12 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
 
         try {
             const updatedSubscricoes = { ...subscricoes, [subData.uid]: subData };
-            await api.patch(`/legislative-matters/id/${materia.id}`, { subscricoes: updatedSubscricoes });
+            await api.patch(`/legislative-matters/${materia.id}`, { subscricoes: updatedSubscricoes, updateType: 'subscription' });
             
             // Também salva um log na sessão para o operador ver instantaneamente
             if (sessaoId) {
                 try {
-                    const sessionResponse = await api.get(`/sessions/id/${sessaoId}`);
+                    const sessionResponse = await api.get(`/session-detail/${sessaoId}`);
                     const currentLogs = sessionResponse.data?.logs || [];
                     const newLog = {
                         id: Date.now().toString(),
@@ -74,7 +74,7 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
                         texto: `${subData.nome} subscreveu a matéria ${materia.tipoMateria} ${materia.numero} como ${tipo}`,
                         timestamp: subData.timestamp
                     };
-                    await api.patch(`/sessions/id/${sessaoId}`, { logs: [...currentLogs, newLog] });
+                    await api.patch(`/sessions/${sessaoId}`, { logs: [...currentLogs, newLog] });
                 } catch (logError) {
                     console.error("Erro ao salvar log da sessão:", logError);
                 }

@@ -20,7 +20,7 @@ const MenuDesktop = ({ onOpenChat, camaraId, logo }) => {
 
         const fetchModules = async () => {
             try {
-                const response = await api.get(`/councils/id/${camaraId}`);
+                const response = await api.get(`/councils/${camaraId}`);
                 if (response.data) {
                     const config = response.data.config || response.data.dadosConfig || {};
                     setActiveModules(config.modulos_ativos || {});

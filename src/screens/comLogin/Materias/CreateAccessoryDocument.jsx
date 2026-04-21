@@ -7,6 +7,7 @@ import {
 import { FaFileSignature, FaRobot, FaArrowLeft, FaSave, FaMagic, FaInfoCircle, FaLightbulb, FaPencilAlt } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import api from '../../../services/api';
 import { sendMessageToAIPrivate } from '../../../aiService';
 
@@ -129,7 +130,7 @@ class CreateAccessoryDocument extends Component {
         Responda APENAS o texto da justificativa em parágrafos HTML (<p>).`;
 
         try {
-            const aiResponse = await sendMessageToAIPrivate(prompt);
+            const aiResponse = await sendMessageToAIPrivate(prompt, camaraId);
             
             // Insere a justificativa no template
             const updatedContent = this.state.content.replace(
@@ -175,10 +176,9 @@ class CreateAccessoryDocument extends Component {
             <Box sx={{ display: 'flex', background: '#f8fafc', minHeight: '100vh' }}>
                 <MenuDashboard />
                 <Box component="main" sx={{ flexGrow: 1, p: 4, ml: { md: '85px' } }}>
-                
 
                     <Grid container spacing={3}>
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <Card sx={{ borderRadius: '16px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
                                 <CardContent sx={{ p: 3 }}>
                                     <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 700, mb: 3, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -262,7 +262,7 @@ class CreateAccessoryDocument extends Component {
                             </Card>
                         </Grid>
 
-                        <Grid item xs={12} md={8}>
+                        <Grid size={{ xs: 12, md: 8 }}>
                             <Paper sx={{ borderRadius: '16px', p: 0, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
                                 <Box sx={{ p: 2, background: '#f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

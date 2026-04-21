@@ -124,7 +124,7 @@ class JuizoPresidente extends Component {
         if (selectedMateria && selectedMateria.pdfBase64) {
             const link = document.createElement('a');
             link.href = `data:application/pdf;base64,${selectedMateria.pdfBase64}`;
-            link.download = `Materia_${selectedMateria.numero.replace('/', '-')}_Original.pdf`;
+            link.download = `Materia_${String(selectedMateria.numero).replace('/', '-')}_Original.pdf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -167,7 +167,7 @@ class JuizoPresidente extends Component {
         };
 
         try {
-            await api.patch(`/legislative-matters/id/${selectedMateria.id}`, despachoData);
+            await api.patch(`/legislative-matters/${selectedMateria.id}`, despachoData);
             this.generateDespachoPDF(selectedMateria, despachoText, statusFinal, signatureData);
 
             // Atualiza a lista local
@@ -262,10 +262,10 @@ class JuizoPresidente extends Component {
         
         Contexto da decisão: ${promptContext}
 
-        O texto deve ser direto, formal e consistente com o contexto fornecido. Não use markdown.`;
+        O texto deve ser direto, formal e consistente com o contexto fornecido. Não use markdown nem tags HTML.`;
 
         try {
-            const response = await sendMessageToAIPrivate(prompt);
+            const response = await sendMessageToAIPrivate(prompt, camaraId);
             this.setState({ despachoText: response, isGeneratingDespacho: false });
         } catch (error) {
             console.error("Erro na IA:", error);
