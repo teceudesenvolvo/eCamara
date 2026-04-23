@@ -179,8 +179,7 @@ class AddProducts extends Component {
                     numero: nextNumero,
                     logoBase64,
                     vereadores
-                },
-                this.handleGeneratePDF
+                }
             );
         } catch (error) {
             console.error("Erro ao buscar configurações:", error);
@@ -222,16 +221,11 @@ class AddProducts extends Component {
         const { name, value } = e.target;
         this.setState({
             [name]: value
-        }, () => {
-            // Callback para gerar PDF após o estado ser atualizado
-            this.handleGeneratePDF();
         });
     };
 
     handleEditorChange = (content) => {
-        this.setState({ textoMateria: content }, () => {
-            this.handleGeneratePDF();
-        });
+        this.setState({ textoMateria: content });
     };
 
     stripHtml = (html) => {
@@ -277,30 +271,19 @@ class AddProducts extends Component {
     handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            this.setState({
-                file: file,
-                fileBase64: event.target.result,
-                fileName: file.name
-            }, () => {
-                this.handleGeneratePDF();
-            });
-        };
-        reader.readAsDataURL(file);
+        // Armazena o arquivo real; não converte para Base64
+        this.setState({ file: file, fileName: file.name });
     };
 
     // Este método agora simplesmente define isSigned como true e regenera o PDF
     handleSignDocument = () => {
-        this.setState({ isSigned: true }, () => {
-            this.handleGeneratePDF(); // Gera PDF com a assinatura
-        });
+        this.setState({ isSigned: true });
     };
 
-    // Abre o popup do PDF
     openPdfPopup = () => {
-        this.setState({ showPdfPopup: true });
+        this.handleGeneratePDF(() => {
+            this.setState({ showPdfPopup: true });
+        });
     };
 
     toggleAiChat = () => {
@@ -427,7 +410,7 @@ class AddProducts extends Component {
                 textoMateria: textoResponse.trim(),
                 isGenerating: false,
                 showEditor: true
-            }, this.handleGeneratePDF);
+            });
 
         } catch (error) {
             console.error("Erro na geração completa via IA:", error);
@@ -591,59 +574,63 @@ class AddProducts extends Component {
         const { camaraId } = this.state;
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
-        // Simula a geração de protocolo
         const newProtocol = `${new Date().getFullYear()}/${Math.floor(Math.random() * 100000)}`;
 
-        const materiaData = {
-            userId: user.id,
-            userEmail: user.email,
-            protocolo: newProtocol,
-            status: 'Aguardando Parecer Jurídico',
-            createdAt: new Date().toISOString(),
+        // Monta FormData para suportar envio de arquivo real (Supabase Storage)
+        const formData = new FormData();
 
-            // Identificação
-            tipoMateria: this.state.tipoMateria,
-            ano: parseInt(this.state.ano) || new Date().getFullYear(),
-            numero: parseInt(this.state.numero) || 0,
-            dataApresenta: this.state.dataApresenta,
-            tipoApresentacao: this.state.tipoApresentacao,
-            tipoAutor: this.state.tipoAutor,
-            autor: this.state.autor,
+        // Campos simples
+        formData.append('userId', user.id || '');
+        formData.append('userEmail', user.email || '');
+        formData.append('protocolo', newProtocol);
+        formData.append('status', 'Aguardando Parecer Jurídico');
+        formData.append('createdAt', new Date().toISOString());
+        formData.append('tipoMateria', this.state.tipoMateria || '');
+        formData.append('ano', String(parseInt(this.state.ano) || new Date().getFullYear()));
+        formData.append('numero', String(parseInt(this.state.numero) || 0));
+        formData.append('dataApresenta', this.state.dataApresenta || '');
+        formData.append('tipoApresentacao', this.state.tipoApresentacao || '');
+        formData.append('tipoAutor', this.state.tipoAutor || '');
+        formData.append('autor', this.state.autor || '');
+        formData.append('apelido', this.state.apelido || '');
+        formData.append('prazo', this.state.prazo || '');
+        formData.append('materiaPolemica', String(this.state.materiaPolemica === 'Sim' || this.state.materiaPolemica === true));
+        formData.append('objeto', this.state.objeto || '');
+        formData.append('regTramita', this.state.regTramita || '');
+        formData.append('dataPrazo', this.state.dataPrazo || '');
+        formData.append('publicacao', String(Boolean(this.state.publicacao)));
+        formData.append('isComplementar', String(this.state.isComplementar === 'Sim' || this.state.isComplementar === true));
+        formData.append('isSigned', String(this.state.isSigned));
+        formData.append('titulo', this.state.titulo || '');
+        formData.append('ementa', this.state.ementa || '');
+        formData.append('indexacao', this.state.indexacao || '');
+        formData.append('observacao', this.state.observacao || '');
+        formData.append('textoMateria', this.state.textoMateria || '');
+        formData.append('anexoNome', this.state.fileName || '');
 
-            // Detalhes
-            apelido: this.state.apelido,
-            prazo: this.state.prazo,
-            materiaPolemica: this.state.materiaPolemica === 'Sim' || this.state.materiaPolemica === true,
-            objeto: this.state.objeto,
-            regTramita: this.state.regTramita,
-            dataPrazo: this.state.dataPrazo,
-            publicacao: Boolean(this.state.publicacao),
-            isComplementar: this.state.isComplementar === 'Sim' || this.state.isComplementar === true,
-            isSigned: this.state.isSigned,
+        // Objetos complexos precisam ser stringificados
+        if (this.state.signatureMetadata) {
+            formData.append('signatureMetadata', JSON.stringify(this.state.signatureMetadata));
+        }
+        if (this.state.messages) {
+            formData.append('chatHistory', JSON.stringify(this.state.messages));
+        }
 
-            // Conteúdo
-            titulo: this.state.titulo,
-            ementa: this.state.ementa,
-            indexacao: this.state.indexacao,
-            observacao: this.state.observacao,
-            textoMateria: this.state.textoMateria,
-
-            signatureMetadata: this.state.signatureMetadata,
-            chatHistory: this.state.messages,
-            pdfBase64: this.state.pdfData,
-            anexoBase64: this.state.fileBase64,
-            anexoNome: this.state.fileName
-        };
+        // Arquivo real (se houver anexo)
+        if (this.state.file) {
+            formData.append('file', this.state.file, this.state.fileName);
+        }
 
         try {
-            await api.post(`/legislative-matters/${camaraId}`, materiaData);
+            await api.post(`/legislative-matters/${camaraId}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
 
             this.setState({
                 protocolGenerated: newProtocol,
                 protocolo: newProtocol,
                 status: 'Aguardando Parecer Jurídico'
             }, () => {
-                this.handleGeneratePDF();
                 alert(`Documento Assinado Digitalmente e Protocolado!\nProtocolo: ${newProtocol}\nStatus: Enviado para Parecer da Presidência.`);
                 this.props.history.push('/admin/materias-dash/' + camaraId);
             });
@@ -653,7 +640,7 @@ class AddProducts extends Component {
         }
     };
 
-    handleGeneratePDF = () => {
+    handleGeneratePDF = (callback) => {
         // Desestruturar todos os dados do estado
         const {
             tipoMateria, ano, numero, dataApresenta, protocolo, tipoApresentacao, tipoAutor, autor, apelido, camaraId,
@@ -816,7 +803,9 @@ class AddProducts extends Component {
         };
 
         pdfMake.createPdf(docDefinition).getBase64((data) => {
-            this.setState({ pdfData: data });
+            this.setState({ pdfData: data }, () => {
+                if (typeof callback === 'function') callback();
+            });
         });
     };
 
@@ -1208,7 +1197,7 @@ class AddProducts extends Component {
                                                     variant="contained"
                                                     size="small"
                                                     startIcon={<FaCheckCircle />}
-                                                    onClick={() => this.setState({ showAiChat: false, showEditor: true }, this.handleGeneratePDF)}
+                                                    onClick={() => this.setState({ showAiChat: false, showEditor: true })}
                                                     sx={{ mt: 2, textTransform: 'none', borderRadius: '8px', backgroundColor: '#126B5E' }}
                                                 >
                                                     Aplicar ao Formulário

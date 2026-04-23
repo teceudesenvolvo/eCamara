@@ -121,7 +121,12 @@ class JuizoPresidente extends Component {
 
     handleDownloadOriginalPDF = () => {
         const { selectedMateria } = this.state;
-        if (selectedMateria && selectedMateria.pdfBase64) {
+        if (!selectedMateria) return;
+
+        // Suporta URL do Supabase (novo) e fallback Base64 (legado)
+        if (selectedMateria.pdfUrl || selectedMateria.anexoUrl) {
+            window.open(selectedMateria.pdfUrl || selectedMateria.anexoUrl, '_blank');
+        } else if (selectedMateria.pdfBase64) {
             const link = document.createElement('a');
             link.href = `data:application/pdf;base64,${selectedMateria.pdfBase64}`;
             link.download = `Materia_${String(selectedMateria.numero).replace('/', '-')}_Original.pdf`;
@@ -604,9 +609,18 @@ class JuizoPresidente extends Component {
                                         </div>
                                     </div>
 
-                                    {/* Ações do PDF */}
+                                    {/* Ações do PDF - suporta URL (Supabase) e fallback Base64 (legado) */}
                                     <div style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
-                                        <button className="btn-secondary" onClick={() => window.open(`data:application/pdf;base64,${selectedMateria.pdfBase64}`)} style={{ flex: 1, height: '45px' }}>
+                                        <button
+                                            className="btn-secondary"
+                                            style={{ flex: 1, height: '45px' }}
+                                            onClick={() => {
+                                                const url = selectedMateria.pdfUrl || selectedMateria.anexoUrl;
+                                                if (url) window.open(url, '_blank');
+                                                else if (selectedMateria.pdfBase64) window.open(`data:application/pdf;base64,${selectedMateria.pdfBase64}`);
+                                                else alert('PDF original não disponível.');
+                                            }}
+                                        >
                                             <FaEye /> Ver PDF Original
                                         </button>
                                         <button className="btn-secondary" onClick={this.handleDownloadOriginalPDF} style={{ flex: 1, height: '45px' }}>

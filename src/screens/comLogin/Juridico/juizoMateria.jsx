@@ -112,9 +112,20 @@ class JuizoMateria extends Component {
         }
     };
 
-    generateParecerPDFBase64 = (materia, parecerText, decisao) => {
+    // Gera o blob do PDF do parecer para uso local ou upload
+    generateParecerPDFBlob = (materia, parecerText, decisao, signatureMetadata) => {
         return new Promise((resolve) => {
-            const docDefinition = this.getDocDefinition(materia, parecerText, decisao);
+            const docDefinition = this.getDocDefinition(materia, parecerText, decisao, signatureMetadata);
+            pdfMake.createPdf(docDefinition).getBlob((blob) => {
+                resolve(blob);
+            });
+        });
+    };
+
+    // Gera Base64 localmente (apenas para visualização no popup)
+    generateParecerPDFBase64 = (materia, parecerText, decisao, signatureMetadata) => {
+        return new Promise((resolve) => {
+            const docDefinition = this.getDocDefinition(materia, parecerText, decisao, signatureMetadata);
             pdfMake.createPdf(docDefinition).getBase64((data) => {
                 resolve(data);
             });
@@ -126,14 +137,32 @@ class JuizoMateria extends Component {
         if (!selectedMateria) return;
 
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
-        
         const signatureMetadata = {
             nome: user.name || 'Procurador',
             email: user.email,
             timestamp: new Date().toISOString()
         };
 
-        const pdfBase64 = await this.generateParecerPDFBase64(selectedMateria, parecerText, decisao, signatureMetadata);
+        // Gerar blob para upload e Base64 para preview local
+        const [pdfBlob, pdfBase64] = await Promise.all([
+            this.generateParecerPDFBlob(selectedMateria, parecerText, decisao, signatureMetadata),
+            this.generateParecerPDFBase64(selectedMateria, parecerText, decisao, signatureMetadata)
+        ]);
+
+        // Upload do PDF para o Supabase via endpoint genérico
+        let parecerPdfUrl = null;
+        try {
+            const formData = new FormData();
+            formData.append('file', pdfBlob, `parecer_${selectedMateria.protocolo || selectedMateria.id}.pdf`);
+            formData.append('slug', camaraId);
+            formData.append('userId', user.id || 'anonymous');
+            formData.append('ref', `parecer_${selectedMateria.id}`);
+            const uploadResponse = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            parecerPdfUrl = uploadResponse.data.url;
+            console.log('[Upload] Parecer PDF URL:', parecerPdfUrl);
+        } catch (uploadError) {
+            console.warn('[Upload] Falha no upload do parecer. Continuando sem URL:', uploadError);
+        }
 
         const newStatus = decisao === 'favoravel' ? 'Parecer Favorável' : 'Parecer Contrário';
         const parecerUpdateData = {
@@ -141,18 +170,15 @@ class JuizoMateria extends Component {
             parecer: parecerText || "Não foi fornecida fundamentação.",
             decisao: decisao,
             parecerDate: new Date().toISOString(),
-            parecerPdfBase64: pdfBase64,
+            parecerPdfUrl: parecerPdfUrl, // Salva URL, não Base64
             parecerSignatureMetadata: signatureMetadata
         };
 
         try {
-            // Atualiza a matéria via patch
             await api.patch(`/legislative-matters/id/${selectedMateria.id}`, parecerUpdateData);
-
-            // Atualiza a lista local para refletir a mudança
             this.setState(prevState => ({
                 materias: prevState.materias.map(m => m.id === selectedMateria.id ? { ...m, ...parecerUpdateData } : m),
-                pdfData: pdfBase64,
+                pdfData: pdfBase64, // Preview local
                 showPdfPopup: true,
                 selectedMateria: null
             }));

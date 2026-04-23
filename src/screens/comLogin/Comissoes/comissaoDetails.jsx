@@ -39,8 +39,7 @@ class ComissaoDetails extends Component {
             // State for Voting
             votingMateria: null,
             memberVote: 'Favorável',
-            votoEmSeparadoFile: null,
-            votoEmSeparadoBase64: null
+            votoEmSeparadoFile: null
         };
     }
 
@@ -163,19 +162,13 @@ class ComissaoDetails extends Component {
     handleVotoFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                this.setState({
-                    votoEmSeparadoFile: file,
-                    votoEmSeparadoBase64: reader.result
-                });
-            };
-            reader.readAsDataURL(file);
+            // Armazena o arquivo real; não converte para Base64
+            this.setState({ votoEmSeparadoFile: file });
         }
     };
 
     handleCastVote = async () => {
-        const { votingMateria, memberVote, votoEmSeparadoBase64, currentUser } = this.state;
+        const { votingMateria, memberVote, votoEmSeparadoFile, currentUser, camaraId } = this.state;
         if (!currentUser) return;
         
         const signatureMetadata = {
@@ -192,14 +185,26 @@ class ComissaoDetails extends Component {
             signature: signatureMetadata
         };
 
-        if (memberVote === 'Voto em Separado' && votoEmSeparadoBase64) {
-            voteData.parecerBase64 = votoEmSeparadoBase64;
+        // Upload do arquivo de voto em separado para o Supabase
+        if (memberVote === 'Voto em Separado' && votoEmSeparadoFile) {
+            try {
+                const formData = new FormData();
+                formData.append('file', votoEmSeparadoFile, votoEmSeparadoFile.name);
+                formData.append('slug', camaraId);
+                formData.append('userId', currentUser.id || 'anonymous');
+                formData.append('ref', `voto_${votingMateria.id}_${currentUser.id}`);
+                const uploadResponse = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                voteData.parecerUrl = uploadResponse.data.url;
+                console.log('[Upload] Voto em Separado URL:', voteData.parecerUrl);
+            } catch (uploadError) {
+                console.warn('[Upload] Falha no upload do voto em separado:', uploadError);
+            }
         }
 
         try {
             const updatedVotos = { ...votingMateria.votosComissao, [currentUser.id]: voteData };
             await api.patch(`/legislative-matters/id/${votingMateria.id}`, { votosComissao: updatedVotos });
-            this.setState({ showVotingModal: false, votingMateria: null, memberVote: 'Favorável', votoEmSeparadoFile: null, votoEmSeparadoBase64: null });
+            this.setState({ showVotingModal: false, votingMateria: null, memberVote: 'Favorável', votoEmSeparadoFile: null });
             this.fetchMaterias();
         } catch (error) {
             console.error("Erro ao computar voto:", error);

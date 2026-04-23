@@ -46,6 +46,7 @@ class Perfil extends Component {
             editCargo: '',
             editBio: '',
             editFoto: '',
+            avatarFile: null,
 
             stats: {
                 total: 0,
@@ -193,15 +194,15 @@ class Perfil extends Component {
     handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                this.setState({ editFoto: reader.result });
-            };
-            reader.readAsDataURL(file);
+            // Armazena o arquivo real e cria uma URL de preview local (sem Base64 permanente)
+            this.setState({
+                avatarFile: file,
+                editFoto: URL.createObjectURL(file) // Preview temporário
+            });
         }
     };
     handleSaveProfile = async () => {
-        const { user, editNome, editCargo, editBio, editFoto } = this.state;
+        const { user, editNome, editBio, avatarFile } = this.state;
         const camaraId = this.props.match.params.camaraId;
 
         if (!user) return;
@@ -209,20 +210,29 @@ class Perfil extends Component {
         this.setState({ loading: true });
 
         try {
-            await api.patch(`/users/${user.id}`, {
-                name: editNome,
-                bio: editBio,
-                foto: editFoto
+            const formData = new FormData();
+            formData.append('name', editNome);
+            formData.append('bio', editBio);
+
+            if (avatarFile) {
+                formData.append('avatar', avatarFile, avatarFile.name);
+            }
+
+            const response = await api.patch(`/users/${user.id}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            // Atualiza o objeto user no estado para refletir na UI imediatamente
+            const updatedFoto = response.data?.foto || this.state.editFoto;
+
             this.setState(prevState => ({
                 user: {
                     ...prevState.user,
                     name: editNome,
                     bio: editBio,
-                    foto: editFoto
+                    foto: updatedFoto
                 },
+                editFoto: updatedFoto,
+                avatarFile: null,
                 loading: false
             }));
 
