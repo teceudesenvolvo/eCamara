@@ -5,8 +5,8 @@ import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip,
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
-import { sendMessageToAIPrivate, analisarMateria } from '../../../aiService';
-import api from '../../../services/api';
+import { sendMessageToAIPrivate, analisarMateria } from '../../../aiService.js';
+import api from '../../../services/api.js';
 import {
     TextField,
     Button,
@@ -99,6 +99,8 @@ class AddProducts extends Component {
             aiTechnicalOpinion: '', // Novo estado para o parecer técnico da IA
             loadingConfig: true,
             vereadores: [], // Lista de vereadores para o select de autor
+            creationPath: null, // 'ai' ou 'form' para controle de fluxo inicial
+            councilName: '', // Nome amigável da Câmara
         };
         this.messagesEndRef = React.createRef();
         this.chatContainerRef = React.createRef();
@@ -136,7 +138,11 @@ class AddProducts extends Component {
                 api.get(`/users/council/${camaraId}`).catch(() => ({ data: [] }))
             ]);
 
-            const configData = configResponse.data || {};
+            // Extração robusta dos dados da câmara lidando com possíveis retornos em array
+            const councilData = Array.isArray(configResponse.data) ? configResponse.data[0] : (configResponse.data || {});
+            const councilName = councilData.name || ''; 
+            const configData = councilData.config || councilData.dadosConfig || {};
+
             const baseConhecimento = configData["base-conhecimento"] || {};
             const layoutConfig = configData.layout || {};
             const homeConfig = configData.home || {};
@@ -147,6 +153,7 @@ class AddProducts extends Component {
 
             // --- Lógica de Auto-preenchimento ---
             const currentYear = new Date().getFullYear().toString();
+            const today = new Date().toISOString().split('T')[0]; // Data atual para autopreenchimento
             const autorName = user.name || '';
 
             // Busca as matérias do usuário para definir o próximo número
@@ -176,8 +183,10 @@ class AddProducts extends Component {
                     loadingConfig: false,
                     autor: autorName,
                     ano: currentYear,
+                    dataApresenta: today,
                     numero: nextNumero,
                     logoBase64,
+                    councilName,
                     vereadores
                 }
             );
@@ -189,6 +198,10 @@ class AddProducts extends Component {
 
     // Função auxiliar para converter imagem URL em Base64, agora como método de classe
     getBase64 = async (url) => { //
+        // Se a URL já for uma string Base64, retorna-a diretamente
+        if (url && url.startsWith('data:image/')) {
+            return url;
+        }
         if (!url) return null;
         try {
             const response = await fetch(url);
@@ -576,9 +589,15 @@ class AddProducts extends Component {
 
         const newProtocol = `${new Date().getFullYear()}/${Math.floor(Math.random() * 100000)}`;
 
+        // Gerar o PDF oficial para enviar o arquivo real para o storage
+        const docDefinition = this.getDocDefinition();
+        pdfMake.createPdf(docDefinition).getBlob(async (blob) => {
+            const pdfFile = new File([blob], `Materia_${this.state.numero.replace('/', '-')}.pdf`, { type: 'application/pdf' });
+
         // Monta FormData para suportar envio de arquivo real (Supabase Storage)
         const formData = new FormData();
 
+        formData.append('pdfFile', pdfFile); // Campo para o Multer processar o upload no backend
         // Campos simples
         formData.append('userId', user.id || '');
         formData.append('userEmail', user.email || '');
@@ -638,72 +657,54 @@ class AddProducts extends Component {
             console.error("Erro ao salvar matéria:", error);
             alert("Erro ao protocolar matéria. Verifique sua conexão e tente novamente.");
         }
+        });
     };
 
-    handleGeneratePDF = (callback) => {
-        // Desestruturar todos os dados do estado
+    getDocDefinition = () => {
         const {
-            tipoMateria, ano, numero, dataApresenta, protocolo, tipoApresentacao, tipoAutor, autor, apelido, camaraId,
-            prazo, materiaPolemica, objeto, regTramita, status, dataPrazo, publicacao, isComplementar, tipoMateriaExt, footerConfig,
-            numeroMateriaExt, anoMateriaExt, dataMateriaExt, titulo, ementa, indexacao, observacao, textoMateria, isSigned,
-            logoBase64, signatureBase64, signatureMetadata
+            tipoMateria, numero, protocolo, autor, camaraId, footerConfig, homeConfig,
+            titulo, ementa, textoMateria, isSigned, logoBase64, signatureMetadata, councilName, ano
         } = this.state;
-
-        // Conteúdo base do PDF
+        
         const docContent = [
-            logoBase64 && {
-                image: logoBase64, // Usa a versão Base64
-                width: 80,
-                alignment: 'right'
-            },
-            {
-                text: this.state.homeConfig.titulo || `Câmara Municipal de ${camaraId}`,
+            // Logo posicionada no canto superior direito (Absolute Position) para não interferir no fluxo centralizado
+            logoBase64 ? { 
+                image: logoBase64, 
+                width: 70,
+                absolutePosition: { x: 480, y: 35 } 
+            } : null,
+            // Nome da Câmara (prioriza o nome institucional 'councilName')
+            { text: councilName || homeConfig.titulo || 'Câmara Municipal', alignment: 'center', style: 'timbrado', margin: [0, 10, 0, 0] },
+            footerConfig.slogan && { text: footerConfig.slogan, style: 'small', alignment: 'center', margin: [0, 0, 0, 10], italics: true },
+            { text: `Protocolo: ${protocolo || 'Pendente'}`, alignment: 'center' },
+            { 
+                text: titulo || `${(tipoMateria || 'Matéria').toUpperCase()} Nº ${numero}/${ano}`, 
+                style: 'header', 
                 alignment: 'center',
-                style: 'timbrado'
-            },
-            {
-                text: `Protocolo: ${protocolo}`, // Adiciona fallback
-                alignment: 'center'
-            },
-            {
-                text: titulo, // Adiciona fallback
-                style: 'header',
-                alignment: 'center'
-            },
-
-            { text: '\n' }, // Espaçamento
-
-
-            // Dados Textuais
-            {
-                text: 'Dados Textuais',
-                alignment: 'center',
-                style: 'subheader'
+                marginTop: 20 
             },
             { text: '\n' },
+            { text: 'Dados Textuais', alignment: 'center', style: 'subheader' },
+            { text: '\n' },
             { text: [{ text: 'Ementa: ', bold: true }, ementa || 'Não informado'], style: 'descricoes' },
-
-            // Minuta da Lei (Se houver)
             textoMateria && { text: '\n\n' },
             textoMateria && { canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1 }] },
-            textoMateria && { stack: this.processHtmlToPdfMake(textoMateria), marginTop: 15 },
-        ].filter(Boolean); // Filtra elementos falsy (como os blocos de Origem Externa vazios)
+            textoMateria && { stack: this.processHtmlToPdfMake(textoMateria), marginTop: 20 },
+        ].filter(Boolean);
 
         const today = new Date();
         const formattedDate = today.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-        const cityName = this.state.homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const cityName = homeConfig.cidade || councilName || camaraId;
 
-        // Adiciona bloco de encerramento e assinatura
         docContent.push(
-            { text: '\n\n\n' }, // Espaçador
+            { text: '\n\n\n' },
             { text: `${cityName}, ${formattedDate}.`, alignment: 'center', style: 'infoText' },
-            { text: '\n\n\n\n' }, // Espaçador para assinatura
+            { text: '\n\n\n\n' },
             { text: '________________________________', alignment: 'center' },
-            { text: this.state.autor || 'Vereador(a) Proponente', alignment: 'center', style: 'small', bold: true, margin: [0, 5, 0, 0] },
+            { text: autor || 'Vereador(a) Proponente', alignment: 'center', style: 'small', bold: true, margin: [0, 5, 0, 0] },
             { text: 'Vereador(a)', alignment: 'center', style: 'small' }
         );
 
-        // Adiciona a assinatura digital se isSigned for true
         if (isSigned) {
             docContent.push(
                 { text: '\n\n' },
@@ -722,14 +723,13 @@ class AddProducts extends Component {
 
         const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
 
-        const docDefinition = {
+        return {
             content: docContent,
-            // Adiciona numeração de páginas no rodapé
             footer: (currentPage, pageCount) => ({
                 stack: [
-                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
                     { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
-                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'center', fontSize: 8, margin: [0, 2, 0, 0] }
+                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
                 ]
             }),
             styles: {
@@ -747,61 +747,19 @@ class AddProducts extends Component {
                     marginBottom: 10,
                     color: '#555'
                 },
-                infoText: { // Novo estilo para as informações em parágrafo
-                    fontSize: 10,
-                    marginBottom: 3,
-                    color: '#444'
-                },
-                descricoes: { // Para Ementa, Indexação, Observação
-                    marginTop: 10,
-                    marginBottom: 10,
-                    fontSize: 10,
-                    color: '#444'
-                },
-                timbrado: {
-                    fontSize: 12,
-                    bold: true,
-                    marginBottom: 10,
-                    color: '#777'
-                },
-                quote: {
-                    italics: true
-                },
-                small: {
-                    fontSize: 9,
-                    color: '#666'
-                },
-                assinatura: {
-                    marginTop: 30,
-                    marginBottom: 0
-                },
-                underline: {
-                    marginTop: -10,
-                    color: '#333'
-                },
-                digitalSignatureInfo: {
-                    fontSize: 8,
-                    color: '#007bff',
-                    marginTop: 10,
-                    italics: true,
-                    background: '#f0f8ff',
-                    padding: 5,
-                    borderRadius: 4
-                },
-                textoLeiParagraph: {
-                    fontSize: 12,
-                    alignment: 'justify',
-                    lineHeight: 1.5,
-                    marginBottom: 10, // Espaço entre parágrafos
-                    leadingIndent: 30 // Identação da primeira linha (padrão legislativo)
-                },
-                footerStyle: {
-                    fontSize: 8,
-                    color: '#777',
-                }
+                infoText: { fontSize: 10, marginBottom: 3, color: '#444' },
+                descricoes: { marginTop: 10, marginBottom: 10, fontSize: 10, color: '#444' },
+                timbrado: { fontSize: 12, bold: true, marginBottom: 10, color: '#777' },
+                small: { fontSize: 9, color: '#666' },
+                digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 10, italics: true, background: '#f0f8ff', padding: 5, borderRadius: 4 },
+                textoLeiParagraph: { fontSize: 12, alignment: 'justify', lineHeight: 1.5, marginBottom: 10, leadingIndent: 30 },
+                footerStyle: { fontSize: 8, color: '#777' }
             }
         };
+    };
 
+    handleGeneratePDF = (callback) => {
+        const docDefinition = this.getDocDefinition();
         pdfMake.createPdf(docDefinition).getBase64((data) => {
             this.setState({ pdfData: data }, () => {
                 if (typeof callback === 'function') callback();
@@ -810,7 +768,7 @@ class AddProducts extends Component {
     };
 
     render() {
-        const { pdfData, isSigned, showPdfPopup, showPasswordModal, passwordInput, passwordError, loadingConfig, isGenerating, aiTechnicalOpinion, showAiChat, messages, currentInput } = this.state;
+        const { pdfData, showPdfPopup, showPasswordModal, passwordInput, passwordError, loadingConfig, isGenerating, aiTechnicalOpinion, showAiChat, messages, currentInput, creationPath } = this.state;
 
         if (loadingConfig) {
             return (
@@ -825,6 +783,42 @@ class AddProducts extends Component {
             <div className='App-header' style={{ background: '#f4f7f6', minHeight: '100vh', alignItems: 'flex-start', flexDirection: 'row' }}>
                 <MenuDashboard />
 
+                {creationPath === null ? (
+                    <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', ml: { md: '65px' } }}>
+                        <Typography variant="h4" sx={{ color: '#126B5E', fontWeight: 800, mb: 6 }}>Como deseja criar sua matéria?</Typography>
+                        <Grid container spacing={4} justifyContent="center" sx={{ maxWidth: '900px' }}>
+                            <Grid item xs={12} sm={6}>
+                                <Card 
+                                    sx={{ cursor: 'pointer', borderRadius: '24px', transition: '0.3s', '&:hover': { transform: 'translateY(-10px)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' } }}
+                                    onClick={() => this.setState({ creationPath: 'ai', showAiChat: true })}
+                                >
+                                    <CardContent sx={{ p: 5, textAlign: 'center' }}>
+                                        <Box sx={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: 'rgba(255, 116, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                                            <FaRobot size={40} color="#FF740F" />
+                                        </Box>
+                                        <Typography variant="h5" fontWeight="bold" gutterBottom>Assistente de IA</Typography>
+                                        <Typography variant="body2" color="textSecondary">Redija o texto técnico automaticamente através de um chat inteligente treinado no seu regimento.</Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Card 
+                                    sx={{ cursor: 'pointer', borderRadius: '24px', transition: '0.3s', '&:hover': { transform: 'translateY(-10px)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' } }}
+                                    onClick={() => this.setState({ creationPath: 'form' })}
+                                >
+                                    <CardContent sx={{ p: 5, textAlign: 'center' }}>
+                                        <Box sx={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: 'rgba(18, 107, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                                            <FaEdit size={35} color="#126B5E" />
+                                        </Box>
+                                        <Typography variant="h5" fontWeight="bold" gutterBottom>Formulário Completo</Typography>
+                                        <Typography variant="body2" color="textSecondary">Preenchimento manual de todos os campos técnicos e redação direta no editor de texto.</Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        </Grid>
+                    </Box>
+                ) : (
+                    <>
                 <Box component="main" sx={{
                     flexGrow: 1,
                     p: { xs: 2, md: 5 },
@@ -1348,6 +1342,8 @@ class AddProducts extends Component {
                             </Box>
                         </Box>
                     </div>
+                )}
+                    </>
                 )}
             </div>
         );

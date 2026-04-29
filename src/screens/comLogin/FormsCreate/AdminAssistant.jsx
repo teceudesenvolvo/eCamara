@@ -67,6 +67,7 @@ const AdminAssistant = () => {
         home: {},
         footer: {},
         logoBase64: null,
+        councilName: '',
         camaraId: 'camara-teste'
     });
     const [attachment, setAttachment] = useState(null);
@@ -95,7 +96,11 @@ const AdminAssistant = () => {
 
             try {
                 const response = await api.get(`/councils/${camaraId}`);
-                const configData = response.data || {};
+                
+                // Extração robusta dos dados da câmara lidando com possíveis retornos em array
+                const councilData = Array.isArray(response.data) ? response.data[0] : (response.data || {});
+                const councilName = councilData.name || ''; // Usa o nome institucional
+                const configData = councilData.config || councilData.dadosConfig || {};
                 
                 const layoutData = configData.layout || {};
                 let logoB64 = null;
@@ -105,6 +110,7 @@ const AdminAssistant = () => {
 
                 setCamaraConfigs({
                     camaraId,
+                    councilName,
                     baseConhecimento: configData["base-conhecimento"] || {},
                     layout: layoutData,
                     home: configData.home || {},
@@ -304,11 +310,15 @@ const AdminAssistant = () => {
     };
 
     const generateDocDefinition = () => {
-        const { logoBase64, home, footer, camaraId } = camaraConfigs;
+        const { logoBase64, home, footer, camaraId, councilName } = camaraConfigs;
 
         const content = [
-            logoBase64 && { image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] },
-            { text: home.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
+            logoBase64 ? { 
+                image: logoBase64, 
+                width: 70, 
+                absolutePosition: { x: 480, y: 35 } 
+            } : null,
+            { text: councilName || home.titulo || 'Câmara Municipal', style: 'header', alignment: 'center', margin: [0, 10, 0, 0] },
             footer.slogan && { text: footer.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
             { text: docType.toUpperCase(), style: 'subheader', alignment: 'center', bold: true, margin: [0, 0, 0, 20] },
             ...processHtmlToPdfMake(generatedContent)
@@ -316,7 +326,7 @@ const AdminAssistant = () => {
 
         const today = new Date();
         const formattedDate = today.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-        const cityName = home.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const cityName = home.cidade || councilName || camaraId;
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
         const signatoryName = formData.de || user.name || '_________________________';
 

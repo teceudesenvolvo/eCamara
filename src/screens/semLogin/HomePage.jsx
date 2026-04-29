@@ -55,7 +55,17 @@ class HomePage extends Component {
             const primaryColor = layout.corPrimaria || '#126B5E';
 
             // 2. Representatives (vereadores)
-            const vereadores = (usersResponse.data || []).filter(u => u.tipo === 'vereador');
+            const vereadores = (usersResponse.data || [])
+                .filter(u => {
+                    const role = (u.role || u.tipo || '').toLowerCase();
+                    const cargo = (u.cargo || '').toLowerCase();
+                    return role === 'vereador' || role === 'presidente' || role === 'parlamentar' || 
+                           cargo.includes('vereador') || cargo.includes('presidente');
+                })
+                .map(u => ({
+                    ...u,
+                    foto: u.foto || u.avatar || u.photoURL || 'https://via.placeholder.com/150'
+                }));
 
             // 3. Recent matters for "Acontece na Câmara"
             const agendaRaw = mattersResponse.data || [];

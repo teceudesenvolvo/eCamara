@@ -14,8 +14,8 @@ import NormasJuridicas from './screens/semLogin/NormasJuridicas.jsx';
 import Comissoes from './screens/semLogin/Comissoes.jsx';
 
 // Com Login - Formulários e Dashboards
-import AddMateria from './screens/comLogin/FormsCreate/addMaterias.jsx';
-import Configuracoes from './screens/comLogin/FormsCreate/Configuracoes.jsx';
+import AddMateria from './screens/comLogin/Materias/addMaterias.jsx';
+import Configuracoes from './screens/comLogin/Config/Configuracoes.jsx';
 import AdminAssistant from './screens/comLogin/FormsCreate/AdminAssistant.jsx';
 
 // Com Login - Dashboards e Detalhes

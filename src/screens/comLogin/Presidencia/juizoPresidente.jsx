@@ -28,6 +28,7 @@ class JuizoPresidente extends Component {
             comissoesDisponiveis: [],
             materias: [],
             loading: true,
+            councilName: '',
             homeConfig: {},
             footerConfig: {},
             camaraId: this.props.match.params.camaraId,
@@ -75,7 +76,10 @@ class JuizoPresidente extends Component {
         const { camaraId } = this.state;
         try {
             const response = await api.get(`/councils/${camaraId}`);
-            const configData = response.data || {};
+            // Extração robusta dos dados da câmara lidando com possíveis retornos em array
+            const councilData = Array.isArray(response.data) ? response.data[0] : (response.data || {});
+            const councilName = councilData.name || ''; // Usa o nome institucional
+            const configData = councilData.config || councilData.dadosConfig || {};
             const layoutData = configData.layout || {};
             
             if (layoutData.logoLight) {
@@ -86,6 +90,7 @@ class JuizoPresidente extends Component {
 
             this.setState({
                 homeConfig: configData.home || {},
+                councilName,
                 footerConfig: configData.footer || {}
             });
         } catch (error) {
@@ -279,18 +284,20 @@ class JuizoPresidente extends Component {
     };
 
     generateDespachoPDF = (materia, despachoText, statusFinal, signatureData) => {
-        const { logoBase64, homeConfig, footerConfig, camaraId } = this.state;
+        const { logoBase64, homeConfig, footerConfig, camaraId, councilName } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
         
-        const cityName = homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const cityName = homeConfig.cidade || councilName || camaraId;
         const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
 
         const docDefinition = {
             content: [
-                logoBase64 && { 
-                    image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] 
-                },
-                { text: homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
+                logoBase64 ? { 
+                    image: logoBase64, 
+                    width: 70, 
+                    absolutePosition: { x: 480, y: 35 } 
+                } : null,
+                { text: councilName || homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center', margin: [0, 10, 0, 0] },
                 footerConfig.slogan && { text: footerConfig.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
                 { text: 'Gabinete da Presidência', style: 'subheader', alignment: 'center', marginBottom: 30 },
 

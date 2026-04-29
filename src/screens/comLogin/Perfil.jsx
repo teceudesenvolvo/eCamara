@@ -215,7 +215,10 @@ class Perfil extends Component {
             formData.append('bio', editBio);
 
             if (avatarFile) {
-                formData.append('foto', avatarFile, avatarFile.name);
+                // O backend (Multer) espera a chave 'avatar' no multipart/form-data.
+                // Mantemos 'avatar' aqui para compatibilidade com a rota PATCH /users/:id,
+                // mesmo que o campo final no banco de dados seja salvo como 'foto'.
+                formData.append('avatar', avatarFile, avatarFile.name);
             }
 
             const response = await api.patch(`/users/${user.id}`, formData, {

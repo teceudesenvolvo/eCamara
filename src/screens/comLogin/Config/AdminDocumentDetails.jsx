@@ -39,6 +39,7 @@ class AdminDocumentDetails extends Component {
             loading: true,
             logoBase64: null,
             homeConfig: {},
+            councilName: '',
             footerConfig: {},
             pdfData: null,
             showPdfPopup: false,
@@ -77,17 +78,21 @@ class AdminDocumentDetails extends Component {
         const { camaraId } = this.state;
         try {
             const response = await api.get(`/councils/${camaraId}`);
-            const configData = response.data || {};
+            
+            // Extração robusta dos dados da câmara lidando com possíveis retornos em array
+            const councilData = Array.isArray(response.data) ? response.data[0] : (response.data || {});
+            const councilName = councilData.name || ''; // Usa o nome institucional
+            const configData = councilData.config || councilData.dadosConfig || {};
 
             const layoutData = configData.layout || {};
             
             if (layoutData.logoLight) {
                 this.getBase64(layoutData.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
-            } else {
-                this.getBase64(logo).then(logoBase64 => this.setState({ logoBase64 }));
             }
+            // Removido fallback para logo padrão local para respeitar a identidade visual da câmara
 
             this.setState({
+                councilName,
                 homeConfig: configData.home || {},
                 footerConfig: configData.footer || {}
             });
@@ -122,12 +127,16 @@ class AdminDocumentDetails extends Component {
     };
 
     generateDocDefinition = () => {
-        const { documento, logoBase64, homeConfig, footerConfig, camaraId } = this.state;
+        const { documento, logoBase64, homeConfig, footerConfig, camaraId, councilName } = this.state;
         if (!documento) return null;
 
         const content = [
-            logoBase64 && { image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] },
-            { text: homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
+            logoBase64 ? { 
+                image: logoBase64, 
+                width: 70, 
+                absolutePosition: { x: 480, y: 35 } 
+            } : null,
+            { text: councilName || homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center', margin: [0, 10, 0, 0] },
             footerConfig.slogan && { text: footerConfig.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
             { text: documento.tipo.toUpperCase(), style: 'subheader', alignment: 'center', bold: true, margin: [0, 0, 0, 20] },
             ...this.processHtmlToPdfMake(documento.conteudo)
@@ -135,7 +144,7 @@ class AdminDocumentDetails extends Component {
 
         const today = new Date();
         const formattedDate = today.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-        const cityName = homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
+        const cityName = homeConfig.cidade || councilName || camaraId;
         const signatoryName = (documento.metadata && documento.metadata.de) ? documento.metadata.de : 'Emitente';
 
         // Adiciona bloco de encerramento e assinatura
