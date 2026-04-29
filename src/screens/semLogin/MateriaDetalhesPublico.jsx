@@ -77,7 +77,7 @@ class MateriaDetalhesPublico extends Component {
             );
         }
 
-        const numeroFormatted = materia.numero && materia.numero.includes('/') ? materia.numero : `${materia.numero || ''}/${materia.ano || ''}`;
+        const numeroFormatted = (materia.numero && String(materia.numero).includes('/')) ? materia.numero : `${materia.numero || ''}/${materia.ano || ''}`;
         const dataApresentacao = materia.dataApresenta || (materia.createdAt ? new Date(materia.createdAt).toLocaleDateString('pt-BR') : '-');
 
         return (

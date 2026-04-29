@@ -139,7 +139,7 @@ class Perfil extends Component {
                 editNome: userData.name || userData.nome || '',
                 editCargo: userData.role || userData.cargo || '',
                 editBio: userData.bio || '',
-                editFoto: userData.foto || userData.photoURL || userData.avatar || '',
+                editFoto: userData.foto,
                 materias,
                 comissoesUsuario,
                 sessoesParticipadas,
@@ -215,7 +215,7 @@ class Perfil extends Component {
             formData.append('bio', editBio);
 
             if (avatarFile) {
-                formData.append('avatar', avatarFile, avatarFile.name);
+                formData.append('foto', avatarFile, avatarFile.name);
             }
 
             const response = await api.patch(`/users/${user.id}`, formData, {

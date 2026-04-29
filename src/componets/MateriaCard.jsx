@@ -56,7 +56,7 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
             nome: user.name || user.displayName || 'Parlamentar',
             tipo: tipo,
             timestamp: new Date().toISOString(),
-            avatar: user.photoURL || user.foto || null
+            foto: user.foto || user.avatar || user.photoURL || null
         };
 
         try {
@@ -139,7 +139,7 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
                                 <Tooltip key={sub.uid} title={`${sub.nome} (${sub.tipo})`}>
                                     <Avatar 
                                         alt={sub.nome} 
-                                        src={sub.avatar} 
+                                        src={sub.foto || sub.avatar} 
                                         sx={{ width: 28, height: 28, fontSize: '0.75rem', border: `2px solid ${sub.tipo === 'Coautoria' ? '#FF740F' : '#126B5E'}` }}
                                     >
                                         {sub.nome.charAt(0)}

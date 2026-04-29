@@ -302,7 +302,7 @@ class Configuracoes extends Component {
             const currentMembers = commissionToUpdateMembers.membros || [];
             const updatedMembers = [
                 ...currentMembers.filter(m => m.id !== user.id), // Remove if already exists to avoid duplicates
-                { id: user.id, name: user.name || user.nome, avatar: user.avatar || user.foto || user.photoURL, cargo: newRoleForCommission } // Use name/avatar for new backend
+                { id: user.id, name: user.name || user.nome, foto: user.foto || user.avatar || user.photoURL || null, cargo: newRoleForCommission } 
             ];
 
             await api.patch(`/commissions/${commissionToUpdateMembers.id}`, { membros: updatedMembers });
@@ -555,7 +555,7 @@ class Configuracoes extends Component {
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
                                     {comissao.membros && comissao.membros.length > 0 ? comissao.membros.map(membro => (
                                         <div key={membro.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f5', padding: '5px 10px', borderRadius: '8px', border: '1px solid #eee' }}>
-                                            <img src={membro.avatar || membro.foto || 'https://via.placeholder.com/25'} alt={membro.name || membro.nome} style={{ width: '25px', height: '25px', borderRadius: '50%', objectFit: 'cover' }} />
+                                            <img src={membro.foto || membro.avatar || 'https://via.placeholder.com/25'} alt={membro.name || membro.nome} style={{ width: '25px', height: '25px', borderRadius: '50%', objectFit: 'cover' }} />
                                             <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{membro.name || membro.nome} ({membro.cargo})</span>
                                             <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }} onClick={() => this.handleRemoveMember(comissao.id, membro.id)}><FaTimes size={12} /></button>
                                         </div>

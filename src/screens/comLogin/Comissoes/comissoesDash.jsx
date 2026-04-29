@@ -89,7 +89,7 @@ class ComissoesDash extends Component {
                                                 {comissao.membros.slice(0, 6).map((membro, index) => (
                                                     <img 
                                                         key={membro.id || index} 
-                                                        src={membro.avatar || membro.foto || 'https://via.placeholder.com/35'} 
+                                                        src={membro.foto || membro.avatar} 
                                                         alt={membro.name || membro.nome} 
                                                         title={`${membro.name || membro.nome} - ${membro.cargo}`}
                                                         style={{ 

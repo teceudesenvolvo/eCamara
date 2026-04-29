@@ -60,13 +60,16 @@ class slideFeactures extends Component {
 
             const fetchedVereadores = usersData
                 .filter(u => {
-                    const tipo = (u.tipo || '').toLowerCase();
-                    return tipo === 'vereador' || tipo === 'presidente' || u.role === 'parlamentar';
+                    const role = (u.role || u.tipo || '').toLowerCase();
+                    const cargo = (u.cargo || '').toLowerCase();
+                    // Filtra por nível de acesso ou cargo institucional para identificar parlamentares
+                    return role === 'vereador' || role === 'presidente' || role === 'parlamentar' || 
+                           cargo.includes('vereador') || cargo.includes('presidente');
                 })
                 .map(u => ({
                     ...u,
                     id: u.id,
-                    foto: u.foto || u.photoURL || u.avatar || 'https://via.placeholder.com/150',
+                    foto: u.foto || u.avatar || u.photoURL || 'https://via.placeholder.com/150',
                     materiasCount: materiasCountByUserId[u.id] || u._count?.matters || 0,
                     comissoesCount: comissoesCountByUserId[u.id] || 0
                 }));
@@ -105,11 +108,11 @@ class slideFeactures extends Component {
                 <div className="representative-card">
                     <div className="representative-header">
                         <div className="representative-image-wrapper">
-                            <img className="representative-image" src={vereador.foto} alt={vereador.nome} />
+                            <img className="representative-image" src={vereador.foto || vereador.avatar || vereador.photoURL || 'https://via.placeholder.com/150'} alt={vereador.nome} />
                         </div>
                         <div className="representative-info">
                             <h5 className="representative-name">{vereador.nome} </h5>
-                            <p className="representative-role" style={{ textTransform: 'capitalize' }}>{vereador.tipo}</p>
+                            <p className="representative-role" style={{ textTransform: 'capitalize' }}>{vereador.cargo || vereador.tipo || vereador.role}</p>
                         </div>
                     </div>
                     <div className="representative-stats">
