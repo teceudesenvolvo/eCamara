@@ -2,13 +2,23 @@ import React, { Component } from 'react';
 import { FaArrowLeft, FaFilePdf, FaHistory, FaCheckCircle, FaClock, FaUserTie, FaCalendarAlt, FaPrint, FaExchangeAlt, FaDownload, FaShareAlt, FaGavel, FaInfoCircle, FaParagraph, FaBalanceScale } from 'react-icons/fa';
 import api from "../../../services/api";
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+
+pdfMake.vfs = pdfFonts.vfs;
 
 class MateriaDetails extends Component {
     constructor(props) {
         super(props);
         this.state = {
             materia: null,
-            loading: true
+            loading: true,
+            showPdfPopup: false,
+            pdfData: null,
+            homeConfig: {},
+            footerConfig: {},
+            councilName: '',
+            logoBase64: null
         };
     }
 
@@ -27,8 +37,24 @@ class MateriaDetails extends Component {
         }
 
         try {
-            const response = await api.get(`/legislative-matter-detail/${materiaId}`);
-            const data = Array.isArray(response.data) ? response.data[0] : response.data;
+            const [materiaResponse, councilResponse] = await Promise.all([
+                api.get(`/legislative-matter-detail/${materiaId}`),
+                api.get(`/councils/${camaraId}`)
+            ]);
+
+            const data = Array.isArray(materiaResponse.data) ? materiaResponse.data[0] : materiaResponse.data;
+            
+            const councilData = Array.isArray(councilResponse.data) ? councilResponse.data[0] : (councilResponse.data || {});
+            const councilName = councilData.name || '';
+            const configData = councilData.config || councilData.dadosConfig || {};
+            const layoutConfig = configData.layout || {};
+            const homeConfig = configData.home || {};
+            const footerConfig = configData.footer || {};
+
+            let logoBase64 = null;
+            if (layoutConfig.logoLight) {
+                logoBase64 = await this.getBase64(layoutConfig.logoLight);
+            }
 
             if (data) {
                 // Constrói o histórico com base nos eventos registrados na matéria
@@ -75,6 +101,7 @@ class MateriaDetails extends Component {
                     regime: data.regTramita || 'Ordinária',
                     ementa: data.ementa || '',
                     textoCompleto: data.textoMateria || '',
+                    pdfUrl: data.pdfUrl || data.anexoUrl || data.fileUrl,
                     pdfBase64: data.pdfBase64,
                     historico: historico,
                     // Novos campos técnicos
@@ -91,7 +118,14 @@ class MateriaDetails extends Component {
                     subscricoes: data.subscricoes ? (Array.isArray(data.subscricoes) ? data.subscricoes : Object.values(data.subscricoes)) : []
                 };
 
-                this.setState({ materia, loading: false });
+                this.setState({ 
+                    materia, 
+                    loading: false,
+                    homeConfig,
+                    footerConfig,
+                    councilName,
+                    logoBase64
+                });
             } else {
                 this.setState({ loading: false });
             }
@@ -101,6 +135,22 @@ class MateriaDetails extends Component {
         }
     }
 
+    getBase64 = async (url) => {
+        if (!url) return null;
+        if (url.startsWith('data:image/')) return url;
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
+        }
+    };
+
     stripHtml = (html) => {
         if (!html) return "";
         let tmp = document.createElement("DIV");
@@ -108,9 +158,141 @@ class MateriaDetails extends Component {
         return tmp.textContent || tmp.innerText || "";
     };
 
+    processHtmlToPdfMake = (html) => {
+        if (!html) return [];
+        const paragraphs = html.split(/<\/p>/gi);
+        return paragraphs.map(p => {
+            let text = p.replace(/<br\s*\/?>/gi, '\n');
+            text = text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+            if (!text) return null;
+            return { text: text, margin: [0, 5, 0, 5], fontSize: 11, alignment: 'justify', lineHeight: 1.4 };
+        }).filter(Boolean);
+    };
+
+    generatePrintVersionPDF = () => {
+        const { materia, logoBase64, homeConfig, footerConfig, councilName } = this.state;
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
+        const cityName = homeConfig.cidade || councilName;
+        const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
+
+        const docDefinition = {
+            content: [
+                logoBase64 ? { image: logoBase64, width: 70, absolutePosition: { x: 480, y: 35 } } : null,
+                { text: councilName || homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center', margin: [0, 10, 0, 0] },
+                { text: 'FICHA COMPLETA DA MATÉRIA LEGISLATIVA', style: 'title', alignment: 'center', margin: [0, 20, 0, 20] },
+
+                {
+                    style: 'infoBox',
+                    table: {
+                        widths: ['*'],
+                        body: [
+                            [[
+                                { text: `${materia.tipo} Nº ${materia.numero}`, style: 'infoTextTitle' },
+                                { text: `Ano: ${materia.ano || '-'} | Protocolo: ${materia.protocolo || '-'}`, style: 'infoText' },
+                                { text: `Autor: ${materia.autor}`, style: 'infoText' },
+                                { text: `Status Atual: ${materia.status}`, style: 'infoText', bold: true },
+                            ]]
+                        ]
+                    },
+                    layout: { hLineWidth: () => 1, vLineWidth: () => 1, hLineColor: () => '#ccc', vLineColor: () => '#ccc' }
+                },
+
+                { text: 'I - EMENTA', style: 'sectionHeader' },
+                { text: materia.ementa, style: 'bodyText', fontStyle: 'italic', margin: [0, 0, 0, 15] },
+
+                { text: 'II - DADOS TÉCNICOS', style: 'sectionHeader' },
+                {
+                    table: {
+                        widths: ['*', '*'],
+                        body: [
+                            [{ text: 'Regime:', bold: true }, { text: materia.regime }],
+                            [{ text: 'Polêmica:', bold: true }, { text: materia.materiaPolemica || 'Não' }],
+                            [{ text: 'Tipo de Lei:', bold: true }, { text: materia.isComplementar ? 'Lei Complementar' : 'Lei Ordinária' }],
+                            [{ text: 'Data Apresentação:', bold: true }, { text: materia.dataApresenta }],
+                        ]
+                    },
+                    margin: [0, 0, 0, 15],
+                    layout: 'noBorders'
+                },
+
+                materia.textoCompleto ? [
+                    { text: 'III - TEXTO INTEGRAL', style: 'sectionHeader' },
+                    { stack: this.processHtmlToPdfMake(materia.textoCompleto), margin: [0, 0, 0, 20] }
+                ] : null,
+
+                materia.parecer ? [
+                    { text: 'IV - PARECER DA PROCURADORIA', style: 'sectionHeader' },
+                    { stack: this.processHtmlToPdfMake(materia.parecer), margin: [0, 0, 0, 20] }
+                ] : null,
+
+                { text: 'V - LINHA DO TEMPO / TRAMITAÇÃO', style: 'sectionHeader' },
+                {
+                    table: {
+                        widths: ['auto', '*'],
+                        body: materia.historico.map(h => [
+                            { text: h.data, fontSize: 10, margin: [0, 5, 0, 5] },
+                            {
+                                stack: [
+                                    { text: h.status, bold: true, fontSize: 11 },
+                                    { text: h.descricao, fontSize: 10, color: '#666' }
+                                ],
+                                margin: [0, 5, 0, 5]
+                            }
+                        ])
+                    },
+                    layout: 'lightHorizontalLines'
+                },
+
+                { text: `\n\n${cityName}, ${dataAtual}.`, style: 'bodyText', alignment: 'right' },
+            ].filter(Boolean),
+            footer: (currentPage, pageCount) => ({
+                stack: [
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
+                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
+                ]
+            }),
+            styles: {
+                header: { fontSize: 14, bold: true, color: '#333' },
+                title: { fontSize: 14, bold: true },
+                sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 10, color: '#126B5E', borderBottom: '1px solid #eee' },
+                infoBox: { margin: [0, 0, 0, 20], backgroundColor: '#f9f9f9' },
+                infoTextTitle: { fontSize: 12, bold: true, margin: [5, 5, 5, 2] },
+                infoText: { fontSize: 10, margin: [5, 2, 5, 2] },
+                bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 },
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 }
+            }
+        };
+
+        pdfMake.createPdf(docDefinition).getBase64((data) => {
+            this.setState({ pdfData: `data:application/pdf;base64,${data}`, showPdfPopup: true });
+        });
+    };
+
+    openPdfPopup = () => {
+        const { materia } = this.state;
+        if (!materia) return;
+
+        // Prioriza a URL do storage para recuperação do arquivo
+        if (materia.pdfUrl) {
+            this.setState({ pdfData: materia.pdfUrl, showPdfPopup: true });
+        } else if (materia.pdfBase64) {
+            // Fallback para dados legados em base64
+            this.setState({ pdfData: `data:application/pdf;base64,${materia.pdfBase64}`, showPdfPopup: true });
+        } else {
+            alert("O arquivo oficial desta matéria não foi encontrado no storage.");
+        }
+    };
+
+    closePdfPopup = () => {
+        this.setState({ showPdfPopup: false, pdfData: null });
+    };
+
     downloadPDF = () => {
         const { materia } = this.state;
-        if (materia && materia.pdfBase64) {
+        if (materia && materia.pdfUrl) {
+            window.open(materia.pdfUrl, '_blank');
+        } else if (materia && materia.pdfBase64) {
             const link = document.createElement('a');
             link.href = `data:application/pdf;base64,${materia.pdfBase64}`;
             link.download = `Materia_${materia.numero ? String(materia.numero).replace('/', '-') : 'doc'}.pdf`;
@@ -123,7 +305,7 @@ class MateriaDetails extends Component {
     };
 
     render() {
-        const { materia, loading } = this.state;
+        const { materia, loading, showPdfPopup, pdfData } = this.state;
 
         if (loading) {
             return (
@@ -358,7 +540,7 @@ class MateriaDetails extends Component {
                                     <div style={{ flex: 1, minWidth: '200px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.2s', cursor: 'pointer' }}
                                          onMouseOver={(e) => e.currentTarget.style.borderColor = '#126B5E'}
                                          onMouseOut={(e) => e.currentTarget.style.borderColor = '#e0e0e0'}
-                                         onClick={this.downloadPDF}
+                                         onClick={this.openPdfPopup}
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                             <div style={{ width: '45px', height: '45px', borderRadius: '8px', background: '#ffebee', color: '#d32f2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
@@ -375,14 +557,15 @@ class MateriaDetails extends Component {
                                     <div style={{ flex: 1, minWidth: '200px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.2s', cursor: 'pointer' }}
                                          onMouseOver={(e) => e.currentTarget.style.borderColor = '#126B5E'}
                                          onMouseOut={(e) => e.currentTarget.style.borderColor = '#e0e0e0'}
+                                         onClick={this.generatePrintVersionPDF}
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                             <div style={{ width: '45px', height: '45px', borderRadius: '8px', background: '#e3f2fd', color: '#1976d2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
                                                 <FaPrint />
                                             </div>
                                             <div>
-                                                <p style={{ margin: '0 0 5px 0', fontWeight: '600', color: '#333' }}>Versão Impressão</p>
-                                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>Sem marcas • A4</p>
+                                                <p style={{ margin: '0 0 5px 0', fontWeight: '600', color: '#333' }}>Imprimir</p>
+                                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>Folha • A4</p>
                                             </div>
                                         </div>
                                         <div style={{ color: '#666' }}><FaShareAlt /></div>
@@ -437,6 +620,24 @@ class MateriaDetails extends Component {
 
                     </div>
                 </div>
+
+                {/* Popup de Visualização do PDF (Storage ou Base64) */}
+                {showPdfPopup && pdfData && (
+                    <div className="pdf-popup-overlay">
+                        <div className="pdf-popup-content" style={{ width: '90%', height: '90%', maxWidth: '1100px', padding: 0, overflow: 'hidden' }}>
+                            <button className="pdf-popup-close-button" onClick={this.closePdfPopup} style={{ zIndex: 10001 }}>
+                                X
+                            </button>
+                            <iframe
+                                title="Visualizador de Documento"
+                                src={pdfData}
+                                width="100%"
+                                height="100%"
+                                frameBorder="0"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }

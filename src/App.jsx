@@ -95,8 +95,8 @@ function App() {
   const isDetailRoute = pathParts.includes('materia') || pathParts.includes('painel-sessao') || pathParts.includes('reuniao-virtual') || pathParts.includes('vereador');
   const camaraId = pathParts.length > 0 ? (isDetailRoute ? pathParts[pathParts.length - 2] : pathParts[pathParts.length - 1]) : 'master';
 
-  // Lista de rotas onde o MenuDesktop (público) NÃO deve aparecer
-  const hideMenuDesktop = ['/', '/login/:camaraId', '/register', '/admin/perfil/:camaraId', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/');
+  // Lista de rotas onde o Menu e o Rodapé NÃO devem aparecer (Login, Cadastro e Admin)
+  const hideMenuDesktop = ['/', '/register', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/') || location.pathname.includes('/login/');
 
   // 1. Verificar Sessão (Me)
   useEffect(() => {

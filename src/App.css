@@ -38,7 +38,8 @@
 }
 
 .loginPage {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+  background: #ffffff !important;
+  background-image: radial-gradient(circle at 50% -20%, #e3fdeb 0%, #ffffff 80%) !important;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -500,28 +501,39 @@ h1 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   width: 90%;
-  max-width: 400px;
+  max-width: 460px;
   height: auto;
   background-color: #ffffff;
-  padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 60px 40px;
+  border-radius: 28px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
 }
 
-.Container>h1 {
-  color: #126B5E !important;
-  font-size: 2rem !important;
-  margin-bottom: 10px;
-  font-weight: 800;
+.login-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.login-header .logoLogin {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+}
+
+.login-header h1 {
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0;
+  letter-spacing: -0.015em;
   align-self: center;
 }
 
-.Container>p {
-  color: #666;
-  font-size: 1rem;
-  margin-bottom: 20px;
+.login-header p {
+  font-size: 1.1rem;
+  color: #86868b;
+  margin-top: 8px;
 }
 
 
@@ -537,29 +549,77 @@ h1 {
 }
 
 .formLogin>a {
-  color: #666;
-  font-weight: 500;
-  font-size: 0.9rem;
-  text-align: center;
-  align-self: center;
-  margin-top: 15px;
-  margin-right: 0;
+  color: #0066cc;
+  font-size: 0.95rem;
   text-decoration: none;
 }
 
 
 .inputLogin {
   width: 100%;
-  height: 48px;
-  padding: 0 15px;
-  border: 1px solid #e0e0e0;
-  margin-bottom: 15px;
-  background-color: #f9f9f9;
-  color: #333;
-  transition: all 0.3s ease;
-  text-align: left;
-  border-radius: 8px;
+  height: 52px;
+  padding: 0 20px;
+  border: 1px solid #d2d2d7;
+  margin-bottom: 12px;
+  background-color: #ffffff;
+  color: #1d1d1f;
+  font-size: 1.05rem;
+  border-radius: 12px;
   box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.inputLogin:focus {
+  border-color: #0066cc;
+  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
+  outline: none;
+}
+
+.buttonLogin {
+  width: 100%;
+  height: 52px;
+  border-radius: 12px;
+  border: none;
+  margin: 25px 0;
+  background: #1d1d1f;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.buttonLogin:hover {
+  background: #333336;
+  transform: scale(1.01);
+}
+
+.buttonLogin:disabled {
+  background: #d2d2d7;
+  cursor: not-allowed;
+}
+
+.login-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.login-footer .linkLogin {
+  color: #0066cc;
+  font-size: 0.9rem;
+  display: block;
+  margin-bottom: 25px;
+}
+
+.register-text {
+  font-size: 0.95rem;
+  color: #86868b;
+}
+
+.register-text a {
+  color: #0066cc;
+  font-weight: 500;
+  text-decoration: none;
 }
 
 .labelEndereco {

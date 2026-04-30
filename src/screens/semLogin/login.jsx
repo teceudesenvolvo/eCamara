@@ -1,5 +1,8 @@
 import React, { Component } from 'react';
+import { Link } from 'react-router-dom';
 import api from "../../services/api";
+import LogoIcon from '../../assets/logo-camaraai-icon.png'
+
 class loginClient extends Component {
     constructor(props) {
         super(props);
@@ -69,20 +72,29 @@ class loginClient extends Component {
         return (
             <div className='App-header loginPage' >
                 <div className='Container' >
-                    <form className='formLogin' onSubmit={this.handleLogin}>
-                        <h1>Entre com sua conta:</h1>
+                    <div className='formLogin'>
+                        <div className='login-header'>
+                            <img src={LogoIcon} alt="Logo Câmara AI" style={{marginBottom: '20px', width: '150px'}} />
+                            <h1>Câmara AI</h1>
+                            <p>Inicie sessão com seu ID da Câmara</p>
+                        </div>
 
-                        {error && <p style={{ color: '#e53935', marginBottom: '15px', fontSize: '0.9rem' }}>{error}</p>}
+                        <form onSubmit={this.handleLogin} style={{ width: '100%' }}>
+                            {error && <p className="txtErro" style={{ marginBottom: '20px' }}>{error}</p>}
 
-                        <input type="email" placeholder="email@example.com" className='inputLogin' value={email} onChange={(e) => this.setState({ email: e.target.value })} />
-                        <input type="password" placeholder="Senha" className='inputLogin' value={password} onChange={(e) => this.setState({ password: e.target.value })} />
-                        <a href='/consultas' className='linkLogin'>Esqueceu a senha?</a>
+                            <input type="email" placeholder="E-mail" className='inputLogin' value={email} onChange={(e) => this.setState({ email: e.target.value })} />
+                            <input type="password" placeholder="Senha" className='inputLogin' value={password} onChange={(e) => this.setState({ password: e.target.value })} />
+                            
+                            <button type="submit" className='buttonLogin' disabled={loading}>
+                                {loading ? 'Processando...' : 'Entrar'}
+                            </button>
+                        </form>
 
-                        <button type="submit" className='buttonLogin' disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
-                            {loading ? 'Entrando...' : 'Entrar'}
-                        </button>
-                    </form>
-
+                        <div className='login-footer'>
+                            <a href='/consultas' className='linkLogin'>Esqueceu a senha?</a>
+                            <p className="register-text">Não tem um ID? <Link to="/">Crie o seu agora.</Link></p>
+                        </div>
+                    </div>
                 </div>
             </div>
         );

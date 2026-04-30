@@ -597,7 +597,8 @@ class AddProducts extends Component {
         // Monta FormData para suportar envio de arquivo real (Supabase Storage)
         const formData = new FormData();
 
-        formData.append('pdfFile', pdfFile); // Campo para o Multer processar o upload no backend
+        // O backend espera a chave 'file' para o documento principal da matéria.
+        formData.append('file', pdfFile); 
         // Campos simples
         formData.append('userId', user.id || '');
         formData.append('userEmail', user.email || '');
@@ -637,7 +638,8 @@ class AddProducts extends Component {
 
         // Arquivo real (se houver anexo)
         if (this.state.file) {
-            formData.append('file', this.state.file, this.state.fileName);
+            // Renomeamos o campo do anexo opcional para não conflitar com o PDF oficial
+            formData.append('attachment', this.state.file, this.state.fileName);
         }
 
         try {
@@ -787,7 +789,7 @@ class AddProducts extends Component {
                     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', ml: { md: '65px' } }}>
                         <Typography variant="h4" sx={{ color: '#126B5E', fontWeight: 800, mb: 6 }}>Como deseja criar sua matéria?</Typography>
                         <Grid container spacing={4} justifyContent="center" sx={{ maxWidth: '900px' }}>
-                            <Grid item xs={12} sm={6}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
                                 <Card 
                                     sx={{ cursor: 'pointer', borderRadius: '24px', transition: '0.3s', '&:hover': { transform: 'translateY(-10px)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' } }}
                                     onClick={() => this.setState({ creationPath: 'ai', showAiChat: true })}
@@ -801,7 +803,7 @@ class AddProducts extends Component {
                                     </CardContent>
                                 </Card>
                             </Grid>
-                            <Grid item xs={12} sm={6}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
                                 <Card 
                                     sx={{ cursor: 'pointer', borderRadius: '24px', transition: '0.3s', '&:hover': { transform: 'translateY(-10px)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' } }}
                                     onClick={() => this.setState({ creationPath: 'form' })}
@@ -888,7 +890,7 @@ class AddProducts extends Component {
 
                     <Grid container spacing={4}>
                         {/* Coluna de Dados Técnicos */}
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <Card sx={{ borderRadius: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.05)', height: '100%' }}>
                                 <CardContent sx={{ p: 3 }}>
                                     <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: '#1a1a1a', fontWeight: 700 }}>
@@ -987,7 +989,7 @@ class AddProducts extends Component {
                         </Grid>
 
                         {/* Coluna de Conteúdo e Editor */}
-                        <Grid item xs={12} md={8}>
+                        <Grid size={{ xs: 12, md: 8 }}>
                             <Card sx={{ borderRadius: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
                                 <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
 
@@ -1157,10 +1159,10 @@ class AddProducts extends Component {
                             position: 'fixed',
                             bottom: 110,
                             right: 30,
-                            width: '420px',
-                            maxWidth: '90vw',
-                            height: '650px',
-                            maxHeight: '75vh',
+                            width: '50%',
+                            maxWidth: '800px',
+                            height: '80vh',
+                            maxHeight: '85vh',
                             borderRadius: '24px',
                             boxShadow: '0 15px 50px rgba(0,0,0,0.2)',
                             pointerEvents: 'auto',

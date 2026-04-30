@@ -1,11 +1,26 @@
 import React, { Component } from 'react';
-import { FaGavel, FaSearch, FaTimes, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye, FaSpinner, FaHistory, FaUserTie, FaCalendarAlt, FaExchangeAlt } from 'react-icons/fa';
+import { FaGavel, FaSearch, FaTimes, FaCheckCircle, FaBalanceScale, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye, FaSpinner, FaHistory, FaUserTie, FaCalendarAlt, FaExchangeAlt, FaRobot, FaPaperPlane, FaEdit } from 'react-icons/fa';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../../assets/logo.png';
 import { generateParecer, sendMessageToAIPrivate } from '../../../aiService';
 import api from '../../../services/api';
+import {
+    Box,
+    Typography,
+    Button,
+    CircularProgress,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Grid,
+    Divider,
+    TextField
+} from '@mui/material';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -18,6 +33,10 @@ class JuizoMateria extends Component {
             filterType: 'Todos',
             filterYear: 'Todos',
             selectedMateria: null,
+            decisao: 'favoravel',
+            analiseConstitucional: '',
+            analiseTecnica: '',
+            analiseLocal: '',
             parecerText: '',
             logoBase64: null,
             isGeneratingParecer: false,
@@ -26,13 +45,40 @@ class JuizoMateria extends Component {
             camaraId: this.props.match.params.camaraId,
             homeConfig: {},
             councilName: '',
+            baseConhecimento: {},
             footerConfig: {},
             viewingMateria: null,
             showDetailModal: false,
             showPdfPopup: false,
-            pdfData: null
+            pdfData: null,
+            // Estado da IA
+            showAiChat: false,
+            messages: [
+                { id: 1, sender: 'ai', text: 'Olá! Sou o Assistente Jurídico do e-Câmara. <br/>Estou pronto para ajudar na análise técnica e redação do seu parecer. Qual ponto deseja analisar primeiro?' }
+            ],
+            currentInput: '',
+            isGenerating: false,
         };
+        this.messagesEndRef = React.createRef();
+        this.chatContainerRef = React.createRef();
     }
+
+    modules = {
+        toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'align': [] }],
+            ['clean']
+        ],
+    };
+
+    formats = [
+        'header',
+        'bold', 'italic', 'underline', 'strike',
+        'list', 'bullet',
+        'align'
+    ];
 
     componentDidMount() {
 
@@ -41,6 +87,12 @@ class JuizoMateria extends Component {
         this.setState({ camaraId });
         this.fetchConfigsAndLogo();
         this.fetchMaterias(camaraId);
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState.messages.length !== this.state.messages.length) {
+            this.scrollToBottom();
+        }
     }
 
     fetchMaterias = async (camaraId) => {
@@ -76,15 +128,152 @@ class JuizoMateria extends Component {
             this.setState({
                 homeConfig: configData.home || {},
                 councilName,
-                footerConfig: configData.footer || {}
+                footerConfig: configData.footer || {},
+                baseConhecimento: configData["base-conhecimento"] || {},
             });
         } catch (error) {
             console.error("Erro ao carregar configurações:", error);
         }
     };
 
+    scrollToBottom = () => {
+        if (this.chatContainerRef.current) {
+            this.chatContainerRef.current.scrollTop = this.chatContainerRef.current.scrollHeight;
+        }
+    }
+
+    toggleAiChat = () => {
+        this.setState({ showAiChat: !this.state.showAiChat });
+    };
+
     handleOpenParecer = (materia) => {
-        this.setState({ selectedMateria: materia, parecerText: '' });
+        this.setState({ 
+            selectedMateria: materia, 
+            parecerText: '', 
+            decisao: 'favoravel',
+            analiseConstitucional: '',
+            analiseTecnica: '',
+            analiseLocal: ''
+        });
+    };
+
+    // Processa o HTML do editor para criar parágrafos formatados no PDF
+    processHtmlToPdfMake = (html) => {
+        if (!html) return [{ text: "Não foi fornecida fundamentação.", style: 'bodyText' }];
+        const paragraphs = html.split(/<\/p>/gi);
+
+        return paragraphs.map(p => {
+            let text = p.replace(/<br\s*\/?>/gi, '\n');
+            text = text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+            if (!text) return null;
+            return {
+                text: text,
+                style: 'bodyText'
+            };
+        }).filter(Boolean);
+    };
+
+    handleSendMessage = async () => {
+        const { currentInput, messages, selectedMateria, baseConhecimento, camaraId } = this.state;
+        if (!currentInput.trim() || !selectedMateria) return;
+
+        const userMessage = { id: Date.now(), sender: 'user', text: currentInput };
+        this.setState({
+            messages: [...messages, userMessage],
+            currentInput: '',
+            isGenerating: true
+        });
+
+        try {
+            const { regimentoText, leiOrganicaText } = baseConhecimento;
+
+            const prompt = `Atue como um Consultor Jurídico Sênior de Direito Municipal.
+            
+            CONTEXTO DA MATÉRIA EM ANÁLISE:
+            - Tipo: ${selectedMateria.tipoMateria}
+            - Número: ${selectedMateria.numero}
+            - Decisão Alvo: ${this.state.decisao === 'favoravel' ? 'Parecer Favorável' : 'Parecer Contrário'}
+            - Ementa: "${selectedMateria.ementa}"
+            - Autor: ${selectedMateria.autor}
+
+            CONHECIMENTO TÉCNICO:
+            - Regimento Interno: ${regimentoText ? regimentoText.substring(0, 3000) : 'Seguir normas padrão'}
+            - Lei Orgânica: ${leiOrganicaText ? leiOrganicaText.substring(0, 3000) : 'Seguir normas padrão'}
+
+            TAREFA:
+            Responda à seguinte solicitação do procurador: "${currentInput}".
+            Use linguagem jurídica formal, cite artigos se o contexto permitir e foque na constitucionalidade e legalidade.
+            Ao sugerir trechos de redação, utilize a decisão alvo como base e use parágrafos HTML (<p>).`;
+
+            const response = await sendMessageToAIPrivate(prompt, camaraId);
+
+            this.setState(prevState => ({
+                messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: response }],
+                isGenerating: false
+            }));
+
+        } catch (error) {
+            console.error("Erro no chat IA Jurídico:", error);
+            this.setState(prevState => ({
+                messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: "Desculpe, ocorreu um erro ao processar sua análise jurídica." }],
+                isGenerating: false
+            }));
+        }
+    };
+
+    handleGenerateParecerWithAI = async () => {
+        const { selectedMateria, camaraId, baseConhecimento, analiseConstitucional, analiseTecnica, analiseLocal } = this.state;
+        if (!selectedMateria) return;
+
+        this.setState({ isGeneratingParecer: true, parecerText: '' });
+
+        const { regimentoText, leiOrganicaText } = baseConhecimento;
+
+        const prompt = `Atue como um Procurador Jurídico experiente da Câmara Municipal. Elabore um parecer técnico-jurídico completo sobre o(a) ${selectedMateria.tipoMateria} nº ${selectedMateria.numero}.
+        
+        SUA CONCLUSÃO DEVE SER: ${this.state.decisao === 'favoravel' ? 'CONSTITUCIONALIDADE E LEGALIDADE (Favorável)' : 'INCONSTITUCIONALIDADE E ILEGALIDADE (Contrário)'}.
+        
+        ORIENTAÇÕES ESPECÍFICAS DO PROCURADOR PARA ESTE PARECER:
+        - Foco em Constitucionalidade/Legalidade: ${analiseConstitucional || 'Análise geral de competência e iniciativa.'}
+        - Observações de Técnica Legislativa: ${analiseTecnica || 'Verificar conformidade com a LC 95/98.'}
+        - Notas sobre Legislação Local/Mérito: ${analiseLocal || 'Analisar compatibilidade com a Lei Orgânica Municipal.'}
+
+        BASE LEGAL LOCAL:
+        - Regimento Interno: ${regimentoText ? regimentoText.substring(0, 2000) : 'Seguir normas padrão'}
+        - Lei Orgânica: ${leiOrganicaText ? leiOrganicaText.substring(0, 2000) : 'Seguir normas padrão'}
+
+        DADOS DA MATÉRIA:
+        - Autor: ${selectedMateria.autor}
+        - Ementa: "${selectedMateria.ementa}"
+
+        O parecer DEVE conter:
+        1. ANÁLISE DA COMPETÊNCIA (Se a matéria é de interesse local).
+        2. ANÁLISE DO VÍCIO DE INICIATIVA (Se o proponente tem poder para tal).
+        3. TÉCNICA LEGISLATIVA (Conformidade com a LC 95/98).
+        4. CONCLUSÃO FUNDAMENTADA.
+        
+        IMPORTANTE: A argumentação jurídica deve sustentar obrigatoriamente a decisão informada (${this.state.decisao}).
+        Responda em formato HTML utilizando as tags <p>, <strong> e <br> para uma fundamentação técnica profissional.`;
+
+        try {
+            const response = await sendMessageToAIPrivate(prompt, camaraId);
+            
+            // Adiciona ao chat também para o usuário poder ajustar
+            const aiMessage = { 
+                id: Date.now(), 
+                sender: 'ai', 
+                text: 'Gerei uma minuta completa do parecer baseada na legislação local. O texto já foi aplicado ao formulário para sua revisão.' 
+            };
+
+            this.setState({ 
+                parecerText: response, 
+                isGeneratingParecer: false,
+                messages: [...this.state.messages, aiMessage]
+            });
+        } catch (error) {
+            console.error("Erro na IA:", error);
+            this.setState({ parecerText: "Erro ao gerar parecer. Tente novamente.", isGeneratingParecer: false });
+        }
     };
 
     handleViewDetail = (materia) => {
@@ -193,37 +382,6 @@ class JuizoMateria extends Component {
         }
     };
 
-    handleGenerateParecerWithAI = async () => {
-        const { selectedMateria, camaraId } = this.state;
-        if (!selectedMateria) return;
-
-        this.setState({ isGeneratingParecer: true, parecerText: '' });
-
-        const prompt = `Atue como um Procurador Jurídico de uma Câmara Municipal. Elabore um parecer técnico-jurídico completo sobre a constitucionalidade e legalidade do seguinte projeto:
-        - Tipo: ${selectedMateria.tipo}
-        - Número: ${selectedMateria.numero}
-        - Autor: ${selectedMateria.autor}
-        - Ementa: "${selectedMateria.ementa}"
-
-        Sua análise deve abordar:
-        1.  **Competência Legislativa:** O município tem competência para legislar sobre o tema?
-        2.  **Vício de Iniciativa:** O projeto foi proposto pelo poder correto (Legislativo ou Executivo)? Ele cria despesas para o Executivo sem indicar a fonte de custeio?
-        3.  **Aspectos Formais:** A redação segue a técnica legislativa (Lei Complementar 95/98)?
-        4.  **Aspectos Materiais:** O conteúdo do projeto conflita com a Constituição Federal, Estadual ou a Lei Orgânica do Município?
-
-        Estruture o parecer com as seções: I - RELATÓRIO, II - ANÁLISE JURÍDICA, e III - CONCLUSÃO.
-        Na conclusão, opine de forma clara pela constitucionalidade/legalidade ou inconstitucionalidade/ilegalidade da matéria.
-        Use uma linguagem formal e técnica. Não utilize tags HTML (como <p>, <br>, etc) nem formatação Markdown.`;
-
-        try {
-            const response = await sendMessageToAIPrivate(prompt, camaraId);
-            this.setState({ parecerText: response, isGeneratingParecer: false });
-        } catch (error) {
-            console.error("Erro na IA:", error);
-            this.setState({ parecerText: "Erro ao gerar parecer. Tente novamente.", isGeneratingParecer: false });
-        }
-    };
-
     getDocDefinition = (materia, parecerText, decisao, signatureMetadata = null) => {
         const { logoBase64, homeConfig, footerConfig, camaraId, councilName } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
@@ -265,7 +423,7 @@ class JuizoMateria extends Component {
                 { text: `Trata-se de análise jurídica do ${materia.tipo} nº ${materia.numero}, de autoria do(a) ${materia.autor}, que visa a dispor sobre "${materia.ementa}". A matéria foi encaminhada a esta Procuradoria para verificação de sua constitucionalidade e legalidade.`, style: 'bodyText' },
 
                 { text: 'II - ANÁLISE JURÍDICA', style: 'sectionHeader' },
-                { text: parecerText || "Não foi fornecida fundamentação.", style: 'bodyText' },
+                { stack: this.processHtmlToPdfMake(parecerText), marginTop: 5, marginBottom: 10 },
 
                 { text: 'III - CONCLUSÃO', style: 'sectionHeader' },
                 { text: ['Diante do exposto, esta Procuradoria Jurídica opina pela ', { text: decisao === 'favoravel' ? 'CONSTITUCIONALIDADE e LEGALIDADE' : 'INCONSTITUCIONALIDADE e ILEGALIDADE', bold: true }, ' da proposição, nos termos da análise apresentada.'], style: 'bodyText' },
@@ -318,7 +476,7 @@ class JuizoMateria extends Component {
 
 
     render() {
-        const { searchTerm, filterStatus, filterType, filterYear, materias, selectedMateria, isGeneratingParecer, parecerText, loading, showDetailModal, viewingMateria, showPdfPopup, pdfData } = this.state;
+        const { searchTerm, filterStatus, filterType, filterYear, materias, selectedMateria, isGeneratingParecer, parecerText, loading, showDetailModal, viewingMateria, showPdfPopup, pdfData, showAiChat, messages, currentInput, isGenerating } = this.state;
 
         // Filtros
         const filteredMaterias = materias.filter(m => {
@@ -354,7 +512,7 @@ class JuizoMateria extends Component {
 
                     {selectedMateria ? (
                         // --- PÁGINA DE PARECER (Substitui o Modal) ---
-                        <div className="dashboard-card">
+                        <div className="dashboard-card" style={{ width: '95%', transition: '0.3s', margin: '0 auto' }}>
                             <div className="dashboard-header" style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
                                     <h2 style={{ margin: 0, color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -363,7 +521,7 @@ class JuizoMateria extends Component {
                                     <p style={{ color: '#666', margin: '5px 0 0 0' }}>Análise de constitucionalidade e legalidade.</p>
                                 </div>
                                 <button onClick={this.handleCloseParecer} className="btn-secondary">
-                                    Voltar para Lista
+                                    Cancelar
                                 </button>
                             </div>
 
@@ -385,71 +543,150 @@ class JuizoMateria extends Component {
                                 </div>
                             </div>
 
-                            {/* Área de Edição do Parecer */}
-                            <div style={{ marginBottom: '30px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                    <label style={{ display: 'block', fontWeight: 'bold', color: '#333', fontSize: '1.1rem' }}>Fundamentação Jurídica</label>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button
-                                            onClick={() => this.handleViewDetail(selectedMateria)}
-                                            className="btn-secondary"
-                                            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                                        >
-                                            <FaFileAlt /> Ver Texto Original
-                                        </button>
-                                        <button
-                                            onClick={() => this.openParecerPDF(selectedMateria, parecerText, 'favoravel')} // A decisão aqui é só para preview
-                                            className="btn-secondary"
-                                        >
-                                            <FaEye style={{ marginRight: '8px', color: '#555' }} />
-                                            Visualizar PDF
-                                        </button>
-                                        <button
-                                            onClick={this.handleGenerateParecerWithAI}
-                                            disabled={isGeneratingParecer}
-                                            className="btn-primary"
-                                            style={{ color: '#fff', borderColor: '#126B5E' }}
-                                        >
-                                            <FaMagic style={{ marginRight: '8px', color: '#fff' }} />
-                                            {isGeneratingParecer ? 'Gerando...' : 'Sugerir com IA'}
-                                        </button>
+                            {/* Formulário de Parecer Otimizado */}
+                            <Grid container spacing={4}>
+                                {/* Coluna de Parâmetros e Decisão */}
+                                <Grid item xs={12} md={4}>
+                                    <Box sx={{ p: 3, borderRadius: '16px', border: '1px solid #eef2f6', backgroundColor: '#fff' }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <FaBalanceScale color="#126B5E" /> Parâmetros do Parecer
+                                        </Typography>
+
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Conclusão do Parecer</InputLabel>
+                                                <Select
+                                                    value={this.state.decisao}
+                                                    onChange={(e) => this.setState({ decisao: e.target.value })}
+                                                    label="Conclusão do Parecer"
+                                                    sx={{ borderRadius: '10px' }}
+                                                >
+                                                    <MenuItem value="favoravel">Parecer Favorável</MenuItem>
+                                                    <MenuItem value="contrario">Parecer Contrário</MenuItem>
+                                                </Select>
+                                            </FormControl>
+
+                                            <TextField
+                                                label="Pontos de Constitucionalidade"
+                                                fullWidth
+                                                size="small"
+                                                multiline
+                                                rows={2}
+                                                value={this.state.analiseConstitucional}
+                                                onChange={(e) => this.setState({ analiseConstitucional: e.target.value })}
+                                                placeholder="Ex: Vício de iniciativa, invasão de competência..."
+                                                InputProps={{ sx: { borderRadius: '10px' } }}
+                                            />
+
+                                            <TextField
+                                                label="Notas de Técnica Legislativa"
+                                                fullWidth
+                                                size="small"
+                                                multiline
+                                                rows={2}
+                                                value={this.state.analiseTecnica}
+                                                onChange={(e) => this.setState({ analiseTecnica: e.target.value })}
+                                                placeholder="Ex: Erro na numeração, ementa imprecisa..."
+                                                InputProps={{ sx: { borderRadius: '10px' } }}
+                                            />
+
+                                            <TextField
+                                                label="Legislação Local / Mérito"
+                                                fullWidth
+                                                size="small"
+                                                multiline
+                                                rows={2}
+                                                value={this.state.analiseLocal}
+                                                onChange={(e) => this.setState({ analiseLocal: e.target.value })}
+                                                placeholder="Ex: Contraria o Art. X da Lei Orgânica..."
+                                                InputProps={{ sx: { borderRadius: '10px' } }}
+                                            />
+
+                                            <Divider sx={{ my: 1 }} />
+
+                                            <Box>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#666', mb: 1.5 }}>Assistência Inteligente</Typography>
+                                                <Button
+                                                    variant="contained"
+                                                    fullWidth
+                                                    startIcon={isGeneratingParecer ? <CircularProgress size={20} color="inherit" /> : <FaMagic />}
+                                                    onClick={this.handleGenerateParecerWithAI}
+                                                    disabled={isGeneratingParecer}
+                                                    sx={{ 
+                                                        backgroundColor: '#126B5E', 
+                                                        '&:hover': { backgroundColor: '#0e554a' },
+                                                        borderRadius: '10px', 
+                                                        textTransform: 'none',
+                                                        py: 1
+                                                    }}
+                                                >
+                                                    {isGeneratingParecer ? 'IA Redigindo...' : 'Gerar Minuta com IA'}
+                                                </Button>
+                                                <Typography variant="caption" sx={{ mt: 1, display: 'block', color: '#999', textAlign: 'center' }}>
+                                                    A IA baseará a redação na conclusão selecionada acima.
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                </Grid>
+
+                                {/* Coluna de Redação Textual */}
+                                <Grid item xs={12} md={8}>
+                                    <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '1rem' }}>Fundamentação Técnica e Jurídica</label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                                onClick={() => this.openParecerPDF(selectedMateria, parecerText, this.state.decisao)}
+                                                className="btn-secondary"
+                                                style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                                            >
+                                                <FaEye /> Preview PDF
+                                            </button>
+                                            <button
+                                                onClick={() => this.handleViewDetail(selectedMateria)}
+                                                className="btn-secondary"
+                                                style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                                            >
+                                                <FaFileAlt /> Ver Original
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                <textarea
-                                    rows="20"
-                                    className="modal-textarea"
-                                    style={{
-                                        background: isGeneratingParecer ? '#f5f5f5' : '#fff',
-                                        border: '1px solid #ccc',
-                                        padding: '15px',
-                                        fontSize: '1rem',
-                                        lineHeight: '1.5',
-                                        color: '#333' // Texto escuro para contraste
-                                    }}
-                                    placeholder={isGeneratingParecer ? "Aguarde, a IA está elaborando uma sugestão de parecer..." : "Escreva aqui a fundamentação jurídica..."}
-                                    value={parecerText}
-                                    onChange={(e) => this.setState({ parecerText: e.target.value })}
-                                    readOnly={isGeneratingParecer}
-                                ></textarea>
-                            </div>
+                                    <Box sx={{ border: '1px solid #d1d9e0', borderRadius: '12px', overflow: 'hidden', backgroundColor: isGeneratingParecer ? '#f8f9fa' : '#fff' }}>
+                                        <ReactQuill
+                                            theme="snow"
+                                            value={parecerText}
+                                            onChange={(content) => this.setState({ parecerText: content })}
+                                            modules={this.modules}
+                                            formats={this.formats}
+                                            placeholder={isGeneratingParecer ? "Aguarde, a IA está elaborando uma sugestão de parecer..." : "Escreva ou gere a fundamentação jurídica do seu parecer..."}
+                                            readOnly={isGeneratingParecer}
+                                            style={{ height: '500px' }}
+                                        />
+                                    </Box>
+                                </Grid>
+                            </Grid>
 
                             {/* Ações */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                                <button
-                                    onClick={() => this.handleSubmitParecer('contrario')}
-                                    className="btn-danger"
-                                    style={{ padding: '12px 25px', fontSize: '1rem' }}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, borderTop: '1px solid #eee', pt: 3, mt: 2 }}>
+                                <Button
+                                    variant="contained"
+                                    onClick={() => this.handleSubmitParecer(this.state.decisao)}
+                                    disabled={!parecerText || isGeneratingParecer}
+                                    sx={{ 
+                                        backgroundColor: this.state.decisao === 'favoravel' ? '#2e7d32' : '#d32f2f',
+                                        '&:hover': { backgroundColor: this.state.decisao === 'favoravel' ? '#1b5e20' : '#c62828' },
+                                        borderRadius: '10px',
+                                        px: 6,
+                                        py: 1.5,
+                                        fontWeight: 700,
+                                        textTransform: 'none',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                    }}
+                                    startIcon={<FaCheckCircle />}
                                 >
-                                    <FaTimesCircle style={{ marginRight: '8px' }} /> Parecer Contrário
-                                </button>
-                                <button
-                                    onClick={() => this.handleSubmitParecer('favoravel')}
-                                    className="btn-success"
-                                    style={{ padding: '12px 25px', fontSize: '1rem' }}
-                                >
-                                    <FaCheckCircle style={{ marginRight: '8px' }} /> Parecer Favorável
-                                </button>
-                            </div>
+                                    Protocolar Parecer {this.state.decisao === 'favoravel' ? 'Favorável' : 'Contrário'}
+                                </Button>
+                            </Box>
                         </div>
                     ) : (
                         // --- LISTAGEM DE MATÉRIAS ---
@@ -708,6 +945,154 @@ class JuizoMateria extends Component {
                                 />
                             </div>
                         </div>
+                    )}
+
+                {/* Janela de Chat AI (Widget Flutuante) */}
+                {selectedMateria && showAiChat && (
+                    <div className="chat-popup-overlay" style={{ background: 'transparent', pointerEvents: 'none' }}>
+                        <div className="chat-ai-container" style={{
+                            position: 'fixed',
+                            bottom: 110,
+                            right: 30,
+                            width: '50%',
+                            maxWidth: '800px',
+                            height: '80vh',
+                            maxHeight: '85vh',
+                            borderRadius: '24px',
+                            boxShadow: '0 15px 50px rgba(0,0,0,0.2)',
+                            pointerEvents: 'auto',
+                            zIndex: 5000,
+                            border: '1px solid rgba(0,0,0,0.05)',
+                            backgroundColor: '#fff',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            <div className="chat-header">
+                                <div className="chat-header-info">
+                                    <h2><FaRobot /> Assistente Jurídico</h2>
+                                    <p>Analisando Regimento e Lei Orgânica</p>
+                                </div>
+                                <button className="back-button" onClick={this.toggleAiChat} style={{ left: 'auto', right: '20px' }}>
+                                    <FaTimes />
+                                </button>
+                            </div>
+
+                            <div className="chat-messages" ref={this.chatContainerRef}>
+                                {messages.map((msg) => (
+                                    <div key={msg.id} className={`message ${msg.sender === 'ai' ? 'message-ai' : 'message-user'}`}>
+                                        <div className="message-icon">
+                                            {msg.sender === 'ai' ? <FaRobot /> : <FaGavel />}
+                                        </div>
+                                        <div className="message-bubble">
+                                            <div dangerouslySetInnerHTML={{ __html: msg.text }} />
+                                        </div>
+                                    </div>
+                                ))}
+                                {isGenerating && (
+                                    <div className="message message-ai">
+                                        <div className="message-icon"><FaSpinner className="animate-spin" /></div>
+                                        <div className="message-bubble">Analisando legalidade e fundamentando...</div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="chat-input-area" style={{ padding: '15px', flexDirection: 'column', gap: '10px' }}>
+                                <Button 
+                                    variant="contained" 
+                                    fullWidth
+                                    startIcon={isGeneratingParecer ? <CircularProgress size={18} color="inherit" /> : <FaMagic />}
+                                    onClick={this.handleGenerateParecerWithAI}
+                                    disabled={isGeneratingParecer}
+                                    sx={{ textTransform: 'none', borderRadius: '12px', backgroundColor: '#126B5E', mb: 1 }}
+                                >
+                                    {isGeneratingParecer ? 'Gerando Sugestão...' : 'Sugerir Parecer Completo'}
+                                </Button>
+                                <div className="search-box-wrapper-chat">
+                                    <input
+                                        type="text"
+                                        className="smart-search-input-chat"
+                                        placeholder="Tire dúvidas sobre ritos ou fundamentação..."
+                                        value={currentInput}
+                                        onChange={(e) => this.setState({ currentInput: e.target.value })}
+                                        onKeyPress={(e) => e.key === 'Enter' && this.handleSendMessage()}
+                                        disabled={isGenerating}
+                                        style={{ width: '100%' }}
+                                    />
+                                    <button className="smart-search-btn-chat" onClick={this.handleSendMessage} disabled={isGenerating}>
+                                        <FaPaperPlane />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                    {/* Botão Flutuante de Chat AI com Balão de Sugestão (como o de addMaterias) */}
+                    {selectedMateria && (
+                        <Box sx={{
+                            position: 'fixed',
+                            bottom: 30,
+                            right: 30,
+                            zIndex: 5001,
+                            display: 'flex',
+                            alignItems: 'center',
+                            '@keyframes slideHint': {
+                                '0%': { transform: 'translateX(0px)', opacity: 0.8 },
+                                '50%': { transform: 'translateX(-5px)', opacity: 1 },
+                                '100%': { transform: 'translateX(0px)', opacity: 0.8 }
+                            }
+                        }}>
+                            {!showAiChat && (
+                                <Box sx={{
+                                    backgroundColor: 'white',
+                                    color: '#333',
+                                    px: 2,
+                                    py: 1,
+                                    borderRadius: '12px',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                                    mr: 2,
+                                    fontSize: '0.85rem',
+                                    fontWeight: '700',
+                                    position: 'relative',
+                                    whiteSpace: 'nowrap',
+                                    animation: 'slideHint 3s ease-in-out infinite',
+                                    border: '1px solid #eee',
+                                    '&::after': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        right: '-8px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        borderTop: '8px solid transparent',
+                                        borderBottom: '8px solid transparent',
+                                        borderLeft: '8px solid white',
+                                    }
+                                }}>
+                                    Fundamentar com IA
+                                </Box>
+                            )}
+                            <Button
+                                variant="contained"
+                                onClick={this.toggleAiChat}
+                                sx={{
+                                    width: 65,
+                                    height: 65,
+                                    borderRadius: '50%',
+                                    minWidth: 0,
+                                    p: 0,
+                                    backgroundColor: '#FF740F',
+                                    boxShadow: '0 8px 24px rgba(255, 116, 15, 0.4)',
+                                    '&:hover': { 
+                                        backgroundColor: '#e6680d', 
+                                        transform: 'scale(1.05)',
+                                        boxShadow: '0 12px 30px rgba(255, 116, 15, 0.5)'
+                                    },
+                                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                }}
+                            >
+                                {showAiChat ? <FaTimes size={24} /> : <FaRobot size={30} />}
+                            </Button>
+                        </Box>
                     )}
                 </div>
             </div>
