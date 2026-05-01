@@ -4,6 +4,9 @@
   text-align: center;
   font-family: Arial, Helvetica, sans-serif;
   overflow-x: hidden;
+  background: #ffffff !important;
+  background-image: radial-gradient(circle at 50% -20%, #e3fdeb 0%, #ffffff 80%) !important;
+  
 }
 
 .App-logo {
@@ -23,7 +26,8 @@
 
 
 .App-header {
-  background-color: #818181;
+  background: #ffffff !important;
+  background-image: radial-gradient(circle at 50% -20%, #e3eae5 0%, #ffffff 80%) !important;
   min-height: 100vh;
   padding-bottom: 50px;
   display: flex;
@@ -659,6 +663,14 @@ h1 {
   /* Espaçamento entre as seções */
   max-width: 1200px;
   margin-right: auto;
+}
+
+.erPuFL{
+  z-index: 9999 !important;
+}
+
+.whUwv{
+  height: calc(203vh - 120px);
 }
 
 /* Cabeçalho do Perfil (nome, foto, ícones de contato) */

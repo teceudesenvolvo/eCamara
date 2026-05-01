@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaBalanceScale, FaSearch, FaCheckCircle, FaTimesCircle, FaArchive, FaPaperPlane, FaFileAlt, FaGavel, FaMagic, FaInbox, FaDownload, FaEye, FaFilePdf, FaInfoCircle, FaParagraph, FaCalendarAlt } from 'react-icons/fa';
+import { FaBalanceScale, FaSearch, FaCheckCircle, FaTimesCircle, FaArchive, FaPaperPlane, FaFileAlt, FaGavel, FaMagic, FaInbox, FaDownload, FaEye, FaFilePdf, FaInfoCircle, FaParagraph, FaCalendarAlt, FaTimes } from 'react-icons/fa';
 import MenuDashboard from "../../../componets/menuAdmin.jsx";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -18,7 +18,18 @@ import {
     MenuItem,
     Divider,
     TextField,
-    FormControl
+    FormControl,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Typography,
+    Chip,
+    Paper,
+    IconButton,
+    Radio,
+    ListItemText,
+    Checkbox
 } from '@mui/material';
 
 pdfMake.vfs = pdfFonts.vfs;
@@ -33,12 +44,14 @@ class JuizoPresidente extends Component {
             // Novos campos para IA
             focoDespacho: '',
             fundamentacaoAdicional: '',
+            tomDespacho: 'Técnico e Formal',
+            baseLegal: '',
             despachoText: '',
             isGeneratingDespacho: false,
             selectedComissao: '',
+            pdfPreviewData: null,
             // PDF and Signature state
             logoBase64: null,
-            showPasswordModal: false,
             passwordInput: '',
             passwordError: '',
             pendingAction: null,
@@ -49,6 +62,7 @@ class JuizoPresidente extends Component {
             homeConfig: {},
             footerConfig: {},
             camaraId: this.props.match.params.camaraId,
+            intencaoDespacho: '', // Moved here
             // PDF Popup
             showPdfPopup: false,
             pdfData: null,
@@ -105,9 +119,9 @@ class JuizoPresidente extends Component {
         if (!camaraId || camaraId === 'camara-teste') return;
         try {
             // Utiliza o Smart Alias do backend para garantir compatibilidade com UUIDs
-            const response = await api.get(`/commissions/${camaraId}`);
+            const response = await api.get(`/${camaraId}/commissions`);
             const rawComissoes = response.data;
-            
+
             // Extração robusta seguindo o padrão de Configuracoes.jsx
             const comissoesToProcess = Array.isArray(rawComissoes) ? rawComissoes : (rawComissoes?.commissions || Object.values(rawComissoes || {}));
 
@@ -177,7 +191,11 @@ class JuizoPresidente extends Component {
             selectedComissao: '',
             isGeneratingDespacho: false,
             focoDespacho: '',
-            fundamentacaoAdicional: ''
+            fundamentacaoAdicional: '',
+            tomDespacho: 'Técnico e Formal',
+            intencaoDespacho: '',
+            baseLegal: '',
+            pdfPreviewData: null
         });
     };
 
@@ -214,17 +232,59 @@ class JuizoPresidente extends Component {
         this.setState({ selectedMateria: null });
     };
 
-    openPasswordModal = (action) => {
-        const { selectedComissao } = this.state;
-        if (action === 'Encaminhado às Comissões' && !selectedComissao) {
-            alert("Por favor, selecione uma comissão para encaminhar a matéria.");
-            return;
+    openPasswordModal = () => {
+        const { selectedComissao, intencaoDespacho } = this.state;
+
+        let pendingAction = 'Despachado';
+        if (selectedComissao === 'Plenário') {
+            pendingAction = 'Enviado para Plenário';
+        } else if (selectedComissao) {
+            pendingAction = 'Encaminhado às Comissões';
+        } else if (intencaoDespacho) {
+            pendingAction = intencaoDespacho;
         }
-        this.setState({ showPasswordModal: true, pendingAction: action, passwordInput: '', passwordError: '' });
+
+        this.setState({ showPasswordModal: true, pendingAction, passwordInput: '', passwordError: '' });
     };
 
     closePdfPopup = () => {
         this.setState({ showPdfPopup: false, pdfData: null });
+    };
+
+    openOriginalPdfPopup = () => {
+        const { selectedMateria } = this.state;
+        if (!selectedMateria) return;
+
+        let pdfSrc = null;
+        if (selectedMateria.pdfUrl || selectedMateria.anexoUrl || selectedMateria.fileUrl) {
+            pdfSrc = selectedMateria.pdfUrl || selectedMateria.anexoUrl || selectedMateria.fileUrl;
+        } else if (selectedMateria.pdfBase64) {
+            pdfSrc = `data:application/pdf;base64,${selectedMateria.pdfBase64}`;
+        }
+
+        if (pdfSrc) {
+            this.setState({ pdfData: pdfSrc, showPdfPopup: true });
+        } else {
+            alert("PDF original não disponível.");
+        }
+    };
+
+    // Nova função para gerar o PDF de pré-visualização e abrir o popup
+    handleViewPreviewPdf = () => {
+        const { selectedMateria, despachoText, selectedComissao, intencaoDespacho } = this.state;
+        if (!selectedMateria) return;
+
+        let statusFinal = 'Despachado';
+        if (selectedComissao === 'Plenário') statusFinal = 'Enviado para Plenário';
+        else if (selectedComissao) statusFinal = `Encaminhado à ${selectedComissao}`;
+        else if (intencaoDespacho) statusFinal = intencaoDespacho;
+
+        const mockSignatureData = { nome: '___________________', email: '', timestamp: new Date().toISOString() };
+
+        const docDefinition = this.getDocDefinition(selectedMateria, despachoText || ' ', statusFinal, mockSignatureData);
+        pdfMake.createPdf(docDefinition).getBase64((data) => {
+            this.setState({ pdfData: `data:application/pdf;base64,${data}`, showPdfPopup: true });
+        });
     };
 
     openDespachoPdfPopup = (pdfBase64) => {
@@ -232,16 +292,16 @@ class JuizoPresidente extends Component {
     };
 
     handleSubmitDespacho = async (novoStatus, signatureData) => {
-        const { selectedMateria, selectedComissao, despachoText, camaraId } = this.state;
+        const { selectedMateria, selectedComissao, intencaoDespacho, despachoText, camaraId } = this.state;
         if (!selectedMateria) return;
 
         let statusFinal = novoStatus;
-        if (novoStatus === 'Encaminhado às Comissões') {
-            if (!selectedComissao) {
-                alert("Por favor, selecione uma comissão para encaminhar a matéria.");
-                return;
-            }
+        if (selectedComissao === 'Plenário') {
+            statusFinal = 'Enviado para Plenário';
+        } else if (selectedComissao) {
             statusFinal = `Encaminhado à ${selectedComissao}`;
+        } else if (intencaoDespacho && (!statusFinal || statusFinal === 'Despachado')) {
+            statusFinal = intencaoDespacho;
         }
 
         // Gerar o PDF do despacho como Blob para upload
@@ -282,7 +342,7 @@ class JuizoPresidente extends Component {
             this.setState(prevState => ({
                 materias: prevState.materias.map(m => m.id === selectedMateria.id ? { ...m, ...despachoData } : m),
                 selectedMateria: null,
-                pdfData: pdfBase64, // Para abrir o popup de visualização
+                pdfData: `data:application/pdf;base64,${pdfBase64}`, // Para abrir o popup de visualização
                 showPdfPopup: true
             }));
         } catch (error) {
@@ -334,7 +394,7 @@ class JuizoPresidente extends Component {
         this.setState({ passwordInput: e.target.value });
     };
     handleGenerateDespachoWithAI = async () => {
-        const { selectedMateria, selectedComissao, camaraId, focoDespacho, fundamentacaoAdicional } = this.state;
+        const { selectedMateria, selectedComissao, camaraId, focoDespacho, fundamentacaoAdicional, tomDespacho, intencaoDespacho, baseLegal } = this.state;
         if (!selectedMateria) return;
 
         this.setState({ isGeneratingDespacho: true, despachoText: '' });
@@ -370,15 +430,18 @@ class JuizoPresidente extends Component {
         - Tipo: ${selectedMateria.tipo}
         - Número: ${selectedMateria.numero}
         - Ementa: "${selectedMateria.ementa}"
-        - Parecer da Procuradoria: "${selectedMateria.parecer || 'Não disponível'}" (${selectedMateria.decisaoParecer || 'Não disponível'})
+        - Parecer da Procuradoria: "${selectedMateria.parecer || 'Não disponível'}" (${selectedMateria.decisao || selectedMateria.decisaoParecer || 'Não disponível'})
         
         Contexto da decisão: ${promptContext}
         
         ORIENTAÇÕES ADICIONAIS DO PRESIDENTE:
+        - Tom do Despacho: ${tomDespacho || 'Técnico e Formal'}
+        - Intenção Principal: ${intencaoDespacho || 'Padrão'}
         - Foco principal do despacho: ${focoDespacho || 'Nenhum foco específico.'}
         - Fundamentação adicional: ${fundamentacaoAdicional || 'Nenhuma fundamentação adicional.'}
+        - Base Legal / Artigos de Referência: ${baseLegal || 'Nenhuma referência específica informada.'}
 
-        O texto deve ser direto, formal e consistente com o contexto fornecido. Responda em formato HTML utilizando as tags <p>, <strong> e <br>.`;
+        O texto deve ser direto, consistente com o contexto fornecido e adequado ao tom solicitado. Responda em formato HTML utilizando as tags <p>, <strong> e <br>.`;
 
         try {
             const response = await sendMessageToAIPrivate(prompt, camaraId);
@@ -425,7 +488,7 @@ class JuizoPresidente extends Component {
                 },
 
                 { text: 'I - DO PARECER JURÍDICO', style: 'sectionHeader' },
-                { text: `A Procuradoria Jurídica desta Casa emitiu parecer opinando pela ${materia.decisaoParecer === 'favoravel' ? 'constitucionalidade e legalidade' : 'inconstitucionalidade e ilegalidade'} da matéria, nos seguintes termos: "${materia.parecer}"`, style: 'bodyText' },
+                { text: `A Procuradoria Jurídica desta Casa emitiu parecer opinando pela ${(materia.decisao === 'favoravel' || materia.decisaoParecer === 'favoravel') ? 'constitucionalidade e legalidade' : 'inconstitucionalidade e ilegalidade'} da matéria, nos seguintes termos: "${materia.parecer || 'Parecer não anexado.'}"`, style: 'bodyText' },
 
                 { text: 'II - DO DESPACHO', style: 'sectionHeader', margin: [0, 10, 0, 5] },
                 { stack: this.processHtmlToPdfMake(despachoText), marginTop: 5, marginBottom: 10 },
@@ -441,8 +504,8 @@ class JuizoPresidente extends Component {
                     text: [
                         { text: 'ASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
                         { text: `Assinado por: ${signatureData?.nome} (${signatureData?.email})\n`, fontSize: 8 },
-                        { text: `Data/Hora: ${new Date(signatureData?.timestamp).toLocaleString()}\n`, fontSize: 8 },
-                        { text: `IP: ${signatureData?.ip} | Hash: ${signatureData?.documentHash?.substring(0, 20)}...`, fontSize: 8 }
+                        { text: `Data/Hora: ${signatureData?.timestamp ? new Date(signatureData.timestamp).toLocaleString() : '---'}\n`, fontSize: 8 },
+                        { text: `IP: ${signatureData?.ip || '0.0.0.0'} | Hash: ${signatureData?.documentHash ? signatureData.documentHash.substring(0, 20) : '---'}...`, fontSize: 8 }
                     ],
                     alignment: 'center', style: 'digitalSignatureInfo'
                 }
@@ -469,94 +532,27 @@ class JuizoPresidente extends Component {
                 digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 10, italics: true, background: '#f0f8ff', padding: 5, borderRadius: 4 }
             }
         };
-
+        return docDefinition;
     };
 
     renderActionButtons = () => {
-        const { selectedMateria } = this.state;
-
-        // Regra 3: Matéria aprovada na comissão -> Enviar para Plenário
-        if (selectedMateria.status === 'Aprovado na Comissão') {
-            return (
-                <button
-                    key="btn-plenario"
-                    onClick={() => this.openPasswordModal('Enviado para Plenário')}
-                    className="btn-primary" style={{ flex: 1 }}
-                >
-                    <FaPaperPlane /> Enviar para Plenário
-                </button>
-            );
-        }
-
-        // Regra do Parecer Favorável ou Aguardando: Arquivar, Comissões ou Plenário
-        if (selectedMateria.status === 'Parecer Favorável' || selectedMateria.status === 'Aguardando Despacho da Presidência') {
-            return (
-                <>
-                    <button
-                        key="btn-arquivar"
-                        onClick={() => this.openPasswordModal('Arquivado')}
-                        className="btn-danger" style={{ flex: 1 }}
-                    >
-                        <FaArchive /> Arquivar
-                    </button>
-                    <button
-                        key="btn-comissao"
-                        onClick={() => this.openPasswordModal('Encaminhado às Comissões')}
-                        className="btn-primary"
-                    >
-                        <FaPaperPlane /> Enviar para Comissão
-                    </button>
-                    <button
-                        key="btn-plenario-f"
-                        onClick={() => this.openPasswordModal('Enviado para Plenário')}
-                        className="btn-success" style={{ flex: 1 }}
-                    >
-                        <FaCheckCircle /> Enviar para Plenário
-                    </button>
-                </>
-            );
-        }
-
-        // Regra 2: Requerimento -> Despachar ou Enviar para Plenário
-        if (selectedMateria.tipo === 'Requerimento') {
-            return (
-                <>
-                    <button
-                        key="btn-despachar"
-                        onClick={() => this.openPasswordModal('Despachado')}
-                        className="btn-success" style={{ flex: 1 }}
-                    >
-                        <FaCheckCircle /> Despachar
-                    </button>
-                    <button
-                        key="btn-plenario-req"
-                        onClick={() => this.openPasswordModal('Enviado para Plenário')}
-                        className="btn-primary" style={{ flex: 1 }}
-                    >
-                        <FaPaperPlane /> Enviar para Plenário
-                    </button>
-                </>
-            );
-        }
-
-        // Regra 1 (Geral): Arquivar ou Enviar para Comissão
         return (
-            <>
-                <button
-                    key="btn-arquivar-g"
-                    onClick={() => this.openPasswordModal('Arquivado')}
-                    className="btn-danger" style={{ flex: 1 }}
-                >
-                    <FaArchive /> Arquivar
-                </button>
-                <button
-                    key="btn-comissao-g"
-                    onClick={() => this.openPasswordModal('Encaminhado às Comissões')}
-                    className="btn-primary" style={{ flex: 1 }}
-                >
-                    <FaPaperPlane /> Enviar para Comissão
-                </button>
-            </>
+            <Button
+                variant="contained"
+                onClick={this.openPasswordModal}
+                sx={{
+                    width: '100%',
+                    py: 1.5,
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    textTransform: 'none',
+                    borderRadius: '12px',
+                    backgroundColor: '#126B5E',
+                    '&:hover': { backgroundColor: '#0e554a' }
+                }}
+            >
+                <FaPaperPlane style={{ marginRight: '8px' }} /> Realizar Despacho e Assinar
+            </Button>
         );
     };
 
@@ -604,279 +600,291 @@ class JuizoPresidente extends Component {
                 <MenuDashboard />
 
                 <div className="dashboard-content">
-                    <div className="dashboard-header" style={{ marginBottom: '30px' }}>
-                        <div>
-                            <h1 className="dashboard-header-title" style={{ fontSize: '20px' }}>
-                                <FaBalanceScale style={{ fontSize: '20px', color: 'var(--primary-color)' }} /> Juízo da Presidência
-                            </h1>
-                            <p style={{ fontSize: '15px' }} className="dashboard-header-desc">Gerenciamento de admissibilidade e despachos legislativos.</p>
-                        </div>
-                    </div>
-
-                    {/* --- Navegação por Abas e Busca --- */}
-                    <div className="dashboard-card" style={{ padding: '10px 20px', marginBottom: '30px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                            {['Pendentes', 'Comissão', 'Plenário', 'Finalizadas'].map(tab => (
-                                <button
-                                    key={tab}
-                                    onClick={() => this.handleTabChange(tab)}
-                                    style={{
-                                        padding: '12px 25px',
-                                        fontSize: '0.9rem',
-                                        border: 'none',
-                                        background: activeTab === tab ? 'var(--primary-color)' : 'transparent',
-                                        color: activeTab === tab ? '#fff' : '#666',
-                                        borderRadius: '12px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.3s'
-                                    }}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="search-input-wrapper" style={{ flex: '0 1 400px', margin: 0 }}>
-                            <FaSearch className="search-icon" />
-                            <input
-                                type="text"
-                                placeholder="Pesquisar matéria..."
-                                className="search-input"
-                                style={{ background: '#f8f9fa' }}
-                                value={searchTerm}
-                                onChange={this.handleSearchChange}
-                            />
-                        </div>
-                    </div>
-
-                    {/* --- Lista de Matérias em Grid --- */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
-                        {materiasFiltradas.length > 0 ? materiasFiltradas.map((materia) => (
-                            <div
-                                key={materia.id}
-                                className="dashboard-card dashboard-card-hover"
-                                style={{
-                                    padding: '25px',
-                                    cursor: 'pointer',
-                                    borderRadius: '20px',
-                                    borderLeft: `6px solid ${materia.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}`,
-                                    margin: 0
-                                }}
-                                onClick={() => this.handleSelectMateria(materia)}
-                            >
-                                <div className="list-item-header" style={{ marginBottom: '15px', justifyContent: 'space-between' }}>
-                                    <span className="tag tag-primary" style={{ fontSize: '0.75rem', padding: '5px 12px' }}>{materia.tipo} {materia.numero}</span>
-                                    <span className={`tag ${materia.status.includes('Aguardando') || materia.status.includes('Aprovado') ? 'tag-warning' : 'tag-neutral'}`} style={{ fontSize: '0.7rem' }}>{materia.status}</span>
-                                </div>
-                                <p className="list-item-title" style={{ fontSize: '1rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '15px', height: '3em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{materia.ementa}</p>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                                    <div>
-                                        <span style={{ color: '#888' }}>Autor:</span> <strong style={{ color: '#444' }}>{materia.autor}</strong>
-                                    </div>
-                                    <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Analisar <FaGavel /></span>
+                    {!selectedMateria ? (
+                        <>
+                            <div className="dashboard-header" style={{ marginBottom: '30px' }}>
+                                <div>
+                                    <h1 className="dashboard-header-title" style={{ fontSize: '20px' }}>
+                                        <FaBalanceScale style={{ fontSize: '20px', color: 'var(--primary-color)' }} /> Juízo da Presidência
+                                    </h1>
+                                    <p style={{ fontSize: '15px' }} className="dashboard-header-desc">Gerenciamento de admissibilidade e despachos legislativos.</p>
                                 </div>
                             </div>
-                        )) : (
-                            <div style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', color: '#999', background: 'transparent', borderRadius: '24px' }}>
-                                <FaInbox size={40} style={{ marginBottom: '15px', opacity: 0.3 }} />
-                                <p style={{ fontSize: '13px', opacity: 0.3 }}>Nenhuma matéria encontrada nesta categoria.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
 
-                {/* --- Popup (Modal) de Detalhes --- */}
-                {selectedMateria && (
-                    <div className="modal-overlay" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-                        <div className="modal-content" style={{ width: '900px', maxWidth: '95vw', padding: 0, borderRadius: '24px', overflow: 'hidden' }}>
-                            <div style={{ height: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '30px', background: '#fff', borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 10 }}>
-                                    <div>
-                                        <h2 style={{ margin: 0, color: '#126B5E', fontSize: '1.4rem', textAlign: 'left' }}>Analise de Admissibilidade</h2>
-                                        <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '0.9rem', textAlign: 'left' }}>{selectedMateria.tipo} {selectedMateria.numero} - {selectedMateria.autor}</p>
-                                    </div>
-                                    <button onClick={this.handleCloseDetails} style={{ background: '#f0f2f5', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
-                                </div>
-
-                                <div style={{ padding: '30px' }}>
-                                    {/* Resumo e Grid de Dados */}
-                                    <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '16px', borderLeft: '4px solid #ccc', marginBottom: '25px' }}>
-                                        <p style={{ margin: 0, lineHeight: '1.6', color: '#333', fontStyle: 'italic', fontSize: '1rem', textAlign: 'left' }}>"{selectedMateria.ementa}"</p>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-                                        <div style={{ textAlign: 'left', background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee' }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Protocolo</label>
-                                            <p style={{ margin: '5px 0 0 0', fontWeight: '600', color: '#333' }}>{selectedMateria.protocolo || 'N/A'}</p>
-                                        </div>
-                                        <div style={{ textAlign: 'left', background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee' }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Matéria Polêmica?</label>
-                                            <p style={{ margin: '5px 0 0 0', fontWeight: '600', color: selectedMateria.materiaPolemica === 'Sim' ? '#d32f2f' : '#333' }}>{selectedMateria.materiaPolemica || 'Não'}</p>
-                                        </div>
-                                        <div style={{ textAlign: 'left', background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee' }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Tipo de Lei</label>
-                                            <p style={{ margin: '5px 0 0 0', fontWeight: '600', color: '#333' }}>{selectedMateria.isComplementar ? 'Lei Complementar' : 'Lei Ordinária'}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Ações do PDF - suporta URL (Supabase) e fallback Base64 (legado) */}
-                                    <div style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
-                                        {selectedMateria.pdfUrl || selectedMateria.pdfBase64 ? (
-                                            <button
-                                                className="btn-secondary"
-                                                style={{ flex: 1, height: '45px' }}
-                                                onClick={() => {
-                                                    const url = selectedMateria.pdfUrl || selectedMateria.anexoUrl;
-                                                    if (url) window.open(url, '_blank');
-                                                    else if (selectedMateria.pdfBase64) window.open(`data:application/pdf;base64,${selectedMateria.pdfBase64}`);
-                                                    else alert('PDF original não disponível.');
-                                                }}
-                                            >
-                                                <FaEye /> Ver PDF Original
-                                            </button>
-                                        ) : null}
-                                        <button className="btn-secondary" onClick={this.handleDownloadOriginalPDF} style={{ flex: 1, height: '45px' }}>
-                                            <FaDownload /> Baixar Arquivo
+                            {/* --- Navegação por Abas e Busca --- */}
+                            <div className="dashboard-card" style={{ padding: '10px 20px', marginBottom: '30px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                                <div style={{ display: 'flex', gap: '5px' }}>
+                                    {['Pendentes', 'Comissão', 'Plenário', 'Finalizadas'].map(tab => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => this.handleTabChange(tab)}
+                                            style={{
+                                                padding: '12px 25px',
+                                                fontSize: '0.9rem',
+                                                border: 'none',
+                                                background: activeTab === tab ? 'var(--primary-color)' : 'transparent',
+                                                color: activeTab === tab ? '#fff' : '#666',
+                                                borderRadius: '12px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.3s'
+                                            }}
+                                        >
+                                            {tab}
                                         </button>
-                                    </div>
+                                    ))}
+                                </div>
 
-                                    {/* Parecer Jurídico */}
-                                    <div style={{ textAlign: 'left', background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: `4px solid ${selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}` }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                            <h4 style={{ margin: 0, color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FaBalanceScale color={selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'} /> Parecer da Procuradoria
-                                            </h4>
-                                            {selectedMateria.parecerDate && <span style={{ fontSize: '0.75rem', color: '#888' }}>{new Date(selectedMateria.parecerDate).toLocaleDateString()}</span>}
-                                        </div>
-                                        <div style={{
-                                            maxHeight: '150px',
-                                            overflowY: 'auto',
-                                            fontSize: '0.9rem',
-                                            color: '#555',
-                                            lineHeight: '1.4',
-                                            background: '#fff',
-                                            padding: '10px',
-                                            borderRadius: '6px',
-                                            border: '1px solid #eee'
-                                        }}>
-                                            {selectedMateria.parecer || "Nenhum parecer jurídico registrado até o momento."}
-                                        </div>
-                                    </div>
+                                <div className="search-input-wrapper" style={{ flex: '0 1 400px', margin: 0 }}>
+                                    <FaSearch className="search-icon" />
+                                    <input
+                                        type="text"
+                                        placeholder="Pesquisar matéria..."
+                                        className="search-input"
+                                        style={{ background: '#f8f9fa' }}
+                                        value={searchTerm}
+                                        onChange={this.handleSearchChange}
+                                    />
+                                </div>
+                            </div>
 
-                                    {/* Texto Integral (Collapse style / Scroll) */}
-                                    <div style={{ textAlign: 'left', marginBottom: '25px' }}>
-                                        <h4 style={{ fontSize: '1rem', color: '#126B5E', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                                            <FaParagraph /> Texto Integral da Proposição
-                                        </h4>
-                                        <div style={{
-                                            background: '#fafafa',
-                                            padding: '15px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #eee',
-                                            maxHeight: '200px',
-                                            overflowY: 'auto',
-                                            fontSize: '0.95rem',
-                                            lineHeight: '1.6',
-                                            color: '#2c3e50'
+                            {/* --- Lista de Matérias em Grid --- */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
+                                {materiasFiltradas.length > 0 ? materiasFiltradas.map((materia) => (
+                                    <div
+                                        key={materia.id}
+                                        className="dashboard-card dashboard-card-hover"
+                                        style={{
+                                            padding: '25px',
+                                            cursor: 'pointer',
+                                            borderRadius: '20px',
+                                            borderLeft: `6px solid ${materia.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}`,
+                                            margin: 0
                                         }}
-                                            dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }}
-                                        />
+                                        onClick={() => this.handleSelectMateria(materia)}
+                                    >
+                                        <div className="list-item-header" style={{ marginBottom: '15px', justifyContent: 'space-between' }}>
+                                            <span className="tag tag-primary" style={{ fontSize: '0.75rem', padding: '5px 12px' }}>{materia.tipo} {materia.numero}</span>
+                                            <span className={`tag ${materia.status.includes('Aguardando') || materia.status.includes('Aprovado') ? 'tag-warning' : 'tag-neutral'}`} style={{ fontSize: '0.7rem' }}>{materia.status}</span>
+                                        </div>
+                                        <p className="list-item-title" style={{ fontSize: '1rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '15px', height: '3em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{materia.ementa}</p>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                            <div>
+                                                <span style={{ color: '#888' }}>Autor:</span> <strong style={{ color: '#444' }}>{materia.autor}</strong>
+                                            </div>
+                                            <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Analisar <FaGavel /></span>
+                                        </div>
                                     </div>
+                                )) : (
+                                    <div style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', color: '#999', background: 'transparent', borderRadius: '24px' }}>
+                                        <FaInbox size={40} style={{ marginBottom: '15px', opacity: 0.3 }} />
+                                        <p style={{ fontSize: '13px', opacity: 0.3 }}>Nenhuma matéria encontrada nesta categoria.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ padding: '0px', width: '100%', maxWidth: '1600px', margin: '0 auto' }}>
+                            {/* Header da Página de Análise */}
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '25px', gap: '15px' }}>
+                                <IconButton onClick={this.handleCloseDetails} sx={{ background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', '&:hover': { background: '#f8f9fa' } }}>
+                                    <FaTimes color="#666" size={18} />
+                                </IconButton>
+                                <div style={{ textAlign: 'center', width: '90%' }}>
+                                    <Typography variant="h5" sx={{ color: '#126B5E', fontWeight: 'bold', margin: '0 auto' }}>Análise de Admissibilidade</Typography>
+                                    <Typography variant="body2" sx={{ color: '#666' }}>{selectedMateria.tipo} {selectedMateria.autor}</Typography>
+                                </div>
+                            </div>
 
-                                    {/* Formulário de Decisão */}
-                                    <div style={{ borderTop: '2px solid #f0f2f5', paddingTop: '20px' }}>
-                                        <Grid container spacing={3}>
-                                            <Grid size={{ xs: 12, md: 6 }}>
-                                                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                                                <InputLabel id="select-comissao-label">Encaminhar para:</InputLabel>
+                            <Grid container spacing={3}>
+                                {/* Formulário Centralizado - Largura Total */}
+                                <Grid size={12} sx={{ maxWidth: '900px', margin: '0 auto' }}>
+                                    <Paper elevation={0} sx={{ p: 3, borderRadius: '20px', mb: 3, background: '#fff', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                                        <Box sx={{ p: 2, background: '#f8f9fa', borderRadius: '12px', borderLeft: '4px solid #126B5E', mb: 3 }}>
+                                            <Typography variant="body1" sx={{ color: '#333', fontStyle: 'italic', lineHeight: 1.6 }}>"{selectedMateria.ementa}"</Typography>
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+                                            <Paper elevation={0} sx={{ p: 1.5, borderRadius: '12px', border: '1px solid #eee', flex: 1, minWidth: '120px' }}>
+                                                <Typography variant="caption" sx={{ color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Protocolo</Typography>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#333' }}>{selectedMateria.protocolo || 'N/A'}</Typography>
+                                            </Paper>
+                                            <Paper elevation={0} sx={{ p: 1.5, borderRadius: '12px', border: '1px solid #eee', flex: 1, minWidth: '120px' }}>
+                                                <Typography variant="caption" sx={{ color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Polêmica?</Typography>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: selectedMateria.materiaPolemica === 'Sim' ? '#d32f2f' : '#333' }}>{selectedMateria.materiaPolemica || 'Não'}</Typography>
+                                            </Paper>
+                                            <Paper elevation={0} sx={{ p: 1.5, borderRadius: '12px', border: '1px solid #eee', flex: 1, minWidth: '120px' }}>
+                                                <Typography variant="caption" sx={{ color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>Tipo de Lei</Typography>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#333' }}>{selectedMateria.isComplementar ? 'Complementar' : 'Ordinária'}</Typography>
+                                            </Paper>
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                                            {selectedMateria.pdfUrl || selectedMateria.pdfBase64 ? (
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    startIcon={<FaEye />}
+                                                    onClick={this.openOriginalPdfPopup}
+                                                    sx={{ flex: 1, borderRadius: '10px', color: '#126B5E', borderColor: '#126B5E' }}
+                                                >
+                                                    Original
+                                                </Button>
+                                            ) : null}
+                                        </Box>
+
+                                        <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', mb: 3, borderLeft: `4px solid ${selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'}`, background: '#f8f9fa' }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#333', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <FaBalanceScale color={selectedMateria.decisaoParecer === 'contrario' ? '#d32f2f' : '#4CAF50'} /> Parecer da Procuradoria
+                                            </Typography>
+                                            <Box sx={{ maxHeight: '100px', overflowY: 'auto', p: 1, background: '#fff', borderRadius: '8px', border: '1px solid #eee' }}>
+                                                <Typography variant="body2" sx={{ color: '#555', lineHeight: 1.5 }}>
+                                                    {selectedMateria.parecer || "Nenhum parecer registrado."}
+                                                </Typography>
+                                            </Box>
+                                        </Paper>
+
+                                        {/* Formulário de Decisão IA */}
+                                        <Typography variant="h6" sx={{ color: '#333', mb: 2, mt: 3, fontWeight: 'bold', borderTop: '1px solid #eee', pt: 3 }}>
+                                            <FaMagic style={{ marginRight: '8px', color: '#FF740F' }} /> Formulário de Despacho
+                                        </Typography>
+
+                                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                                            <Grid size={12}>
+                                                <FormControl fullWidth size="small">
+                                                    <InputLabel id="select-comissao-label">Encaminhar para:</InputLabel>
                                                     <Select
-                                                    labelId="select-comissao-label"
+                                                        labelId="select-comissao-label"
                                                         value={selectedComissao}
                                                         onChange={(e) => this.setState({ selectedComissao: e.target.value })}
                                                         label="Encaminhar para:"
-                                                    sx={{ borderRadius: '10px' }}
-                                                    MenuProps={{
-                                                        PaperProps: {
-                                                            sx: { zIndex: 9999 } // Garante que o menu apareça acima de outros popups
-                                                        }
-                                                    }}
+                                                        sx={{ borderRadius: '10px', background: '#fff' }}
+                                                        renderValue={(selected) => selected || <em>Selecione uma comissão...</em>}
+                                                        MenuProps={{
+                                                            PaperProps: {
+                                                                sx: { zIndex: 9999, borderRadius: '12px' }
+                                                            }
+                                                        }}
                                                     >
-                                                        <MenuItem value="" sx={{zIndex: 9999}} ><em>Selecione uma comissão...</em></MenuItem>
-                                                    {comissoesDisponiveis.map((comissao, idx) => (
-                                                        <MenuItem key={comissao.id || idx} value={comissao.nome}>{comissao.nome}</MenuItem>
+                                                        <MenuItem value=""><em>Selecione uma comissão...</em></MenuItem>
+                                                        <MenuItem value="Plenário">
+                                                            <Radio checked={selectedComissao === 'Plenário'} size="small" sx={{ color: '#126B5E', '&.Mui-checked': { color: '#126B5E' } }} />
+                                                            <ListItemText primary="Plenário" primaryTypographyProps={{ fontWeight: 'bold', color: '#126B5E' }} />
+                                                        </MenuItem>
+                                                        {comissoesDisponiveis.map((comissao, idx) => (
+                                                            <MenuItem key={comissao.id || idx} value={comissao.nome}>
+                                                                <Radio checked={selectedComissao === comissao.nome} size="small" />
+                                                                <ListItemText primary={comissao.nome} />
+                                                            </MenuItem>
                                                         ))}
                                                     </Select>
                                                 </FormControl>
-
-                                                <TextField
-                                                    label="Foco Principal do Despacho (para IA)"
-                                                    fullWidth
-                                                    size="small"
-                                                    multiline
-                                                    rows={2}
-                                                    value={focoDespacho}
-                                                    onChange={(e) => this.setState({ focoDespacho: e.target.value })}
-                                                    placeholder="Ex: Urgência na tramitação, necessidade de parecer técnico..."
-                                                    sx={{ mb: 2 }}
-                                                    InputProps={{ sx: { borderRadius: '10px' } }}
-                                                />
-
-                                                <TextField
-                                                    label="Fundamentação Adicional (para IA)"
-                                                    fullWidth
-                                                    size="small"
-                                                    multiline
-                                                    rows={2}
-                                                    value={fundamentacaoAdicional}
-                                                    onChange={(e) => this.setState({ fundamentacaoAdicional: e.target.value })}
-                                                    placeholder="Ex: Citar artigo específico do Regimento Interno..."
-                                                    InputProps={{ sx: { borderRadius: '10px' } }}
-                                                />
-                                                <Button
-                                                    variant="contained"
-                                                    fullWidth
-                                                    startIcon={isGeneratingDespacho ? <CircularProgress size={18} color="inherit" /> : <FaMagic />}
-                                                    onClick={this.handleGenerateDespachoWithAI}
-                                                    disabled={isGeneratingDespacho}
-                                                    sx={{ textTransform: 'none', borderRadius: '12px', backgroundColor: '#FF740F', '&:hover': { backgroundColor: '#e6680d' } }}
-                                                >
-                                                    {isGeneratingDespacho ? 'IA Redigindo...' : 'Sugerir Despacho com IA'}
-                                                </Button>
                                             </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#333', textAlign: 'left' }}>Texto do Despacho</label>
-                                                <Box sx={{ border: '1px solid #d1d9e0', borderRadius: '12px', overflow: 'hidden', backgroundColor: isGeneratingDespacho ? '#f8f9fa' : '#fff' }}>
-                                                    <ReactQuill
-                                                        theme="snow"
-                                                        value={despachoText}
-                                                        onChange={(content) => this.setState({ despachoText: content })}
-                                                        modules={this.modules}
-                                                        formats={this.formats}
-                                                        placeholder={isGeneratingDespacho ? "Aguarde, a IA está redigindo o despacho..." : "Escreva aqui o despacho da presidência..."}
-                                                        readOnly={isGeneratingDespacho}
-                                                        style={{ height: '300px' }}
-                                                    />
-                                                </Box>
-                                                <Button
-                                                    variant="outlined"
-                                                    startIcon={<FaEye />}
-                                                    onClick={() => this.openDespachoPdfPopup(despachoText)}
-                                                    sx={{ mt: 2, textTransform: 'none', borderRadius: '12px', borderColor: '#126B5E', color: '#126B5E', '&:hover': { backgroundColor: '#e0f2f1' } }}
-                                                >
-                                                    Visualizar PDF
-                                                </Button>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <FormControl fullWidth size="small">
+                                                    <InputLabel>Tom do Despacho</InputLabel>
+                                                    <Select
+                                                        value={this.state.tomDespacho}
+                                                        label="Tom do Despacho"
+                                                        onChange={(e) => this.setState({ tomDespacho: e.target.value })}
+                                                        sx={{ borderRadius: '10px', background: '#fff' }}
+                                                        MenuProps={{ PaperProps: { sx: { zIndex: 9999 } } }}
+                                                    >
+                                                        <MenuItem value="Técnico e Formal">Técnico e Formal</MenuItem>
+                                                        <MenuItem value="Conciliador e Orientativo">Conciliador e Orientativo</MenuItem>
+                                                        <MenuItem value="Rigoroso e Direto">Rigoroso e Direto</MenuItem>
+                                                        <MenuItem value="Resumido e Objetivo">Resumido e Objetivo</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <FormControl fullWidth size="small">
+                                                    <InputLabel>Intenção Principal</InputLabel>
+                                                    <Select
+                                                        value={this.state.intencaoDespacho}
+                                                        label="Intenção Principal"
+                                                        onChange={(e) => this.setState({ intencaoDespacho: e.target.value })}
+                                                        sx={{ borderRadius: '10px', background: '#fff' }}
+                                                        MenuProps={{ PaperProps: { sx: { zIndex: 9999 } } }}
+                                                    >
+                                                        <MenuItem value="">Automático</MenuItem>
+                                                        <MenuItem value="Deferimento">Deferimento / Aprovação</MenuItem>
+                                                        <MenuItem value="Indeferimento">Indeferimento / Rejeição</MenuItem>
+                                                        <MenuItem value="Encaminhamento para Comissão">Encaminhamento para Comissão</MenuItem>
+                                                        <MenuItem value="Arquivamento">Arquivamento</MenuItem>
+                                                        <MenuItem value="Devolução ao Autor">Devolução ao Autor para adequação</MenuItem>
+                                                    </Select>
+                                                </FormControl>
                                             </Grid>
                                         </Grid>
-                                    </div>
-                                </div>
-                                <div className="modal-footer" style={{ padding: '20px 30px', background: '#f8f9fa', borderTop: '1px solid #eee' }}>
-                                    <div style={{ display: 'flex', gap: '10px', width: '100%' }}>{this.renderActionButtons()}</div>
-                                </div>
-                            </div>
+
+                                        <TextField
+                                            label="Base Legal / Artigos de Referência"
+                                            fullWidth
+                                            size="small"
+                                            value={this.state.baseLegal}
+                                            onChange={(e) => this.setState({ baseLegal: e.target.value })}
+                                            placeholder="Ex: Artigo 142 do Regimento Interno"
+                                            sx={{ mb: 2 }}
+                                            InputProps={{ sx: { borderRadius: '10px', background: '#fff' } }}
+                                        />
+
+                                        <Button
+                                            variant="contained"
+                                            fullWidth
+                                            size="large"
+                                            startIcon={isGeneratingDespacho ? <CircularProgress size={20} color="inherit" /> : <FaMagic />}
+                                            onClick={this.handleGenerateDespachoWithAI}
+                                            disabled={isGeneratingDespacho}
+                                            sx={{
+                                                mb: 3,
+                                                textTransform: 'none',
+                                                borderRadius: '12px',
+                                                backgroundColor: '#FF740F',
+                                                fontWeight: 'bold',
+                                                boxShadow: '0 4px 14px 0 rgba(255,116,15,0.39)',
+                                                '&:hover': { backgroundColor: '#e6680d' }
+                                            }}
+                                        >
+                                            {isGeneratingDespacho ? 'IA Redigindo o Despacho...' : 'Gerar Despacho com IA'}
+                                        </Button>
+
+                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#333' }}>
+                                            Texto do Despacho (Editor)
+                                            <Button
+                                                variant="outlined"
+                                                startIcon={<FaEye />}
+                                                onClick={this.handleViewPreviewPdf}
+                                                sx={{ marginLeft: "60%", mt: 2, textTransform: 'none', borderRadius: '12px', borderColor: '#126B5E', color: '#126B5E', '&:hover': { backgroundColor: '#e0f2f1' } }}
+                                            >
+                                                Visualizar PDF
+                                            </Button>
+                                        </Typography>
+                                        <Box sx={{ border: '1px solid #d1d9e0', borderRadius: '12px', overflow: 'hidden', mb: 3, backgroundColor: isGeneratingDespacho ? '#f8f9fa' : '#fff' }}>
+                                            <ReactQuill
+                                                theme="snow"
+                                                value={despachoText}
+                                                onChange={(content) => this.setState({ despachoText: content })}
+                                                modules={this.modules}
+                                                formats={this.formats}
+                                                placeholder={isGeneratingDespacho ? "Aguarde, a IA está analisando..." : "Texto do despacho aparecerá aqui..."}
+                                                readOnly={isGeneratingDespacho}
+                                                style={{ height: '300px' }}
+                                            />
+                                            {/* Botão para visualizar o PDF do despacho */}
+                                        </Box>
+
+                                        {/* Botão Principal de Despacho */}
+                                        <Box sx={{ pt: 2, borderTop: '1px solid #eee' }}>
+                                            {this.renderActionButtons()}
+                                        </Box>
+                                    </Paper>
+
+                                </Grid>
+                            </Grid>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Modal de Senha para Assinatura */}
                 {showPasswordModal && (
@@ -904,6 +912,7 @@ class JuizoPresidente extends Component {
                     </div>
                 )}
 
+                {/* Popup de Visualização do PDF do Despacho */}
                 {/* Popup de Visualização do PDF do Despacho */}
                 {showPdfPopup && pdfData && (
                     <div className="pdf-popup-overlay">
