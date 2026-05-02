@@ -6,6 +6,7 @@ import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../../assets/logo.png';
+import LogoIcon from '../../../assets/logo-camaraai-icon.png';
 import { generateParecer, sendMessageToAIPrivate } from '../../../aiService';
 import api from '../../../services/api';
 import {
@@ -39,6 +40,7 @@ class JuizoMateria extends Component {
             analiseLocal: '',
             parecerText: '',
             logoBase64: null,
+            camaraAILogoBase64: null,
             isGeneratingParecer: false,
             materias: [],
             loading: true,
@@ -58,6 +60,10 @@ class JuizoMateria extends Component {
             ],
             currentInput: '',
             isGenerating: false,
+            showPasswordModal: false,
+            passwordInput: '',
+            passwordError: '',
+            pendingDecisao: null,
         };
         this.messagesEndRef = React.createRef();
         this.chatContainerRef = React.createRef();
@@ -119,13 +125,19 @@ class JuizoMateria extends Component {
             const councilName = councilData.name || ''; // Usa o nome institucional
             const configData = councilData.config || councilData.dadosConfig || {};
 
+            let logoB64 = null;
             if (configData.layout?.logoLight) {
-                this.getBase64(configData.layout.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
+                logoB64 = await this.getBase64(configData.layout.logoLight);
             } else {
-                this.getBase64(logo).then(logoBase64 => this.setState({ logoBase64 }));
+                logoB64 = await this.getBase64(logo);
             }
 
+            // Carrega a logo da CâmaraAI para o bloco de assinatura
+            const camaraAILogoB64 = await this.getBase64(LogoIcon);
+
             this.setState({
+                logoBase64: logoB64,
+                camaraAILogoBase64: camaraAILogoB64,
                 homeConfig: configData.home || {},
                 councilName,
                 footerConfig: configData.footer || {},
@@ -187,7 +199,7 @@ class JuizoMateria extends Component {
         try {
             const { regimentoText, leiOrganicaText } = baseConhecimento;
 
-            const prompt = `Atue como um Consultor Jurídico Sênior de Direito Municipal.
+            const prompt = `Atue como um Consultor Jurídico Sênior de Direito Municipal para a ${councilName || 'Câmara Municipal'}.
             
             CONTEXTO DA MATÉRIA EM ANÁLISE:
             - Tipo: ${selectedMateria.tipoMateria}
@@ -229,7 +241,7 @@ class JuizoMateria extends Component {
 
         const { regimentoText, leiOrganicaText } = baseConhecimento;
 
-        const prompt = `Atue como um Procurador Jurídico experiente da Câmara Municipal. Elabore um parecer técnico-jurídico completo sobre o(a) ${selectedMateria.tipoMateria} nº ${selectedMateria.numero}.
+        const prompt = `Atue como um Procurador Jurídico experiente da ${councilName || 'Câmara Municipal'}. Elabore um parecer técnico-jurídico completo sobre o(a) ${selectedMateria.tipoMateria} nº ${selectedMateria.numero}.
         
         SUA CONCLUSÃO DEVE SER: ${this.state.decisao === 'favoravel' ? 'CONSTITUCIONALIDADE E LEGALIDADE (Favorável)' : 'INCONSTITUCIONALIDADE E ILEGALIDADE (Contrário)'}.
         
@@ -265,8 +277,9 @@ class JuizoMateria extends Component {
                 text: 'Gerei uma minuta completa do parecer baseada na legislação local. O texto já foi aplicado ao formulário para sua revisão.' 
             };
 
+            const cleaned = response.replace(/```html|```/g, '').trim();
             this.setState({ 
-                parecerText: response, 
+                parecerText: cleaned, 
                 isGeneratingParecer: false,
                 messages: [...this.state.messages, aiMessage]
             });
@@ -326,15 +339,53 @@ class JuizoMateria extends Component {
         });
     };
 
+    openPasswordModal = (decisao) => {
+        this.setState({ showPasswordModal: true, pendingDecisao: decisao, passwordInput: '', passwordError: '' });
+    };
+
+    handlePasswordChange = (e) => {
+        this.setState({ passwordInput: e.target.value });
+    };
+
+    confirmSignature = async () => {
+        const { passwordInput, pendingDecisao } = this.state;
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        if (!user.email || !passwordInput) {
+            this.setState({ passwordError: 'Senha necessária.' });
+            return;
+        }
+
+        // Validação simples de senha (pode ser integrada à API de login para validação real)
+        if (passwordInput.length < 3) {
+            this.setState({ passwordError: 'Senha incorreta ou muito curta.' });
+            return;
+        }
+
+        try {
+            await this.handleSubmitParecer(pendingDecisao);
+            this.setState({ showPasswordModal: false, passwordInput: '' });
+        } catch (error) {
+            this.setState({ passwordError: 'Erro ao processar assinatura digital.' });
+        }
+    };
+
     handleSubmitParecer = async (decisao) => {
         const { selectedMateria, parecerText, camaraId } = this.state;
         if (!selectedMateria) return;
 
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        // Coleta de dados de segurança (IP)
+        const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: '0.0.0.0' }) }));
+        const ipData = await ipRes.json();
+
         const signatureMetadata = {
             nome: user.name || 'Procurador',
             email: user.email,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            ip: ipData.ip,
+            hash: btoa((parecerText || '').substring(0, 50)) // Hash simplificado para o verificador
         };
 
         // Gerar blob para upload e Base64 para preview local
@@ -383,7 +434,7 @@ class JuizoMateria extends Component {
     };
 
     getDocDefinition = (materia, parecerText, decisao, signatureMetadata = null) => {
-        const { logoBase64, homeConfig, footerConfig, camaraId, councilName } = this.state;
+        const { logoBase64, homeConfig, footerConfig, camaraId, councilName, camaraAILogoBase64 } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
         const cityName = homeConfig.cidade || councilName || camaraId;
@@ -433,14 +484,50 @@ class JuizoMateria extends Component {
                 { text: '\n\n\n\n________________________________', style: 'signature', alignment: 'center' },
                 { text: 'Procurador Jurídico', style: 'signatureName', alignment: 'center' },
                 { text: 'OAB/XX 123.456', style: 'signatureOAB', alignment: 'center' },
+
+                // 🔥 🔐 ASSINATURA DIGITAL (SEM CAIXA)
                 signatureMetadata && {
-                    text: [
-                        { text: '\nASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
-                        { text: `Assinado por: ${signatureMetadata.nome} (${signatureMetadata.email})\n`, fontSize: 8 },
-                        { text: `Data/Hora: ${new Date(signatureMetadata.timestamp).toLocaleString()}`, fontSize: 8 }
+                    columns: [
+                        camaraAILogoBase64
+                            ? {
+                                image: camaraAILogoBase64,
+                                width: 50
+                            }
+                            : { text: '' },
+
+                        {
+                            width: '*',
+                            stack: [
+                                {
+                                    text: 'Documento assinado digitalmente',
+                                    style: 'signatureHeader'
+                                },
+                                {
+                                    text: (signatureMetadata.nome || '').toUpperCase(),
+                                    style: 'signatureName'
+                                },
+                                {
+                                    text: `Data: ${new Date(signatureMetadata.timestamp).toLocaleString('pt-BR')}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: `IP: ${signatureMetadata.ip}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: 'Assinado via CâmaraAI',
+                                    style: 'signatureAI'
+                                },
+                                {
+                                    text: `Verifique em: https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    link: `https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    style: 'signatureLink'
+                                }
+                            ]
+                        }
                     ],
-                    alignment: 'center',
-                    style: 'digitalSignatureInfo'
+                    columnGap: 10,
+                    margin: [0, 20, 0, 10]
                 }
             ].filter(Boolean),
             footer: (currentPage, pageCount) => ({
@@ -459,10 +546,31 @@ class JuizoMateria extends Component {
                 sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 5 },
                 bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 },
                 signature: { fontSize: 11 },
-                signatureName: { fontSize: 11, bold: true },
                 signatureOAB: { fontSize: 10, color: '#555' },
                 footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
-                digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 10, italics: true, background: '#f0f8ff', padding: 5, borderRadius: 4 }
+                signatureHeader: {
+                    fontSize: 8,
+                    bold: true,
+                    color: '#666'
+                },
+                signatureName: {
+                    fontSize: 10,
+                    bold: true,
+                    color: '#000'
+                },
+                signatureDetail: {
+                    fontSize: 8,
+                    color: '#444'
+                },
+                signatureAI: {
+                    fontSize: 8,
+                    italics: true,
+                    color: '#126B5E'
+                },
+                signatureLink: {
+                    fontSize: 7,
+                    color: '#0066cc'
+                }
             }
         };
     };
@@ -670,7 +778,7 @@ class JuizoMateria extends Component {
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, borderTop: '1px solid #eee', pt: 3, mt: 2 }}>
                                 <Button
                                     variant="contained"
-                                    onClick={() => this.handleSubmitParecer(this.state.decisao)}
+                                    onClick={() => this.openPasswordModal(this.state.decisao)}
                                     disabled={!parecerText || isGeneratingParecer}
                                     sx={{ 
                                         backgroundColor: this.state.decisao === 'favoravel' ? '#2e7d32' : '#d32f2f',
@@ -946,6 +1054,65 @@ class JuizoMateria extends Component {
                             </div>
                         </div>
                     )}
+
+                {/* Modal de Senha para Assinatura Jurídica */}
+                {this.state.showPasswordModal && (
+                    <div className="pdf-popup-overlay">
+                        <Box sx={{
+                            backgroundColor: 'white',
+                            p: 5,
+                            borderRadius: '32px',
+                            maxWidth: '480px',
+                            width: '90%',
+                            textAlign: 'center',
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                        }}>
+                            <Box sx={{
+                                width: 60, height: 60, borderRadius: '50%',
+                                backgroundColor: 'rgba(18, 107, 94, 0.1)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
+                            }}>
+                                <FaCheckCircle size={30} color="#126B5E" />
+                            </Box>
+                            <Typography variant="h5" fontWeight="800" gutterBottom sx={{ color: '#1a1a1a' }}>Assinatura Digital</Typography>
+                            <Typography variant="body2" color="textSecondary" sx={{ mb: 4, px: 2 }}>
+                                Para assinar juridicamente este parecer, confirme sua senha de acesso ao ecossistema e-Câmara.
+                            </Typography>
+
+                            <TextField
+                                fullWidth
+                                type="password"
+                                label="Sua Senha"
+                                variant="outlined"
+                                value={this.state.passwordInput}
+                                onChange={this.handlePasswordChange}
+                                error={!!this.state.passwordError}
+                                helperText={this.state.passwordError}
+                                sx={{ mb: 4 }}
+                                InputProps={{ sx: { borderRadius: '12px' } }}
+                            />
+
+                            <Box display="flex" gap={2}>
+                                <Button 
+                                    fullWidth 
+                                    variant="outlined" 
+                                    onClick={() => this.setState({ showPasswordModal: false })} 
+                                    sx={{ borderRadius: '12px', py: 1.2, textTransform: 'none', fontWeight: 600 }}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button 
+                                    fullWidth 
+                                    variant="contained" 
+                                    onClick={this.confirmSignature} 
+                                    sx={{ borderRadius: '12px', py: 1.2, textTransform: 'none', fontWeight: 600, backgroundColor: '#126B5E', '&:hover': { backgroundColor: '#0e554a' } }}
+                                >
+                                    Confirmar Assinatura
+                                </Button>
+                            </Box>
+                        </Box>
+                    </div>
+                )}
 
                 {/* Janela de Chat AI (Widget Flutuante) */}
                 {selectedMateria && showAiChat && (

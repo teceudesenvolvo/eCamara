@@ -10,7 +10,7 @@ import {
     FaBalanceScale,
     FaList,
     FaCog,
-    FaRobot,
+    FaFile,
     FaPalette,
     FaBars,
     FaTimes,
@@ -21,7 +21,9 @@ import {
     FaBullhorn,
     FaFemale,
     FaBriefcase,
-    FaTv
+    FaTv, 
+    FaLayerGroup,
+    FaUser
 } from "react-icons/fa";
 import logoCamaraAI from '../assets/logo-camaraai.png';
 import '../App.css';
@@ -70,9 +72,12 @@ const MenuDashboard = ({ logo: propLogo }) => {
         let currentCamaraId = '';
 
         if (pathParts[0] === 'admin') {
-            // Rotas Administrativas: /admin/:page/:camaraId/...
-            // O ID da câmara é o terceiro segmento (índice 2) se houver 3 ou mais partes
-            currentCamaraId = (pathParts.length >= 3) ? pathParts[2] : pathParts[pathParts.length - 1];
+            // Rotas Administrativas
+            if (pathParts[1] === 'servicos' || (pathParts[1] === 'assistente-admin' && ['novo', 'detalhes'].includes(pathParts[2]))) {
+                currentCamaraId = pathParts[3];
+            } else {
+                currentCamaraId = pathParts[2];
+            }
         } else {
             // Rotas Públicas: /home/:camaraId, /materias/:camaraId, etc.
             currentCamaraId = pathParts[pathParts.length - 1];
@@ -165,7 +170,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
 
                     {activeModules['sessoes'] && hasAccess('manage_sessions') && (
                         <Link to={`/admin/pautas-sessao/${camaraId}`} className={`aDesktop ${isActive('pautas-sessao')}`}>
-                            <FaList className="icon-desktop" />
+                            <FaLayerGroup className="icon-desktop" />
                             <span className="text-desktop">Sessões</span>
                         </Link>
                     )}
@@ -184,17 +189,19 @@ const MenuDashboard = ({ logo: propLogo }) => {
 
                     {hasAccess('admin_config') && (
                         <>
+
+                            {activeModules['assistente'] && (
+                                <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
+                                    <FaFile className="icon-desktop" />
+                                    <span className="text-desktop">Documentos</span>
+                                </Link>
+                            )}
                             <Link to={`/admin/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
                                 <FaCog className="icon-desktop" />
                                 <span className="text-desktop">Configurações</span>
                             </Link>
 
-                            {activeModules['assistente'] && (
-                                <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
-                                    <FaRobot className="icon-desktop" />
-                                    <span className="text-desktop">Assistente</span>
-                                </Link>
-                            )}
+
 
                             <Link to={`/admin/layout-manager/${camaraId}`} className={`aDesktop ${isActive('layout-manager')}`}>
                                 <FaPalette className="icon-desktop" />
@@ -204,7 +211,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
                     )}
 
                     <Link to={`/admin/perfil/${camaraId}`} className={`aDesktop ${isActive('/perfil')}`}>
-                        <FaRegUser className="icon-desktop" />
+                        <FaUser className="icon-desktop" />
                         <span className="text-desktop">Minha Conta</span>
                     </Link>
 

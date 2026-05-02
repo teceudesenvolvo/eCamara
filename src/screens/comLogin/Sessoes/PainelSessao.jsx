@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import api from '../../../services/api.js';
 import { FaUsers, FaVoteYea, FaClock, FaDesktop, FaMicrophone, FaVideo, FaVideoSlash } from "react-icons/fa";
 import '../../../styles/FuturisticPanel.css';
+import { normalizeSession } from '../../../utils/sessionNormalizer';
 
 class PainelSessao extends Component {
   constructor(props) {
@@ -59,9 +60,9 @@ class PainelSessao extends Component {
 
     try {
       const response = await api.get(`/session-detail/${sessaoId}`);
-      const data = Array.isArray(response.data) ? response.data[0] : response.data;
-      if (data) {
-        this.setState({ sessao: { ...data, id: data.id || data._id }, loading: false });
+      const normalized = normalizeSession(Array.isArray(response.data) ? response.data[0] : response.data);
+      if (normalized) {
+        this.setState({ sessao: normalized, loading: false });
       } else {
         this.setState({ loading: false });
       }

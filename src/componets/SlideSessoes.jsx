@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Splide, SplideSlide } from '@splidejs/react-splide';
 import { withRouter } from 'react-router-dom';
 import api from '../services/api.js';
+import { normalizeSessionList, parseSessionDate } from '../utils/sessionNormalizer';
 
 class SlideSessoes extends Component {
     constructor(props) {
@@ -29,16 +30,11 @@ class SlideSessoes extends Component {
 
         try {
             const response = await api.get(`/sessions/${camaraId}`);
-            const data = response.data || [];
+            const sessoes = normalizeSessionList(response.data);
             
-            if (data.length > 0) {
-                // Ordena por data mais recente
-                data.sort((a, b) => {
-                    const dateA = a.data.split('/').reverse().join('');
-                    const dateB = b.data.split('/').reverse().join('');
-                    return dateB.localeCompare(dateA);
-                });
-                this.setState({ sessoes: data, loading: false });
+            if (sessoes.length > 0) {
+                sessoes.sort((a, b) => parseSessionDate(b.data) - parseSessionDate(a.data));
+                this.setState({ sessoes, loading: false });
             } else {
                 this.setState({ loading: false });
             }

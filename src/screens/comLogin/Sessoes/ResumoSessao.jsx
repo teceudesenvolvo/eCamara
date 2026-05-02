@@ -9,6 +9,7 @@ import Chip from '@mui/material/Chip';
 import { FaFileAlt, FaUsers, FaCheckCircle, FaInfoCircle, FaCalendarAlt, FaArrowLeft, FaVideo, FaVoteYea, FaUser } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import api from '../../../services/api.js';
+import { normalizeSession } from '../../../utils/sessionNormalizer';
 
 class ResumoSessao extends Component {
     constructor(props) {
@@ -41,9 +42,9 @@ class ResumoSessao extends Component {
 
         try {
             const response = await api.get(`/session-detail/${sessaoId}`);
-            const data = Array.isArray(response.data) ? response.data[0] : response.data;
-            if (data) {
-                this.setState({ sessao: { ...data, id: data.id || data._id }, loading: false });
+            const normalized = normalizeSession(Array.isArray(response.data) ? response.data[0] : response.data);
+            if (normalized) {
+                this.setState({ sessao: normalized, loading: false });
             } else {
                 this.setState({ loading: false });
             }

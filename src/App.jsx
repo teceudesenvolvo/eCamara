@@ -82,7 +82,10 @@ function App() {
     logo: '', // Logo dynamic
   });
 
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem('@CamaraAI:user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const openChat = () => setIsChatOpen(true);
@@ -93,7 +96,12 @@ function App() {
   
   // Extração robusta: identifica se é uma rota de detalhes ou lista para pegar o slug correto
   const isDetailRoute = pathParts.includes('materia') || pathParts.includes('painel-sessao') || pathParts.includes('reuniao-virtual') || pathParts.includes('vereador');
-  const camaraId = pathParts.length > 0 ? (isDetailRoute ? pathParts[pathParts.length - 2] : pathParts[pathParts.length - 1]) : 'master';
+  const isAdminDocumentDetailRoute = pathParts[0] === 'admin' && pathParts[1] === 'assistente-admin' && pathParts[2] === 'detalhes';
+  
+  const camaraIdFromUrl = pathParts.length > 0 ? ((isDetailRoute || isAdminDocumentDetailRoute) ? pathParts[pathParts.length - 2] : pathParts[pathParts.length - 1]) : null;
+  const camaraId = (camaraIdFromUrl && camaraIdFromUrl !== 'admin' && camaraIdFromUrl !== 'perfil') 
+    ? camaraIdFromUrl 
+    : (localStorage.getItem('@CamaraAI:councilId') || 'master');
 
   // Lista de rotas onde o Menu e o Rodapé NÃO devem aparecer (Login, Cadastro e Admin)
   const hideMenuDesktop = ['/', '/register', '/camara-ai-admin-geral'].includes(location.pathname) || location.pathname.includes('/admin/') || location.pathname.includes('/login/');
@@ -105,12 +113,19 @@ function App() {
       if (token) {
         try {
           const response = await api.get('/auth/me');
-          setCurrentUser(response.data);
-          localStorage.setItem('@CamaraAI:user', JSON.stringify(response.data));
+          const userData = response.data;
+          setCurrentUser(userData);
+          localStorage.setItem('@CamaraAI:user', JSON.stringify(userData));
+          if (userData.council || userData.councilSlug) {
+            localStorage.setItem('@CamaraAI:councilId', userData.council || userData.councilSlug);
+          }
         } catch (error) {
           console.error("Erro ao verificar sessão:", error);
-          localStorage.removeItem('@CamaraAI:token');
-          localStorage.removeItem('@CamaraAI:user');
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            localStorage.removeItem('@CamaraAI:token');
+            localStorage.removeItem('@CamaraAI:user');
+            setCurrentUser(null);
+          }
         }
       }
     };
@@ -206,7 +221,7 @@ function App() {
           <Route path="/admin/configuracoes/:camaraId" component={Configuracoes} />
           <Route exact path="/admin/assistente-admin/:camaraId" component={AdminDocumentsDash} />
           <Route path="/admin/assistente-admin/novo/:camaraId" component={AdminAssistant} />
-          <Route path="/admin/assistente-admin/detalhes/:camaraId" component={AdminDocumentDetails} />
+          <Route path="/admin/assistente-admin/detalhes/:camaraId/:docId" component={AdminDocumentDetails} />
 
           {/* Páginas de Serviços */}
           <Route path="/admin/servicos/agendamentos/:camaraId" component={Agendamentos} />

@@ -11,6 +11,7 @@ import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import api from '../../../services/api.js';
 import '../../../styles/FuturisticPanel.css';
 import MateriaCard from '../../../componets/MateriaCard.jsx';
+import { normalizeSession } from '../../../utils/sessionNormalizer';
 
 class SessaoPlenariaRestrita extends Component {
     constructor(props) {
@@ -89,9 +90,9 @@ class SessaoPlenariaRestrita extends Component {
 
         try {
             const response = await api.get(`/session-detail/${sessaoId}`);
-            const data = Array.isArray(response.data) ? response.data[0] : response.data;
-            if (data) {
-                this.setState({ sessao: { ...data, id: data.id || data._id }, loading: false });
+            const normalized = normalizeSession(Array.isArray(response.data) ? response.data[0] : response.data);
+            if (normalized) {
+                this.setState({ sessao: normalized, loading: false });
             } else {
                 this.setState({ loading: false });
             }
@@ -247,7 +248,7 @@ class SessaoPlenariaRestrita extends Component {
             const { camaraId, sessao } = this.state;
             if (!sessao) return;
             try {
-                await api.patch(`/sessions/id/${sessao.id}`, { status: 'Encerrada' });
+                await api.patch(`/sessions/${sessao.id}`, { status: 'Encerrada' });
                 alert("Sessão encerrada com sucesso.");
                 this.props.history.push(`/admin/sessoes/${camaraId}`);
             } catch (error) {
@@ -438,7 +439,10 @@ class SessaoPlenariaRestrita extends Component {
                     {/* Cabecalho */}
                     <header className='admin-header'>
                         <div>
-                            <h2 style={{ margin: 0, color: '#126B5E' }}>{sessao.tipo} nº {sessao.numero}</h2>
+                            <h2 style={{ margin: 0, color: '#126B5E' }}>{sessao.tipo}</h2>
+                            <Typography variant="subtitle1" gutterBottom style={{ margin: '5px 0 0 0', color: '#666', textAlign: 'left', fontSize: '14px' }}>
+                                <b>Data:</b> {sessao.data} | <b>Formato:</b> {sessao.formato} | <b>Legislatura:</b> {sessao.legislatura}ª | <b>Status:</b> {sessao.status}
+                            </Typography>
                         </div>
                         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                             <div style={{ textAlign: 'right' }}>

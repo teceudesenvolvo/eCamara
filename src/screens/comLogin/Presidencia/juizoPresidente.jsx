@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
-import { FaBalanceScale, FaSearch, FaCheckCircle, FaTimesCircle, FaArchive, FaPaperPlane, FaFileAlt, FaGavel, FaMagic, FaInbox, FaDownload, FaEye, FaFilePdf, FaInfoCircle, FaParagraph, FaCalendarAlt, FaTimes } from 'react-icons/fa';
+import { FaBalanceScale, FaSearch, FaCheckCircle, FaTimesCircle, FaArchive, FaPaperPlane, FaFileAlt, FaGavel, FaMagic, FaInbox, FaDownload, FaEye, FaFilePdf, FaInfoCircle, FaParagraph, FaCalendarAlt, FaTimes, FaFileSignature } from 'react-icons/fa';
 import MenuDashboard from "../../../componets/menuAdmin.jsx";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import logo from '../../../assets/logo.png';
+import LogoIcon from '../../../assets/logo-camaraai-icon.png';
 import { sendMessageToAIPrivate } from '../../../aiService';
 import api from '../../../services/api.js';
 import {
@@ -48,6 +49,10 @@ class JuizoPresidente extends Component {
             baseLegal: '',
             despachoText: '',
             isGeneratingDespacho: false,
+            // Signature state
+            isSigned: false,
+            signatureMetadata: null,
+            camaraAILogoBase64: null,
             selectedComissao: '',
             pdfPreviewData: null,
             // PDF and Signature state
@@ -152,10 +157,14 @@ class JuizoPresidente extends Component {
                 this.getBase64(logo).then(logoBase64 => this.setState({ logoBase64 }));
             }
 
+            // Carrega a logo da CâmaraAI para o bloco de assinatura
+            const camaraAILogoB64 = await this.getBase64(LogoIcon);
+
             this.setState({
                 homeConfig: configData.home || {},
                 councilName,
-                footerConfig: configData.footer || {}
+                footerConfig: configData.footer || {},
+                camaraAILogoBase64: camaraAILogoB64
             });
         } catch (error) {
             console.error("Erro ao carregar configurações:", error);
@@ -279,9 +288,10 @@ class JuizoPresidente extends Component {
         else if (selectedComissao) statusFinal = `Encaminhado à ${selectedComissao}`;
         else if (intencaoDespacho) statusFinal = intencaoDespacho;
 
-        const mockSignatureData = { nome: '___________________', email: '', timestamp: new Date().toISOString() };
+        const { signatureMetadata, isSigned } = this.state;
+        const mockSignatureData = signatureMetadata || { nome: '___________________', email: '', timestamp: new Date().toISOString() };
 
-        const docDefinition = this.getDocDefinition(selectedMateria, despachoText || ' ', statusFinal, mockSignatureData);
+        const docDefinition = this.getDocDefinition(selectedMateria, despachoText || ' ', statusFinal, mockSignatureData, isSigned);
         pdfMake.createPdf(docDefinition).getBase64((data) => {
             this.setState({ pdfData: `data:application/pdf;base64,${data}`, showPdfPopup: true });
         });
@@ -305,7 +315,7 @@ class JuizoPresidente extends Component {
         }
 
         // Gerar o PDF do despacho como Blob para upload
-        const docDefinition = this.getDocDefinition(selectedMateria, despachoText, statusFinal, signatureData);
+        const docDefinition = this.getDocDefinition(selectedMateria, despachoText, statusFinal, signatureData, true);
         const pdfBlob = await new Promise(resolve => {
             pdfMake.createPdf(docDefinition).getBlob(blob => resolve(blob));
         });
@@ -338,7 +348,7 @@ class JuizoPresidente extends Component {
         };
 
         try {
-            await api.patch(`/legislative-matters/${selectedMateria.id}`, despachoData);
+            await api.patch(`/legislative-matters/id/${selectedMateria.id}`, despachoData);
             this.setState(prevState => ({
                 materias: prevState.materias.map(m => m.id === selectedMateria.id ? { ...m, ...despachoData } : m),
                 selectedMateria: null,
@@ -369,18 +379,26 @@ class JuizoPresidente extends Component {
         }
 
         try {
-            // Em uma implementação real, o backend verificaria a senha antes de assinar.
-            // Por enquanto, validamos que o usuário está presente e simulamos a assinatura.
+            // Coleta de dados de segurança
+            const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: '0.0.0.0' }) }));
+            const ipData = await ipRes.json();
+            const ip = ipData.ip;
+            const userAgent = navigator.userAgent;
+            const timestamp = new Date().toISOString();
+            const hash = await this.generateHash(despachoText || '');
+
             const signatureData = {
                 nome: user.name || 'Presidente',
                 email: user.email,
-                timestamp: new Date().toISOString(),
-                ip: '0.0.0.0', // Simplificado, em produção buscar IP real
-                userAgent: navigator.userAgent,
-                documentHash: await this.generateHash(despachoText || ''),
+                timestamp: timestamp,
+                ip: ip,
+                userAgent: userAgent,
+                documentHash: hash,
+                hash: hash,
                 userId: user.id // Adiciona o ID do usuário para o upload
             };
 
+            this.setState({ isSigned: true, signatureMetadata: signatureData });
             this.handleSubmitDespacho(this.state.pendingAction, signatureData);
             this.setState({ showPasswordModal: false });
         } catch (error) {
@@ -452,8 +470,8 @@ class JuizoPresidente extends Component {
         }
     };
 
-    getDocDefinition = (materia, despachoText, statusFinal, signatureData) => {
-        const { logoBase64, homeConfig, footerConfig, camaraId, councilName } = this.state;
+    getDocDefinition = (materia, despachoText, statusFinal, signatureData, isSigned) => {
+        const { logoBase64, homeConfig, footerConfig, camaraId, councilName, camaraAILogoBase64 } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
         const cityName = homeConfig.cidade || councilName || camaraId;
@@ -500,14 +518,50 @@ class JuizoPresidente extends Component {
 
                 { text: '\n\n\n\n________________________________', style: 'signature', alignment: 'center' },
                 { text: 'Presidente da Câmara', style: 'signatureName', alignment: 'center' },
-                {
-                    text: [
-                        { text: 'ASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
-                        { text: `Assinado por: ${signatureData?.nome} (${signatureData?.email})\n`, fontSize: 8 },
-                        { text: `Data/Hora: ${signatureData?.timestamp ? new Date(signatureData.timestamp).toLocaleString() : '---'}\n`, fontSize: 8 },
-                        { text: `IP: ${signatureData?.ip || '0.0.0.0'} | Hash: ${signatureData?.documentHash ? signatureData.documentHash.substring(0, 20) : '---'}...`, fontSize: 8 }
+
+                // 🔥 🔐 ASSINATURA DIGITAL (SEM CAIXA)
+                isSigned && signatureData && {
+                    columns: [
+                        camaraAILogoBase64
+                            ? {
+                                image: camaraAILogoBase64,
+                                width: 50
+                            }
+                            : { text: '' },
+
+                        {
+                            width: '*',
+                            stack: [
+                                {
+                                    text: 'Documento assinado digitalmente',
+                                    style: 'signatureHeader'
+                                },
+                                {
+                                    text: (signatureData.nome || '').toUpperCase(),
+                                    style: 'signatureName'
+                                },
+                                {
+                                    text: `Data: ${new Date(signatureData.timestamp).toLocaleString('pt-BR')}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: `IP: ${signatureData.ip}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: 'Assinado via CâmaraAI',
+                                    style: 'signatureAI'
+                                },
+                                {
+                                    text: `Verifique em: https://verificador.camaraai.com/${signatureData.hash}`,
+                                    link: `https://verificador.camaraai.com/${signatureData.hash}`,
+                                    style: 'signatureLink'
+                                }
+                            ]
+                        }
                     ],
-                    alignment: 'center', style: 'digitalSignatureInfo'
+                    columnGap: 10,
+                    margin: [0, 20, 0, 10]
                 }
             ].filter(Boolean),
             footer: (currentPage, pageCount) => ({
@@ -527,9 +581,30 @@ class JuizoPresidente extends Component {
                 sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 5, color: '#126B5E' },
                 bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 },
                 signature: { fontSize: 11 },
-                signatureName: { fontSize: 11, bold: true },
                 footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
-                digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 10, italics: true, background: '#f0f8ff', padding: 5, borderRadius: 4 }
+                signatureHeader: {
+                    fontSize: 8,
+                    bold: true,
+                    color: '#666'
+                },
+                signatureName: {
+                    fontSize: 10,
+                    bold: true,
+                    color: '#000'
+                },
+                signatureDetail: {
+                    fontSize: 8,
+                    color: '#444'
+                },
+                signatureAI: {
+                    fontSize: 8,
+                    italics: true,
+                    color: '#126B5E'
+                },
+                signatureLink: {
+                    fontSize: 7,
+                    color: '#0066cc'
+                }
             }
         };
         return docDefinition;
@@ -551,7 +626,7 @@ class JuizoPresidente extends Component {
                     '&:hover': { backgroundColor: '#0e554a' }
                 }}
             >
-                <FaPaperPlane style={{ marginRight: '8px' }} /> Realizar Despacho e Assinar
+                <FaFileSignature style={{ marginRight: '8px' }} /> Realizar Despacho e Assinar
             </Button>
         );
     };

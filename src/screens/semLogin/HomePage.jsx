@@ -5,6 +5,7 @@ import SlideFeacures from '../../componets/slideFeactures.jsx';
 import '../../App.css';
 import ChatAI from './ChatAI.jsx';
 import api from '../../services/api.js';
+import { normalizeSessionList } from '../../utils/sessionNormalizer';
 
 
 class HomePage extends Component {
@@ -35,6 +36,9 @@ class HomePage extends Component {
     fetchData = async () => {
         const { camaraId } = this.state;
         if (!camaraId || camaraId === ':camaraId' || camaraId === 'camara-teste') return;
+
+        // Persiste o ID da câmara no localStorage para manter o contexto mesmo que a conexão com o banco oscile
+        localStorage.setItem('@CamaraAI:councilId', camaraId);
 
         this.setState({ loading: true });
 
@@ -84,7 +88,7 @@ class HomePage extends Component {
             });
 
             // 4. Buscar sessões recentes
-            const sessoes = sessionsResponse.data || [];
+            const sessoes = normalizeSessionList(sessionsResponse.data);
             sessoes.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
             this.setState({

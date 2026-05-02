@@ -19,6 +19,7 @@ import Chip from '@mui/material/Chip';
 
 // Components
 import HistoricoSessao from '../../componets/HistoricoSessao.jsx';
+import { normalizeSession } from '../../utils/sessionNormalizer';
 
 import api from '../../services/api.js';
 
@@ -57,8 +58,9 @@ class SessaoVirtual extends Component {
 
     try {
       const response = await api.get(`/session-detail/${sessaoId}`);
-      if (response.data) {
-        this.setState({ sessao: response.data, loading: false });
+      const normalized = normalizeSession(Array.isArray(response.data) ? response.data[0] : response.data);
+      if (normalized) {
+        this.setState({ sessao: normalized, loading: false });
       } else {
         if (this.state.loading) this.setState({ loading: false });
       }
@@ -117,8 +119,11 @@ class SessaoVirtual extends Component {
 
       <div className='App-header' >
         <div className='sessao-virtual-container'>
-          <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '30px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
-            {sessao.tipo} nº {sessao.numero}
+          <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '10px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
+            {sessao.tipo}
+          </Typography>
+          <Typography variant="subtitle1" gutterBottom style={{ marginBottom: '30px', color: '#666', textAlign: 'left' }}>
+            Data: {sessao.data} | Formato: {sessao.formato} | Legislatura: {sessao.legislatura}ª | Status: {sessao.status}
           </Typography>
 
           <div className='sessao-virtual-main-content'>

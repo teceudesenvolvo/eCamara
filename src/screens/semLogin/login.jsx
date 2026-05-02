@@ -48,6 +48,7 @@ class loginClient extends Component {
             // Salva os dados no localStorage
             localStorage.setItem('@CamaraAI:token', token);
             localStorage.setItem('@CamaraAI:user', JSON.stringify(user));
+            localStorage.setItem('@CamaraAI:councilId', camaraId);
 
             window.location.href = `/admin/materias-dash/${camaraId}`;
         } catch (error) {
@@ -92,7 +93,7 @@ class loginClient extends Component {
 
                         <div className='login-footer'>
                             <a href='/consultas' className='linkLogin'>Esqueceu a senha?</a>
-                            <p className="register-text">Não tem um ID? <Link to="/">Crie o seu agora.</Link></p>
+                            <p className="register-text">Não tem um ID? <a href="https://blu-tecnologias-site.vercel.app/#/products/2" target="_blank" rel="noopener noreferrer">Crie o seu agora.</a></p>
                         </div>
                     </div>
                 </div>

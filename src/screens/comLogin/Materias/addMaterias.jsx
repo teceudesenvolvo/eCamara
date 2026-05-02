@@ -3,6 +3,7 @@ import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash, FaInfoCircle, FaRobot, FaMagic, FaTimes, FaCommentDots, FaArrowLeft } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
+import LogoIcon from '../../../assets/logo-camaraai-icon.png';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx'; // Certifique-se de que este caminho está correto
 import { sendMessageToAIPrivate, analisarMateria } from '../../../aiService.js';
@@ -72,6 +73,7 @@ class AddProducts extends Component {
             // Para Assinatura Digital
             isSigned: false, // Booleano para controlar se o documento está assinado
             signatureMetadata: null, // Metadados da assinatura
+            camaraAILogoBase64: null,
 
             // Controle do preview PDF
             showPdfPopup: false, // Estado para controlar a visibilidade do popup do PDF
@@ -173,6 +175,7 @@ class AddProducts extends Component {
 
             // Logo conversion
             const logoBase64 = layoutConfig.logoLight ? await this.getBase64(layoutConfig.logoLight) : null;
+            const camaraAILogoBase64 = await this.getBase64(LogoIcon);
 
             this.setState(
                 {
@@ -186,6 +189,7 @@ class AddProducts extends Component {
                     dataApresenta: today,
                     numero: nextNumero,
                     logoBase64,
+                    camaraAILogoBase64,
                     councilName,
                     vereadores
                 }
@@ -360,7 +364,8 @@ class AddProducts extends Component {
                 timestamp: timestamp,
                 ip: ip,
                 userAgent: userAgent,
-                documentHash: hash
+                documentHash: hash,
+                hash: hash
             };
 
             this.setState({
@@ -405,11 +410,11 @@ class AddProducts extends Component {
 
             // --- PASSO 2: GERAÇÃO DOS CAMPOS (Se aprovado na análise) ---
             const finalType = tipoMateria || 'Matéria';
-            const titleResponse = await sendMessageToAIPrivate(`Sugira um título formal e em caixa alta para uma matéria legislativa do tipo "${finalType}" sobre o assunto "${objeto}". Responda APENAS o título sugerido.`, camaraId);
+            const titleResponse = await sendMessageToAIPrivate(`Sugira um título formal e em caixa alta para uma matéria legislativa da ${this.state.councilName || 'Câmara Municipal'} do tipo "${finalType}" sobre o assunto "${objeto}". Responda APENAS o título sugerido.`, camaraId);
 
-            const ementaResponse = await sendMessageToAIPrivate(`Escreva uma ementa legislativa (resumo formal) para uma matéria do tipo "${finalType}" sobre "${objeto}". Comece com verbos como "Dispõe sobre...", "Institui...", etc. Responda APENAS a ementa.`, camaraId);
+            const ementaResponse = await sendMessageToAIPrivate(`Escreva uma ementa legislativa (resumo formal) para uma matéria da ${this.state.councilName || 'Câmara Municipal'} do tipo "${finalType}" sobre "${objeto}". Comece com verbos como "Dispõe sobre...", "Institui...", etc. Responda APENAS a ementa.`, camaraId);
 
-            const textoResponse = await sendMessageToAIPrivate(`Atue como consultor legislativo. Escreva a minuta completa de um ${finalType} sobre o assunto "${objeto}".
+            const textoResponse = await sendMessageToAIPrivate(`Atue como consultor legislativo da ${this.state.councilName || 'Câmara Municipal'}. Escreva a minuta completa de um ${finalType} sobre o assunto "${objeto}".
                 
                 REGRAS:
                 - Use estrutura de artigos (Art. 1º, Art. 2º...).
@@ -417,10 +422,12 @@ class AddProducts extends Component {
                 - Inclua uma justificativa formal ao final.
                 - Responda APENAS o HTML.`, camaraId);
 
+            const cleanText = (text) => text.replace(/```html|```/g, '').trim();
+
             this.setState({
-                titulo: titleResponse.trim(),
-                ementa: ementaResponse.trim(),
-                textoMateria: textoResponse.trim(),
+                titulo: cleanText(titleResponse),
+                ementa: cleanText(ementaResponse),
+                textoMateria: cleanText(textoResponse),
                 isGenerating: false,
                 showEditor: true
             });
@@ -484,12 +491,12 @@ class AddProducts extends Component {
 
             if (chatStep === 0) {
                 // Passo 0: Usuário informa o Tema
-                prompt = `Você é um assistente legislativo da Câmara Municipal. O usuário deseja criar uma nova matéria. O tema informado foi: "${currentInput}". Confirme que entendeu o tema e pergunte qual é o tipo da matéria (ex: Projeto de Lei, Requerimento, Indicação, Moção). Seja breve e cordial.`;
+                prompt = `Você é um assistente legislativo da ${this.state.councilName || 'Câmara Municipal'}. O usuário deseja criar uma nova matéria. O tema informado foi: "${currentInput}". Confirme que entendeu o tema e pergunte qual é o tipo da matéria (ex: Projeto de Lei, Requerimento, Indicação, Moção). Seja breve e cordial.`;
                 nextStep = 1;
                 nextStateUpdates = { objeto: currentInput };
             } else if (chatStep === 1) {
                 // Passo 1: Usuário informa o Tipo
-                prompt = `Estamos criando uma matéria legislativa sobre o tema "${objeto}". O usuário informou que o tipo da matéria é: "${currentInput}". Confirme o tipo e peça para o usuário fornecer os detalhes específicos, justificativa ou pontos principais que devem constar no texto da lei.`;
+                prompt = `Estamos criando uma matéria legislativa para a ${this.state.councilName || 'Câmara Municipal'} sobre o tema "${objeto}". O usuário informou que o tipo da matéria é: "${currentInput}". Confirme o tipo e peça para o usuário fornecer os detalhes específicos, justificativa ou pontos principais que devem constar no texto da lei.`;
                 nextStep = 2;
                 nextStateUpdates = { tipoMateria: currentInput };
             } else if (chatStep === 2) {
@@ -665,7 +672,7 @@ class AddProducts extends Component {
     getDocDefinition = () => {
         const {
             tipoMateria, numero, protocolo, autor, camaraId, footerConfig, homeConfig,
-            titulo, ementa, textoMateria, isSigned, logoBase64, signatureMetadata, councilName, ano
+            titulo, ementa, textoMateria, isSigned, logoBase64, signatureMetadata, councilName, ano, camaraAILogoBase64
         } = this.state;
         
         const docContent = [
@@ -707,18 +714,52 @@ class AddProducts extends Component {
             { text: 'Vereador(a)', alignment: 'center', style: 'small' }
         );
 
-        if (isSigned) {
+        // 🔥 🔐 ASSINATURA DIGITAL (SEM CAIXA)
+        if (isSigned && signatureMetadata) {
             docContent.push(
                 { text: '\n\n' },
                 {
-                    text: [
-                        { text: 'ASSINATURA DIGITAL\n', bold: true, fontSize: 10 },
-                        { text: `Assinado por: ${signatureMetadata?.nome} (${signatureMetadata?.email})\n`, fontSize: 8 },
-                        { text: `Data/Hora: ${new Date(signatureMetadata?.timestamp).toLocaleString()}\n`, fontSize: 8 },
-                        { text: `IP: ${signatureMetadata?.ip} | Hash: ${signatureMetadata?.documentHash?.substring(0, 20)}...`, fontSize: 8 }
+                    columns: [
+                        camaraAILogoBase64
+                            ? {
+                                image: camaraAILogoBase64,
+                                width: 50
+                            }
+                            : { text: '' },
+
+                        {
+                            width: '*',
+                            stack: [
+                                {
+                                    text: 'Documento assinado digitalmente',
+                                    style: 'signatureHeader'
+                                },
+                                {
+                                    text: (signatureMetadata.nome || '').toUpperCase(),
+                                    style: 'signatureName'
+                                },
+                                {
+                                    text: `Data: ${new Date(signatureMetadata.timestamp).toLocaleString('pt-BR')}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: `IP: ${signatureMetadata.ip}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: 'Assinado via CâmaraAI',
+                                    style: 'signatureAI'
+                                },
+                                {
+                                    text: `Verifique em: https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    link: `https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    style: 'signatureLink'
+                                }
+                            ]
+                        }
                     ],
-                    style: 'digitalSignatureInfo',
-                    alignment: 'center'
+                    columnGap: 10,
+                    margin: [0, 20, 0, 10]
                 }
             );
         }
@@ -753,7 +794,29 @@ class AddProducts extends Component {
                 descricoes: { marginTop: 10, marginBottom: 10, fontSize: 10, color: '#444' },
                 timbrado: { fontSize: 12, bold: true, marginBottom: 10, color: '#777' },
                 small: { fontSize: 9, color: '#666' },
-                digitalSignatureInfo: { fontSize: 8, color: '#007bff', marginTop: 10, italics: true, background: '#f0f8ff', padding: 5, borderRadius: 4 },
+                signatureHeader: {
+                    fontSize: 8,
+                    bold: true,
+                    color: '#666'
+                },
+                signatureName: {
+                    fontSize: 10,
+                    bold: true,
+                    color: '#000'
+                },
+                signatureDetail: {
+                    fontSize: 8,
+                    color: '#444'
+                },
+                signatureAI: {
+                    fontSize: 8,
+                    italics: true,
+                    color: '#126B5E'
+                },
+                signatureLink: {
+                    fontSize: 7,
+                    color: '#0066cc'
+                },
                 textoLeiParagraph: { fontSize: 12, alignment: 'justify', lineHeight: 1.5, marginBottom: 10, leadingIndent: 30 },
                 footerStyle: { fontSize: 8, color: '#777' }
             }

@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone, FaUpload, FaEye } from 'react-icons/fa';
+import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone, FaUpload, FaEye, FaCheckCircle, FaTimes, FaFileSignature } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
+import LogoIcon from '../../../assets/logo-camaraai-icon.png';
+import AssinaturaComponent from '../../../componets/Assinatura.jsx'; // Importa o novo componente de assinatura (renomeado para evitar conflito)
 import { sendMessageToAIPrivate } from '../../../aiService.ts';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import api from '../../../services/api.js';
+import {
+    TextField,
+    Button,
+    Box,
+    Typography,
+    CircularProgress,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Divider
+} from '@mui/material';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -61,12 +75,18 @@ const AdminAssistant = () => {
     const [pdfData, setPdfData] = useState(null);
     const [showPdfPopup, setShowPdfPopup] = useState(false);
     const [isSigned, setIsSigned] = useState(false);
+    const [signatureMetadata, setSignatureMetadata] = useState(null);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+
     const [camaraConfigs, setCamaraConfigs] = useState({
         baseConhecimento: {},
         layout: {},
         home: {},
         footer: {},
         logoBase64: null,
+        camaraAILogoBase64: null, // Nova propriedade para a logo da CâmaraAI
         councilName: '',
         camaraId: 'camara-teste'
     });
@@ -96,26 +116,33 @@ const AdminAssistant = () => {
 
             try {
                 const response = await api.get(`/councils/${camaraId}`);
-                
+
                 // Extração robusta dos dados da câmara lidando com possíveis retornos em array
                 const councilData = Array.isArray(response.data) ? response.data[0] : (response.data || {});
                 const councilName = councilData.name || ''; // Usa o nome institucional
                 const configData = councilData.config || councilData.dadosConfig || {};
-                
+
                 const layoutData = configData.layout || {};
                 let logoB64 = null;
-                if (layoutData.logoLight) {
-                    logoB64 = await getBase64(layoutData.logoLight);
+
+                // Tenta carregar a logo da câmara (Light)
+                const logoSource = layoutData.logoLight || layoutData.logo;
+                if (logoSource) {
+                    logoB64 = await getBase64(logoSource);
                 }
+
+                // Carrega a logo da CâmaraAI para o bloco de assinatura
+                const camaraAILogoB64 = await getBase64(LogoIcon);
 
                 setCamaraConfigs({
                     camaraId,
                     councilName,
                     baseConhecimento: configData["base-conhecimento"] || {},
                     layout: layoutData,
-                    home: configData.home || {},
-                    footer: configData.footer || {},
-                    logoBase64: logoB64
+                    home: configData.home || {}, // Adicionado homeConfig
+                    footer: configData.footer || {}, // Adicionado footerConfig
+                    logoBase64: logoB64,
+                    camaraAILogoBase64: camaraAILogoB64
                 });
             } catch (error) {
                 console.error("Erro ao carregar configurações da Câmara:", error);
@@ -125,6 +152,10 @@ const AdminAssistant = () => {
         };
 
         const getBase64 = async (url) => {
+            if (!url) return null;
+            // Se já for Base64, retorna diretamente
+            if (url.startsWith('data:image/')) return url;
+
             try {
                 const response = await fetch(url);
                 const blob = await response.blob();
@@ -186,7 +217,7 @@ const AdminAssistant = () => {
             .join('\n');
 
         const prompt = `
-            Atue como um especialista em redação oficial e técnica legislativa brasileira.
+            Atue como um especialista em redação oficial e técnica legislativa brasileira para a ${camaraConfigs.councilName || 'Câmara Municipal'}.
             
             CONTEXTO LEGISLATIVO DA CASA:
             - Regimento Interno: ${baseConhecimento.regimentoText || 'Seguir normas padrão.'}
@@ -218,7 +249,8 @@ const AdminAssistant = () => {
 
         try {
             const response = await sendMessageToAIPrivate(prompt, camaraConfigs.camaraId);
-            setGeneratedContent(response);
+            const cleaned = response.replace(/```html|```/g, '').trim();
+            setGeneratedContent(cleaned);
         } catch (error) {
             console.error("Erro ao gerar documento:", error);
             setGeneratedContent(`<p style="color: red;">Erro ao gerar documento: ${error.message}</p>`);
@@ -310,66 +342,203 @@ const AdminAssistant = () => {
     };
 
     const generateDocDefinition = () => {
-        const { logoBase64, home, footer, camaraId, councilName } = camaraConfigs;
+        const {
+            logoBase64,
+            home,
+            footer,
+            camaraId,
+            councilName,
+            camaraAILogoBase64
+        } = camaraConfigs;
 
-        const content = [
-            logoBase64 ? { 
-                image: logoBase64, 
-                width: 70, 
-                absolutePosition: { x: 480, y: 35 } 
-            } : null,
-            { text: councilName || home.titulo || 'Câmara Municipal', style: 'header', alignment: 'center', margin: [0, 10, 0, 0] },
-            footer.slogan && { text: footer.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
-            { text: docType.toUpperCase(), style: 'subheader', alignment: 'center', bold: true, margin: [0, 0, 0, 20] },
-            ...processHtmlToPdfMake(generatedContent)
-        ];
+        const content = [];
 
+        // 🔹 Logo
+        if (logoBase64) {
+            content.push({
+                image: logoBase64,
+                width: 70,
+                absolutePosition: { x: 485, y: 35 }
+            });
+        }
+
+        // 🔹 Cabeçalho
+        content.push({
+            text: councilName || home.titulo || 'Câmara Municipal',
+            style: 'header',
+            alignment: 'center',
+            margin: [0, 10, 0, 0]
+        });
+
+        if (footer?.slogan) {
+            content.push({
+                text: footer.slogan,
+                style: 'slogan',
+                alignment: 'center',
+                margin: [0, 0, 0, 15]
+            });
+        }
+
+        content.push({
+            text: docType.toUpperCase(),
+            style: 'subheader',
+            alignment: 'center',
+            bold: true,
+            margin: [0, 0, 0, 20]
+        });
+
+        // 🔹 Corpo
+        const body = processHtmlToPdfMake(generatedContent || '<p></p>');
+        content.push(...body);
+
+        // 🔹 Dados assinatura manual
         const today = new Date();
-        const formattedDate = today.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+        const formattedDate = today.toLocaleDateString('pt-BR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
         const cityName = home.cidade || councilName || camaraId;
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
         const signatoryName = formData.de || user.name || '_________________________';
 
-        // Adiciona bloco de encerramento e assinatura
+
+
+        // 🔹 Assinatura manual (fica abaixo da digital)
         content.push(
-            { text: '\n\n\n' }, // Espaçador
-            { text: `${cityName}, ${formattedDate}.`, alignment: 'center' },
-            { text: '\n\n\n\n' }, // Espaçador para assinatura
+            { text: `${cityName}, ${formattedDate}.`, alignment: 'center', margin: [0, 20, 0, 0] },
+            { text: '\n\n\n' },
             { text: '________________________________', alignment: 'center' },
-            { text: signatoryName, alignment: 'center', style: 'small', bold: true, margin: [0, 5, 0, 0] },
+            {
+                text: signatoryName,
+                alignment: 'center',
+                style: 'small',
+                bold: true,
+                margin: [0, 5, 0, 0]
+            },
             { text: 'Emitente', alignment: 'center', style: 'small' }
         );
 
-        const footerText = `📍 ${footer.address || ''} | 📞 ${footer.phone || ''}\n📧 ${footer.email || ''}\n${footer.copyright || ''}`;
+        // 🔥 🔐 ASSINATURA DIGITAL (SEM CAIXA)
+        if (isSigned && signatureMetadata) {
+            content.push(
+                { text: '\n\n' },
 
-        if (isSigned) {
-            content.push({ text: `\n\nAssinado Digitalmente via Camara AI em: ${new Date().toLocaleString()}`, alignment: 'center', style: 'digitalSignatureInfo' });
+                {
+                    columns: [
+                        camaraAILogoBase64
+                            ? {
+                                image: camaraAILogoBase64,
+                                width: 50
+                            }
+                            : { text: '' },
+
+                        {
+                            width: '*',
+                            stack: [
+                                {
+                                    text: 'Documento assinado digitalmente',
+                                    style: 'signatureHeader'
+                                },
+                                {
+                                    text: (signatureMetadata.nome || '').toUpperCase(),
+                                    style: 'signatureName'
+                                },
+                                {
+                                    text: `Data: ${new Date(signatureMetadata.timestamp).toLocaleString('pt-BR')}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: `IP: ${signatureMetadata.ip}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: 'Assinado via CâmaraAI',
+                                    style: 'signatureAI'
+                                },
+                                {
+                                    text: `Verifique em: https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    link: `https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    style: 'signatureLink'
+                                }
+                            ]
+                        }
+                    ],
+                    columnGap: 10,
+                    margin: [0, 20, 0, 10]
+                }
+            );
         }
 
+        const footerText = `📍 ${footer?.address || ''} | 📞 ${footer?.phone || ''}
+📧 ${footer?.email || ''}
+${footer?.copyright || ''}`;
+
         return {
-            content: content,
+            content: content.filter(Boolean),
+
             footer: (currentPage, pageCount) => ({
                 stack: [
-                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
-                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] },
-                    { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
+                    {
+                        canvas: [
+                            {
+                                type: 'line',
+                                x1: 40,
+                                y1: 0,
+                                x2: 555,
+                                y2: 0,
+                                lineWidth: 0.5,
+                                lineColor: '#ccc'
+                            }
+                        ]
+                    },
+                    {
+                        text: footerText,
+                        style: 'footerStyle',
+                        alignment: 'center',
+                        margin: [0, 5, 0, 0]
+                    },
+                    {
+                        text: `Página ${currentPage} de ${pageCount}`,
+                        alignment: 'right',
+                        fontSize: 8,
+                        margin: [0, 0, 40, 0]
+                    }
                 ]
             }),
+
             styles: {
                 header: { fontSize: 14, bold: true, color: '#333' },
                 slogan: { fontSize: 9, italics: true, color: '#666' },
                 subheader: { fontSize: 13, color: '#126B5E', marginTop: 10 },
+
                 footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
-                small: {
-                    fontSize: 9,
+                small: { fontSize: 9, color: '#666' },
+
+                signatureHeader: {
+                    fontSize: 8,
+                    bold: true,
                     color: '#666'
                 },
-                digitalSignatureInfo: {
-                    fontSize: 8,
-                    color: '#007bff',
-                    marginTop: 5,
-                    italics: true
+                signatureName: {
+                    fontSize: 10,
+                    bold: true,
+                    color: '#000'
                 },
+                signatureDetail: {
+                    fontSize: 8,
+                    color: '#444'
+                },
+                signatureAI: {
+                    fontSize: 8,
+                    italics: true,
+                    color: '#126B5E'
+                },
+                signatureLink: {
+                    fontSize: 7,
+                    color: '#0066cc'
+                }
             }
         };
     };
@@ -399,10 +568,38 @@ const AdminAssistant = () => {
     };
 
     const handleSign = () => {
-        const confirm = window.confirm("Deseja assinar digitalmente este documento?");
-        if (confirm) {
+        setShowPasswordModal(true);
+    };
+
+    const confirmSignature = async () => {
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        if (!passwordInput) {
+            setPasswordError('Digite sua senha para assinar.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            // Coleta de dados de segurança
+            const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: '0.0.0.0' }) }));
+            const ipData = await ipRes.json();
+
+            const meta = {
+                nome: user.name || user.nome,
+                email: user.email,
+                timestamp: new Date().toISOString(),
+                ip: ipData.ip,
+                hash: btoa(generatedContent.substring(0, 50)) // Hash simplificado para o exemplo
+            };
+
+            setSignatureMetadata(meta);
             setIsSigned(true);
-            alert("Documento assinado com sucesso!");
+            setShowPasswordModal(false);
+            alert("Documento assinado com sucesso! Clique em Salvar para finalizar.");
+        } catch (e) {
+            setPasswordError('Falha ao processar assinatura.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -410,34 +607,56 @@ const AdminAssistant = () => {
         const token = localStorage.getItem('@CamaraAI:token');
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
-        if (!token || !user.id) {
-            alert("Você precisa estar logado para salvar.");
-            return;
-        }
-        if (!generatedContent) {
-            alert("Não há conteúdo para salvar.");
-            return;
-        }
+        if (!token || !user.id) return alert("Sessão expirada.");
+        if (!generatedContent) return alert("Gere o conteúdo antes de salvar.");
+
+        setIsLoading(true);
         const { camaraId } = camaraConfigs;
 
-        const docData = {
-            userId: user.id,
-            tipo: docType.charAt(0).toUpperCase() + docType.slice(1),
-            titulo: formData.assunto || formData.reuniao || 'Documento Sem Título',
-            conteudo: generatedContent,
-            createdAt: new Date().toISOString(),
-            status: isSigned ? 'Assinado' : 'Rascunho',
-            metadata: formData,
-            attachment: attachment
-        };
+        const docDefinition = generateDocDefinition();
+        pdfMake.createPdf(docDefinition).getBlob(async (blob) => {
+            try {
+                // 1. Busca documentos existentes para calcular a próxima numeração da sequência
+                const response = await api.get(`/administrative-documents/${camaraId}`);
+                const existingDocs = response.data || [];
+                const nextNumber = existingDocs.filter(d => d.category?.toLowerCase() === docType.toLowerCase()).length + 1;
+                
+                // 2. Constrói o título formatado: "Tipo Número - Assunto"
+                const docLabel = docType.charAt(0).toUpperCase() + docType.slice(1);
+                const subject = formData.assunto || formData.reuniao || 'Sem Assunto';
+                const constructedTitle = `${docLabel} ${nextNumber} - ${subject}`;
 
-        try {
-            await api.post(`/administrative-documents/${camaraId}`, docData);
-            alert("Documento salvo com sucesso!");
-        } catch (error) {
-            console.error("Erro ao salvar:", error);
-            alert("Erro ao salvar documento. Verifique sua conexão.");
-        }
+                const pdfFile = new File([blob], `${docType}_${Date.now()}.pdf`, { type: 'application/pdf' });
+                const formDataPayload = new FormData();
+
+                // 3. Montagem do payload conforme solicitado
+                formDataPayload.append('file', pdfFile); // O PDF gerado é o arquivo principal
+                formDataPayload.append('userId', user.id);
+                formDataPayload.append('title', constructedTitle); // Usando o título sequencial
+                formDataPayload.append('category', docType); // Usando o tipo como categoria
+                
+                // Campos adicionais para integridade do banco relacional (se o backend ainda usar)
+                formDataPayload.append('tipo', docLabel);
+                formDataPayload.append('titulo', constructedTitle);
+                formDataPayload.append('conteudo', generatedContent);
+                formDataPayload.append('status', isSigned ? 'Assinado' : 'Rascunho');
+                formDataPayload.append('metadata', JSON.stringify(formData));
+                if (attachment) formDataPayload.append('refAttachment', JSON.stringify(attachment)); // Anexo opcional
+
+                await api.post(`/administrative-documents/${camaraId}`, formDataPayload, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        // 'Content-Type': 'multipart/form-data' // Axios adiciona automaticamente o boundary
+                    }
+                });
+                alert("Documento enviado para o Storage com sucesso!");
+            } catch (error) {
+                console.error("Erro ao salvar no storage:", error);
+                alert("Erro ao salvar. Verifique se o arquivo excede o limite de 50MB.");
+            } finally {
+                setIsLoading(false);
+            }
+        });
     };
 
     const renderFormFields = () => {
@@ -466,6 +685,71 @@ const AdminAssistant = () => {
                         className="modal-input"
                     />
                 )}
+
+                {/* Assinatura Digital - Movido para fora do loop de campos */}
+                {showPasswordModal && (
+                    <div className="pdf-popup-overlay">
+                        <Box sx={{
+                            backgroundColor: 'white',
+                            p: 5,
+                            borderRadius: '32px',
+                            maxWidth: '480px',
+                            width: '90%',
+                            textAlign: 'center',
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                        }}>
+                            <Box sx={{
+                                width: 60, height: 60, borderRadius: '50%',
+                                backgroundColor: 'rgba(18, 107, 94, 0.1)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
+                            }}>
+                                <FaCheckCircle size={30} color="#126B5E" />
+                            </Box>
+                            <Typography variant="h5" fontWeight="800" gutterBottom>Assinatura Digital</Typography>
+                            <Typography variant="body2" color="textSecondary" sx={{ mb: 4 }}>
+                                Confirme sua senha para assinar juridicamente este documento administrativo.
+                            </Typography>
+
+                            <TextField
+                                fullWidth // Use TextField do MUI
+                                type="password"
+                                label="Sua Senha"
+                                variant="outlined"
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                                error={!!passwordError}
+                                helperText={passwordError}
+                                sx={{ mb: 4 }}
+                                InputProps={{ sx: { borderRadius: '12px' } }}
+                            />
+
+                            <Box display="flex" gap={2}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => setShowPasswordModal(false)}
+                                    sx={{ borderRadius: '12px', textTransform: 'none' }}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    fullWidth
+                                    variant="contained"
+                                    onClick={confirmSignature}
+                                    disabled={isLoading}
+                                    sx={{
+                                        borderRadius: '12px',
+                                        backgroundColor: '#126B5E',
+                                        '&:hover': { backgroundColor: '#0e554a' },
+                                        textTransform: 'none'
+                                    }}
+                                >
+                                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Confirmar'}
+                                </Button>
+                            </Box>
+                        </Box>
+                    </div>
+                )}
             </div>
         ));
     };
@@ -486,7 +770,7 @@ const AdminAssistant = () => {
                 {/* Painel de Configuração (Esquerda) */}
                 <div>
                     <div className="dashboard-header" style={{ marginBottom: '20px' }}>
-                        
+
                         <div>
                             <h1 className="dashboard-header-title" style={{ color: '#126B5E' }}>
                                 Assistente Administrativo
@@ -517,24 +801,24 @@ const AdminAssistant = () => {
                                     <FaMicrophone /> Gerar Ata via Áudio (Upload)
                                 </label>
                                 <div className="flex gap-2 mb-2">
-                                    <input 
-                                        type="file" 
+                                    <input
+                                        type="file"
                                         accept="audio/*,video/*"
                                         className="modal-input flex-1"
                                         onChange={(e) => setAudioFile(e.target.files[0])}
                                         style={{ padding: '8px' }}
                                     />
-                                    <button 
+                                    <button
                                         onClick={handleAudioGenerate}
                                         disabled={audioLoading}
                                         className="btn-secondary"
                                         style={{ background: '#126B5E', color: 'white', border: 'none', whiteSpace: 'nowrap', marginTop: '10px' }}
                                     >
-                                        {audioLoading ? <FaSpinner className="animate-spin" /> : <FaUpload />} 
+                                        {audioLoading ? <FaSpinner className="animate-spin" /> : <FaUpload />}
                                         {audioLoading ? ' Processando...' : ' Enviar e Gerar'}
                                     </button>
                                 </div>
-                                
+
                                 {/* Stepper de Progresso */}
                                 {audioLoading && (
                                     <div className="mt-3 process-container">
@@ -545,8 +829,8 @@ const AdminAssistant = () => {
                                             <div className="bg-green-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${(progressStep / 3) * 100}%` }}></div>
                                         </div>
                                         <p style={{ color: '#555', textAlign: 'left', fontSize: '0.85rem', marginTop: '15px', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                            <FaSpinner style={{color: '#555'}} className="animate-spin" />
-                                            Processando áudio e gerando ata. <br/> Tempo decorrido: {formatTime(elapsedTime)}. <br/> Por favor aguarde...
+                                            <FaSpinner style={{ color: '#555' }} className="animate-spin" />
+                                            Processando áudio e gerando ata. <br /> Tempo decorrido: {formatTime(elapsedTime)}. <br /> Por favor aguarde...
                                         </p>
                                     </div>
                                 )}

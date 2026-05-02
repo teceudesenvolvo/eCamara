@@ -1,14 +1,14 @@
 import React, { Component } from 'react';
-import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt, FaTimes, FaSearch, FaEye, FaArrowLeft, FaInfoCircle, FaGavel, FaExclamationTriangle, FaFilePdf } from 'react-icons/fa';
+import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaFileSignature, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt, FaTimes, FaSearch, FaEye, FaArrowLeft, FaInfoCircle, FaGavel, FaExclamationTriangle, FaFilePdf } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
+import { Box } from '@mui/material';
 import 'react-quill/dist/quill.snow.css';
 
 class GerenciarSessao extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            activeLibraryTab: 'materias', // 'materias' ou 'urgencias'
-            showPdfModal: false
+            activeLibraryTab: 'materias' // 'materias' ou 'urgencias'
         };
     }
 
@@ -42,6 +42,12 @@ class GerenciarSessao extends Component {
             isEditingUrl,
             editedTransmissaoUrl,
             materiaSearchTerm,
+            isSignedEdital,
+            handleOpenSignEdital,
+            handleViewEditalPDF,
+            editalHorario,
+            editalBaseLegal,
+            editalOficio,
             viewingMateriaForDetail,
             handleCloseDetails,
             handleOpenSessao,
@@ -61,11 +67,11 @@ class GerenciarSessao extends Component {
 
         // Lógica de filtragem unificada
         const getFilteredItems = () => {
-            const term = materiaSearchTerm.toLowerCase();
+            const term = String(materiaSearchTerm || '').toLowerCase();
             if (activeLibraryTab === 'materias') {
                 return materiasDisponiveis.filter(m =>
                     m.titulo?.toLowerCase().includes(term) ||
-                    m.numero?.includes(term) ||
+                    String(m.numero || '').toLowerCase().includes(term) ||
                     m.autor?.toLowerCase().includes(term)
                 );
             }
@@ -99,7 +105,10 @@ class GerenciarSessao extends Component {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                             <h2 style={{ fontSize: '17px', margin: 0, color: '#126B5E' }}>{sessao.tipo}</h2>
-                            <p style={{ fontSize: '12px', margin: '5px 0 0 0', color: '#666' }}><FaCalendarAlt /> {sessao.data} • Status: <strong>{sessao.status}</strong></p>
+                            <p style={{ fontSize: '12px', margin: '5px 0 0 0', color: '#666' }}>
+                                <FaCalendarAlt /> Data: {sessao.data} | Formato: {sessao.formato || 'Presencial'} | 
+                                Legislatura: {sessao.legislatura}ª | Status: <strong>{sessao.status}</strong>
+                            </p>
                         </div>
                         {roteiroPdfUrl && (
                             <button onClick={() => window.open(roteiroPdfUrl)} className="btn-success">Ver Roteiro Gerado</button>
@@ -159,7 +168,12 @@ class GerenciarSessao extends Component {
                                                         <FaEye />
                                                     </button>
                                                     {item.pdfBase64 && (
-                                                        <button onClick={() => window.open(`data:application/pdf;base64,${item.pdfBase64}`)} className="btn-secondary" style={{ padding: '8px', borderRadius: '8px', color: '#d32f2f' }} title="Visualizar PDF">
+                                                        <button 
+                                                            onClick={() => setParentState({ pdfData: `data:application/pdf;base64,${item.pdfBase64}`, showPdfModal: true })} 
+                                                            className="btn-secondary" 
+                                                            style={{ padding: '8px', borderRadius: '8px', color: '#d32f2f' }} 
+                                                            title="Visualizar PDF"
+                                                        >
                                                             <FaFilePdf />
                                                         </button>
                                                     )}
@@ -203,7 +217,7 @@ class GerenciarSessao extends Component {
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             {item.pdfBase64 && (
                                                 <button 
-                                                    onClick={() => window.open(`data:application/pdf;base64,${item.pdfBase64}`)}
+                                                    onClick={() => setParentState({ pdfData: `data:application/pdf;base64,${item.pdfBase64}`, showPdfModal: true })}
                                                     style={{ background: '#f0f2f5', border: 'none', color: '#d32f2f', cursor: 'pointer', width: '35px', height: '35px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
                                                     title="Visualizar PDF"
                                                 >
@@ -231,50 +245,84 @@ class GerenciarSessao extends Component {
                             <FaFileAlt /> Edital de Convocação
                         </h3>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <button onClick={handleGenerateEditalWithAI} disabled={isGeneratingEdital} className="btn-primary" style={{ fontSize: '0.85rem', padding: '10px 20px', borderRadius: '12px' }}>
-                                <FaMagic /> {isGeneratingEdital ? 'Gerando Edital...' : 'Sugerir Texto com IA'}
+                            <button 
+                                onClick={handleViewEditalPDF} 
+                                className="btn-secondary" 
+                                style={{ fontSize: '0.85rem', padding: '10px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                disabled={!editalText && !sessao.editalPdfUrl && !sessao.editalPath}
+                            >
+                                <FaFilePdf color="#d32f2f" /> Visualizar PDF
                             </button>
-                            {roteiroPdfUrl && (
+                            {!isSignedEdital && !sessao.editalPdfUrl && (
                                 <button 
-                                    onClick={() => this.setState({ showPdfModal: true })} 
-                                    className="btn-secondary" 
-                                    style={{ fontSize: '0.85rem', padding: '10px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                    onClick={handleOpenSignEdital} 
+                                    className="btn-primary" 
+                                    style={{ fontSize: '0.85rem', padding: '10px 20px', borderRadius: '12px', background: '#FF740F' }}
+                                    disabled={!editalText}
                                 >
-                                    <FaFilePdf color="#d32f2f" /> Visualizar PDF
+                                    <FaFileSignature /> Assinar Edital
                                 </button>
                             )}
                         </div>
                     </div>
-                    <div style={{ border: '1px solid #eee', borderRadius: '16px', overflow: 'hidden', background: '#fff' }}>
-                        <ReactQuill
-                            theme="snow"
-                            value={editalText}
-                            onChange={(content) => setParentState({ editalText: content })}
-                            modules={this.quillModules}
-                            formats={this.quillFormats}
-                            style={{ height: '300px', marginBottom: '50px' }}
-                            placeholder="Redija o edital ou use a IA para gerar uma base..."
-                        />
-                    </div>
-                </div>
 
-                {/* Popup de Visualização do PDF do Edital/Roteiro */}
-                {this.state.showPdfModal && roteiroPdfUrl && (
-                    <div className="pdf-popup-overlay">
-                        <div className="pdf-popup-content" style={{ width: '90%', height: '90%', maxWidth: '1000px' }}>
-                            <button className="pdf-popup-close-button" onClick={() => this.setState({ showPdfModal: false })}>
-                                X
-                            </button>
-                            <iframe 
-                                src={roteiroPdfUrl} 
-                                title="Visualização do Edital" 
-                                width="100%" 
-                                height="100%" 
-                                style={{ border: 'none' }}
-                            />
-                        </div>
-                    </div>
-                )}
+                    {sessao.editalPdfUrl ? (
+                        <Box sx={{ 
+                            p: 4, 
+                            textAlign: 'center', 
+                            background: '#f0fdf4', 
+                            borderRadius: '16px', 
+                            border: '1px solid #bbf7d0',
+                            animation: 'fadeIn 0.3s'
+                        }}>
+                            <FaCheckCircle size={40} color="#2e7d32" style={{ marginBottom: '15px' }} />
+                            <h4 style={{ color: '#166534', margin: '0 0 5px 0', fontSize: '1.1rem' }}>Edital Oficializado</h4>
+                            <p style={{ color: '#15803d', margin: 0, fontSize: '0.9rem' }}>
+                                O edital desta sessão já foi assinado digitalmente.
+                            </p>
+                        </Box>
+                    ) : !isSignedEdital && (
+                        <Box sx={{ animation: 'fadeIn 0.3s' }}>
+                            {/* Parâmetros Adicionais para a IA */}
+                            <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '16px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 2fr 1.5fr', gap: '15px' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Horário da Sessão</label>
+                                    <input type="text" className="modal-input" value={editalHorario} onChange={(e) => setParentState({ editalHorario: e.target.value })} placeholder="Ex: 09h45" style={{ height: '40px' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Base Legal (Lei Orgânica / RI)</label>
+                                    <input type="text" className="modal-input" value={editalBaseLegal} onChange={(e) => setParentState({ editalBaseLegal: e.target.value })} placeholder="Ex: Art. 25 Lei Orgânica..." style={{ height: '40px' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Ofício de Referência (Opcional)</label>
+                                    <input type="text" className="modal-input" value={editalOficio} onChange={(e) => setParentState({ editalOficio: e.target.value })} placeholder="Ex: Ofício nº 17/2025/GAB" style={{ height: '40px' }} />
+                                </div>
+                                <div style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
+                                    <button 
+                                        onClick={handleGenerateEditalWithAI} 
+                                        disabled={isGeneratingEdital} 
+                                        className="btn-primary" 
+                                        style={{ width: '100%', justifyContent: 'center', height: '45px', background: '#126B5E' }}
+                                    >
+                                        <FaMagic /> {isGeneratingEdital ? 'IA Redigindo...' : 'Gerar Edital de Convocação com IA'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style={{ border: '1px solid #eee', borderRadius: '16px', overflow: 'hidden', background: '#fff' }}>
+                                <ReactQuill
+                                    theme="snow"
+                                    value={editalText}
+                                    onChange={(content) => setParentState({ editalText: content })}
+                                    modules={this.quillModules}
+                                    formats={this.quillFormats}
+                                    style={{ height: '300px', marginBottom: '50px' }}
+                                    placeholder="Redija o edital ou use a IA para gerar uma base..."
+                                />
+                            </div>
+                        </Box>
+                    )}
+                </div>
 
                 {/* Popup de Detalhes da Matéria */}
                 {viewingMateriaForDetail && (
@@ -295,7 +343,7 @@ class GerenciarSessao extends Component {
                             <div className="modal-footer">
                                 {viewingMateriaForDetail.pdfBase64 && (
                                     <button 
-                                        onClick={() => window.open(`data:application/pdf;base64,${viewingMateriaForDetail.pdfBase64}`)} 
+                                        onClick={() => setParentState({ pdfData: `data:application/pdf;base64,${viewingMateriaForDetail.pdfBase64}`, showPdfModal: true })} 
                                         className="btn-secondary"
                                         style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}
                                     >

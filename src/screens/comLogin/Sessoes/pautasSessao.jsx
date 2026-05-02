@@ -3,9 +3,12 @@ import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaTrash, FaFileA
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
+import LogoIcon from '../../../assets/logo-camaraai-icon.png';
 import GerenciarSessao from './GerenciarSessao.jsx'; // Importa o novo componente
 import { sendMessageToAIPrivate } from '../../../aiService.js';
 import api from '../../../services/api.js';
+import { normalizeSessionList, parseSessionDate } from '../../../utils/sessionNormalizer';
+import { Box, Typography, TextField, Button, CircularProgress } from '@mui/material';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -31,15 +34,28 @@ class PautasSessao extends Component {
             editalText: '',
             isFinalizing: false,
             selectedMonth: '',
+            // Estados para Assinatura do Edital
+            showPasswordModalEdital: false,
+            passwordInputEdital: '',
+            passwordErrorEdital: '',
+            isSignedEdital: false,
+            signatureMetadataEdital: null,
             roteiroPdfUrl: null, // Novo estado para armazenar a URL do PDF gerado
             isEditingUrl: false,
             editedTransmissaoUrl: '',
+            // Novos campos para o Edital
+            editalHorario: '09h00',
+            editalBaseLegal: 'Art. 25, Inciso II, da Lei Orgânica e Art. 101, Inciso II do Regimento Interno',
+            editalOficio: '',
             homeConfig: {},
             footerConfig: {},
             logoBase64: null,
+            camaraAILogoBase64: null,
             camaraId: this.props.match.params.camaraId,
             viewingMateriaForDetail: null, // Mantido aqui para o modal ser controlado pelo pai
-            materiaSearchTerm: ''
+            showPdfModal: false,
+            pdfData: null,
+            isAdmin: false
         };
     }
 
@@ -47,9 +63,11 @@ class PautasSessao extends Component {
         const token = localStorage.getItem('@CamaraAI:token');
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
 
+        const isAdmin = ['admin', 'superadmin'].includes((user.role || user.tipo || '').toLowerCase());
+
         if (token && user.id) {
             const camaraId = user.camaraId || this.props.match.params.camaraId || 'camara-teste';
-            this.setState({ camaraId }, () => {
+            this.setState({ camaraId, isAdmin }, () => {
                 this.fetchConfigsAndLogo();
                 this.fetchSessoes();
                 this.fetchMateriasDisponiveis();
@@ -58,27 +76,16 @@ class PautasSessao extends Component {
         }
     }
 
-    // Helper para converter strings de data (DD/MM/YYYY ou ISO) em objetos Date de forma robusta
-    parseDate = (dateStr) => {
-        if (!dateStr) return new Date(0);
-        if (typeof dateStr !== 'string') return new Date(dateStr);
-        
-        if (dateStr.includes('/')) {
-            const [d, m, y] = dateStr.split('/');
-            return new Date(y, m - 1, d);
-        }
-        return new Date(dateStr);
-    };
-
     fetchSessoes = async () => {
         const { camaraId } = this.state;
         try {
             const response = await api.get(`/sessions/${camaraId}`);
-            const rawData = response.data;
-            // Garante a extração de um array, lidando com diferentes padrões de API
-            const data = Array.isArray(rawData) ? rawData : (rawData?.sessions || rawData?.sessoes || Object.values(rawData || {}));
-            const sessoes = data.filter(s => s).map(s => ({ ...s, id: s.id || s._id }));
-            this.setState({ sessoes });
+            console.log("[Debug] Resposta bruta da API:", response.data);
+            
+            const sessoesConsistent = normalizeSessionList(response.data);
+            
+            console.log("[Debug] Sessões normalizadas via utility:", sessoesConsistent);
+            this.setState({ sessoes: sessoesConsistent });
         } catch (error) {
             console.error("Erro ao buscar sessões:", error);
         }
@@ -90,7 +97,7 @@ class PautasSessao extends Component {
             const response = await api.get(`/legislative-matters/${camaraId}`);
             const rawData = response.data;
             const data = Array.isArray(rawData) ? rawData : (rawData?.matters || rawData?.materias || Object.values(rawData || {}));
-            
+
             const materias = data.filter(m => m).map(m => ({ ...m, id: m.id || m._id }));
             const materiasDisponiveis = materias.filter(m => ['Enviado para Plenário', 'Parecer Favorável', 'Aprovado na Comissão'].includes(m.status));
             this.setState({ materiasDisponiveis });
@@ -119,13 +126,18 @@ class PautasSessao extends Component {
         try {
             const response = await api.get(`/councils/${camaraId}`);
             const configData = response.data || {};
-            const layoutData = configData.layout || {};
-            
+            const config = configData.config || configData.dadosConfig || {};
+            const layoutData = config.layout || {};
+
             if (layoutData.logoLight) {
                 this.getBase64(layoutData.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
             } else if (layoutData.logo) {
                 this.getBase64(layoutData.logo).then(logoBase64 => this.setState({ logoBase64 }));
             }
+
+            // Carrega ícone CâmaraAI
+            const camaraAILogoB64 = await this.getBase64(LogoIcon);
+            this.setState({ camaraAILogoBase64: camaraAILogoB64 });
 
             this.setState({
                 homeConfig: configData.home || {},
@@ -151,9 +163,9 @@ class PautasSessao extends Component {
     };
 
     handleOpenModal = () => {
-        this.setState({ 
-            showModal: true, selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária', 
-            novaTransmissaoUrl: '', novoTipoDeSessao: 'Presencial', novaLegislatura: '', novoNumeroPlenaria: '' 
+        this.setState({
+            showModal: true, selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária',
+            novaTransmissaoUrl: '', novoTipoDeSessao: 'Presencial', novaLegislatura: '', novoNumeroPlenaria: ''
         });
     };
 
@@ -161,14 +173,60 @@ class PautasSessao extends Component {
         this.setState({ showModal: false });
     };
 
-    handleCreateSessao = async () => {
-        const { novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId, novoTipoDeSessao, novaLegislatura, novoNumeroPlenaria, homeConfig } = this.state;
+    // Helper to convert DD/MM/YYYY to YYYY-MM-DD for input type="date"
+    formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return dateString; // Return as is if not in expected format
+    };
+
+    handleDeleteSessao = async (sessaoId) => {
+        const { isAdmin, camaraId } = this.state;
+        if (!isAdmin) {
+            alert('Apenas usuários administradores podem excluir sessões.');
+            return;
+        }
+
+        // Check if the session is "Em Elaboração" before allowing deletion
+        const sessaoToDelete = this.state.sessoes.find(s => s.id === sessaoId);
+        if (sessaoToDelete && sessaoToDelete.status !== 'Em Elaboração') {
+            alert('Apenas sessões "Em Elaboração" podem ser excluídas.');
+            return;
+        }
+
+        // Double check if sessaoToDelete is found before proceeding
+        if (!sessaoToDelete) {
+            alert('Sessão não encontrada.');
+            return;
+        }
+
+        if (!window.confirm('Tem certeza que deseja excluir esta sessão? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        try {
+            await api.delete(`/sessions/${sessaoId}`);
+            this.fetchSessoes();
+            alert('Sessão excluída com sucesso.');
+        } catch (error) {
+            console.error('Erro ao excluir sessão:', error);
+            alert('Erro ao excluir sessão.');
+        }
+    };
+
+    handleSaveSession = async () => {
+        const { novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId, novoTipoDeSessao, novaLegislatura, novoNumeroPlenaria, selectedSessaoId } = this.state;
         if (!novaData || !novaLegislatura || !novoNumeroPlenaria) {
             alert("Por favor, preencha a data, legislatura e o número da sessão.");
             return;
         }
-        const year = new Date(novaData).getFullYear();
-        const sessoesDoAno = sessoes.filter(s => s.data.endsWith(`/${year}`)).length;
+        const parsedDate = parseSessionDate(novaData);
+        const dataFormatada = !isNaN(parsedDate.getTime())
+            ? parsedDate.toLocaleDateString('pt-BR')
+            : novaData || '';
 
         let finalTransmissaoUrl = novaTransmissaoUrl || '';
         if ((novoTipoDeSessao === 'Remota' || novoTipoDeSessao === 'Híbrida') && !finalTransmissaoUrl) {
@@ -176,29 +234,50 @@ class PautasSessao extends Component {
             finalTransmissaoUrl = `https://meet.jit.si/${jitsiRoomName}`;
         }
 
-        const cityName = homeConfig.cidade || camaraId;
-        const nomeSessaoFormatado = `${novoNumeroPlenaria}ª Sessão Plenária da ${novaLegislatura}ª Legislatura da Câmara Municipal de ${cityName}`;
-
-        const newSessao = {
-            data: novaData.split('-').reverse().join('/'),
-            tipo: nomeSessaoFormatado,
-            categoria: novoTipo,
-            numero: `${sessoesDoAno + 1}/${year}`,
-            legislatura: novaLegislatura,
-            numeroPlenaria: novoNumeroPlenaria,
-            tipoDeSessao: novoTipoDeSessao,
-            transmissaoUrl: finalTransmissaoUrl,
-            status: 'Em Elaboração',
-            itens: [],
-            edital: ''
+        // Payload estritamente de acordo com a documentação do backend para evitar erros do Prisma
+        const sessionData = {
+            dataSessao: dataFormatada,
+            legislatura: String(novaLegislatura),
+            numeroSessao: String(novoNumeroPlenaria),
+            tipoSessao: novoTipo.replace('Sessão ', ''),
+            formatoSessao: novoTipoDeSessao,
+            urlTransmissao: finalTransmissaoUrl
         };
+
+        let successMessage = "Sessão criada com sucesso! O título foi gerado automaticamente pelo sistema.";
+        let errorMessage = "Erro ao criar sessão: ";
+
         try {
-            await api.post(`/sessions/${camaraId}`, newSessao);
+            if (selectedSessaoId) {
+                await api.patch(`/sessions/${selectedSessaoId}`, sessionData);
+                successMessage = "Sessão atualizada com sucesso!";
+            } else {
+                await api.post(`/sessions/${camaraId}`, sessionData);
+            }
             this.setState({ showModal: false });
             this.fetchSessoes();
+            alert(successMessage);
         } catch (error) {
-            console.error("Erro ao criar sessão:", error);
-            alert("Erro ao criar sessão.");
+            console.error("Erro detalhado ao criar sessão:", error.response?.data);
+            
+            let errorMessage = "Erro de comunicação com o servidor.";
+            if (error.response?.data) {
+                const data = error.response.data;
+                if (data.details) {
+                    // O Prisma coloca o motivo exato do erro no FINAL da string, 
+                    // que estava sendo cortada pelo navegador (...).
+                    const tail = data.details.length > 300 
+                        ? "..." + data.details.substring(data.details.length - 300) 
+                        : data.details;
+                    errorMessage = `${data.error || 'Erro'}\n\nMotivo:\n${tail}`;
+                } else {
+                    errorMessage = data.error || data.message || JSON.stringify(data);
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            alert(errorMessage);
         }
     };
 
@@ -208,12 +287,42 @@ class PautasSessao extends Component {
 
     handleSelectSessao = (sessao) => {
         this.setState({
-            selectedSessaoId: sessao.id || sessao._id,
-            editalText: sessao.edital || '', 
+            // If session is "Em Elaboração", open modal for editing
+            showModal: sessao.status === 'Em Elaboração',
+            selectedSessaoId: sessao.id,
+            novaData: sessao.status === 'Em Elaboração' ? this.formatDateForInput(sessao.data) : '',
+            novoTipo: sessao.status === 'Em Elaboração' ? sessao.tipoSessao : 'Sessão Ordinária',
+            novaLegislatura: sessao.status === 'Em Elaboração' ? sessao.legislatura : '',
+            novoNumeroPlenaria: sessao.status === 'Em Elaboração' ? sessao.numero : '',
+            novoTipoDeSessao: sessao.status === 'Em Elaboração' ? sessao.formato : 'Presencial',
+            novaTransmissaoUrl: sessao.status === 'Em Elaboração' ? sessao.urlTransmissao : '',
+
+            // These are for GerenciarSessao component
+            // If not editing, clear edital and roteiro for the details view
+            editalText: sessao.status === 'Em Elaboração' ? sessao.edital || '' : '',
+            roteiroPdfUrl: sessao.status === 'Em Elaboração' ? sessao.roteiroPdfUrl || null : null,
+
+            editalText: sessao.edital || '',
             roteiroPdfUrl: null, // Reseta o PDF ao selecionar nova sessão
             isEditingUrl: false, // Reseta o modo de edição da URL
             editedTransmissaoUrl: sessao.transmissaoUrl || '', // Define a URL atual para edição
         });
+    };
+
+    // Processa o HTML do editor para criar parágrafos formatados no PDF
+    processHtmlToPdfMake = (html) => {
+        if (!html) return [{ text: "Conteúdo não informado.", style: 'bodyText' }];
+        const paragraphs = html.split(/<\/p>/gi);
+
+        return paragraphs.map(p => {
+            let text = p.replace(/<br\s*\/?>/gi, '\n');
+            text = text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+            if (!text) return null;
+            return {
+                text: text,
+                style: 'bodyText'
+            };
+        }).filter(Boolean);
     };
 
     handleAddItem = async (materiaIdFromParam = null) => {
@@ -235,7 +344,15 @@ class PautasSessao extends Component {
             const updatedItens = [...currentItens, materia];
 
             try {
-                await api.patch(`/sessions/${selectedSessaoId}`, { itens: updatedItens });
+                const payload = {
+                    itens: updatedItens,
+                    metadata: {
+                        ...(selectedSessao.metadata || {}),
+                        itens: updatedItens
+                    }
+                };
+
+                await api.patch(`/sessions/${selectedSessaoId}`, payload);
                 await api.patch(`/legislative-matters/id/${materia.id}`, { status: 'Em Pauta' });
 
                 this.setState(prevState => ({
@@ -277,9 +394,17 @@ class PautasSessao extends Component {
             const updatedItens = [...currentItens, itemNormalizado];
 
             try {
-                await api.patch(`/sessions/${selectedSessaoId}`, { itens: updatedItens });
+                const payload = {
+                    itens: updatedItens,
+                    metadata: {
+                        ...(selectedSessao.metadata || {}),
+                        itens: updatedItens
+                    }
+                };
+
+                await api.patch(`/sessions/${selectedSessaoId}`, payload);
                 await api.patch(`/legislative-matters/accessory/${doc.id}`, { status: 'Em Pauta' });
-                
+
                 this.setState(prevState => ({
                     sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s),
                     selectedDocumentoToAdd: ''
@@ -301,8 +426,16 @@ class PautasSessao extends Component {
         const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId);
 
         try {
-            await api.patch(`/sessions/${selectedSessaoId}`, { itens: updatedItens });
-            
+            const payload = {
+                itens: updatedItens,
+                metadata: {
+                    ...(selectedSessao.metadata || {}),
+                    itens: updatedItens
+                }
+            };
+
+            await api.patch(`/sessions/${selectedSessaoId}`, payload);
+
             if (itemToRemove) {
                 const isAcessorio = itemToRemove.isAcessorio;
                 if (isAcessorio) {
@@ -343,11 +476,11 @@ class PautasSessao extends Component {
         const { selectedSessaoId, sessoes, camaraId } = this.state;
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!selectedSessao) return;
-    
+
         this.setState({ isFinalizing: true });
-    
+
         const itensTexto = (selectedSessao.itens || []).map((item, index) => `${index + 1}. ${item.titulo} (${item.autor})`).join('\n');
-    
+
         const REGIMENTO_INTERNO_ROTEIRO = `
         1. Abertura: Verificação de quórum e invocação da proteção de Deus pelo Presidente.
         2. Expediente: Leitura da ata da sessão anterior para aprovação, seguida da leitura de correspondências e ofícios recebidos.
@@ -362,7 +495,7 @@ class PautasSessao extends Component {
         5. Grande Expediente: Espaço de 15 minutos para cada Vereador inscrito discursar sobre temas previamente definidos.
         6. Encerramento: Considerações finais e encerramento da sessão pelo Presidente.
         `;
-    
+
         const prompt = `Atue como Secretário Legislativo da Câmara Municipal. Sua tarefa é gerar o roteiro completo e formal para a ${selectedSessao.tipo} nº ${selectedSessao.numero}, a ser realizada em ${selectedSessao.data}.
     
         Use o seguinte Regimento Interno para estruturar o roteiro da sessão:
@@ -374,7 +507,7 @@ class PautasSessao extends Component {
         ${itensTexto || "Nenhuma matéria cadastrada na ordem do dia."}
     
         Com base no regimento e na lista de matérias, gere o documento "Roteiro da Sessão" completo, detalhando cada fase e incluindo os nomes das matérias nos locais apropriados da Ordem do Dia. O texto deve ser formal e pronto para ser lido pelo Presidente da Câmara. Não use markdown.`;
-    
+
         try {
             const roteiroText = await sendMessageToAIPrivate(prompt, camaraId);
             this.generateRoteiroPDF(selectedSessao, roteiroText, true); // Passa true para armazenar em vez de abrir
@@ -389,14 +522,14 @@ class PautasSessao extends Component {
     generateRoteiroPDF = (sessao, roteiroText, storeUrl = false) => {
         const { logoBase64, homeConfig, footerConfig, camaraId } = this.state;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
-        
+
         const cityName = homeConfig.cidade || camaraId.charAt(0).toUpperCase() + camaraId.slice(1);
         const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
-    
+
         const docDefinition = {
             content: [
-                logoBase64 && { 
-                    image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5] 
+                logoBase64 && {
+                    image: logoBase64, width: 60, alignment: 'center', margin: [0, 0, 0, 5]
                 },
                 { text: homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center' },
                 footerConfig.slogan && { text: footerConfig.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
@@ -413,11 +546,12 @@ class PautasSessao extends Component {
                     { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8, margin: [0, 0, 40, 0] }
                 ]
             }),
-            styles: { header: { fontSize: 14, bold: true, color: '#333' }, slogan: { fontSize: 9, italics: true, color: '#666' }, subheader: { fontSize: 12, color: '#555' }, title: { fontSize: 14, bold: true, marginTop: 20, marginBottom: 5 }, sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 10, color: '#126B5E' }, bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 },
-            footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 }
+            styles: {
+                header: { fontSize: 14, bold: true, color: '#333' }, slogan: { fontSize: 9, italics: true, color: '#666' }, subheader: { fontSize: 12, color: '#555' }, title: { fontSize: 14, bold: true, marginTop: 20, marginBottom: 5 }, sectionHeader: { fontSize: 12, bold: true, marginTop: 15, marginBottom: 10, color: '#126B5E' }, bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5 },
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 }
             }
         };
-    
+
         const pdfDocGenerator = pdfMake.createPdf(docDefinition);
 
         if (storeUrl) {
@@ -430,29 +564,213 @@ class PautasSessao extends Component {
     };
 
     handleGenerateEditalWithAI = async () => {
-        const { selectedSessaoId, sessoes } = this.state;
+        const { selectedSessaoId, sessoes, camaraId, homeConfig, editalHorario, editalBaseLegal, editalOficio, councilName } = this.state;
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!selectedSessao) return;
 
         this.setState({ isGeneratingEdital: true, editalText: '' });
 
         const itensTexto = (selectedSessao.itens || []).map((item, index) => `${index + 1}. ${item.titulo} (${item.autor})`).join('\n');
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        const presidenteNome = user.name?.toUpperCase() || "PRESIDENTE";
+        const cidade = homeConfig.cidade || councilName || camaraId;
+        const estado = homeConfig.estado || "CEARÁ";
+        const anoAtual = new Date().getFullYear();
 
-        const prompt = `Atue como Presidente da Câmara Municipal. Redija um Edital de Convocação formal para a ${selectedSessao.tipo} nº ${selectedSessao.numero}, a ser realizada no dia ${selectedSessao.data}.
-        
-        A Ordem do Dia será:
-        ${itensTexto || "Nenhuma matéria cadastrada na ordem do dia."}
+        const prompt = `Atue como o Presidente da Câmara Municipal de ${cidade}, Estado do ${estado}. 
+        Sua tarefa é gerar o conteúdo técnico para um EDITAL DE CONVOCAÇÃO rigorosamente no formato abaixo:
 
-        O texto deve seguir a estrutura padrão de editais legislativos, convocando os Senhores Vereadores, mencionando o horário regimental (ou definir 19h) e o local (Plenário da Câmara). Finalize com a data e assinatura. Não use markdown nem tags HTML.`;
+        --- ESTRUTURA ESPERADA ---
+        <h2 style="text-align: center;">EDITAL DE CONVOCAÇÃO N° ${selectedSessao.numero || '___'}/${anoAtual}</h2>
+        <p style="text-align: center;">Data: ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        <p><br></p>
+        <p><strong>Ementa:</strong> convoca os Senhores Vereadores para a ${selectedSessao.tipo} da Câmara Municipal de ${cidade}.</p>
+        <p><br></p>
+        <p>O PRESIDENTE DA CÂMARA MUNICIPAL DE ${cidade.toUpperCase()}, Estado do ${estado}, usando das atribuições conferidas por ${editalBaseLegal || 'suas atribuições legais'}, ${editalOficio ? `atendendo ao ${editalOficio},` : ''} convoca os Senhores Vereadores do Legislativo Municipal para a ${selectedSessao.tipo}, a ser realizada em formato ${selectedSessao.formato}, no dia ${selectedSessao.data}, às ${editalHorario || '09h00'}, constituída da seguinte pauta:</p>
+        <p><br></p>
+        <p>(LEITURA):</p>
+        <ul>
+            ${(selectedSessao.itens || []).map(i => `<li>${i.titulo}, do autor ${i.autor};</li>`).join('')}
+        </ul>
+        <p><br></p>
+        <p>Registre-se e publique-se.</p>
+        <p><br></p>
+        <p style="text-align: center;"><strong>${presidenteNome}</strong><br>Presidente</p>
+
+        REGRAS CRÍTICAS:
+        1. Retorne APENAS o código HTML.
+        2. NÃO inclua saudações iniciais ("Compreendo perfeitamente...", "Prezado Senhor...").
+        3. NÃO inclua seções de "Observações Importantes" ou "Atenciosamente" ao final.
+        4. Se não houver itens na pauta, use o texto: "Pauta a definir."
+        5. Mantenha o tom extremamente formal e jurídico.`;
 
         try {
-            const { camaraId } = this.state;
             const response = await sendMessageToAIPrivate(prompt, camaraId);
-            this.setState({ editalText: response, isGeneratingEdital: false });
+            const cleaned = response.replace(/```html|```/g, '').trim();
+            this.setState({ editalText: cleaned, isGeneratingEdital: false });
         } catch (error) {
             console.error("Erro na IA:", error);
             this.setState({ editalText: "Erro ao gerar edital.", isGeneratingEdital: false });
         }
+    };
+
+    generateHash = async (content) => {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(content);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    };
+
+    handleOpenSignEdital = () => {
+        if (!this.state.editalText) return alert("Gere ou redija o texto do edital antes de assinar.");
+        this.setState({ showPasswordModalEdital: true, passwordInputEdital: '', passwordErrorEdital: '' });
+    };
+
+    confirmSignatureEdital = async () => {
+        const { passwordInputEdital, editalText, selectedSessaoId, sessoes, camaraId } = this.state;
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        const sessao = sessoes.find(s => s.id === selectedSessaoId);
+
+        if (!passwordInputEdital) {
+            this.setState({ passwordErrorEdital: 'Senha necessária.' });
+            return;
+        }
+
+        try {
+            const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: '0.0.0.0' }) }));
+            const ipData = await ipRes.json();
+            const hash = await this.generateHash(editalText || '');
+
+            const meta = {
+                nome: user.name || 'Presidente',
+                email: user.email,
+                timestamp: new Date().toISOString(),
+                ip: ipData.ip,
+                hash: hash
+            };
+
+            // 1. Gerar PDF assinado para upload
+            const docDefinition = this.getEditalDocDefinition(sessao, editalText, true, meta);
+            const pdfBlob = await new Promise(resolve => {
+                pdfMake.createPdf(docDefinition).getBlob(blob => resolve(blob));
+            });
+
+            // 2. Upload para o Storage
+            let editalPdfUrl = null;
+            try {
+                const formData = new FormData();
+                formData.append('file', pdfBlob, `edital_${selectedSessaoId}.pdf`);
+                formData.append('slug', camaraId);
+                formData.append('userId', user.id || 'anonymous');
+                formData.append('ref', `edital_${selectedSessaoId}`);
+                const uploadResponse = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                editalPdfUrl = uploadResponse.data.url;
+            } catch (uploadError) {
+                console.warn('[Upload] Falha no upload do edital:', uploadError);
+            }
+
+            // 3. Salva no backend de forma robusta (raiz e metadata)
+            const updatePayload = {
+                edital: editalText,
+                isSignedEdital: true,
+                editalSignatureMetadata: meta,
+                editalPath: editalPdfUrl,
+                metadata: {
+                    ...(sessao.metadata || {}),
+                    editalSignatureMetadata: meta,
+                    editalPath: editalPdfUrl,
+                    isSignedEdital: true,
+                    edital: editalText
+                }
+            };
+
+            await api.patch(`/sessions/${selectedSessaoId}`, updatePayload);
+
+            this.setState({
+                isSignedEdital: true,
+                signatureMetadataEdital: meta,
+                showPasswordModalEdital: false,
+                pdfData: editalPdfUrl || `data:application/pdf;base64,${await new Promise(r => pdfMake.createPdf(docDefinition).getBase64(r))}`,
+                showPdfModal: true
+            });
+            alert("Edital assinado e salvo com sucesso!");
+            this.fetchSessoes();
+        } catch (error) {
+            console.error("Erro na assinatura do edital:", error);
+            this.setState({ passwordErrorEdital: 'Erro ao processar assinatura.' });
+        }
+    };
+
+    handleViewEditalPDF = () => {
+        const { editalText, sessoes, selectedSessaoId, isSignedEdital, signatureMetadataEdital } = this.state;
+        const sessao = sessoes.find(s => s.id === selectedSessaoId);
+        if (!sessao) return;
+
+        // Se já existe uma URL de PDF salva, usamos ela, caso contrário geramos o preview base64
+        if (sessao.editalPdfUrl) {
+            this.setState({ pdfData: sessao.editalPdfUrl, showPdfModal: true });
+        } else {
+            const docDefinition = this.getEditalDocDefinition(sessao, editalText, isSignedEdital, signatureMetadataEdital);
+            pdfMake.createPdf(docDefinition).getBase64((data) => {
+                this.setState({ pdfData: `data:application/pdf;base64,${data}`, showPdfModal: true });
+            });
+        }
+    };
+
+    getEditalDocDefinition = (sessao, editalText, isSigned, signatureMetadata) => {
+        const { logoBase64, homeConfig, footerConfig, camaraId, councilName, camaraAILogoBase64 } = this.state;
+        const footerText = `📍 ${footerConfig.address || ''} | 📞 ${footerConfig.phone || ''}\n📧 ${footerConfig.email || ''}\n${footerConfig.copyright || ''}`;
+
+        return {
+            content: [
+                logoBase64 ? { image: logoBase64, width: 70, absolutePosition: { x: 480, y: 35 } } : null,
+                { text: councilName || homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center', margin: [0, 10, 0, 30] },
+                
+                ...this.processHtmlToPdfMake(editalText),
+
+                // 🔥 🔐 BLOCO DE ASSINATURA DIGITAL
+                isSigned && signatureMetadata && {
+                    columns: [
+                        camaraAILogoBase64 ? { image: camaraAILogoBase64, width: 50 } : { text: '' },
+                        {
+                            width: '*',
+                            stack: [
+                                { text: 'Documento assinado digitalmente', style: 'signatureHeader' },
+                                { text: (signatureMetadata.nome || '').toUpperCase(), style: 'signatureName' },
+                                { text: `Data: ${new Date(signatureMetadata.timestamp).toLocaleString('pt-BR')}`, style: 'signatureDetail' },
+                                { text: `IP: ${signatureMetadata.ip}`, style: 'signatureDetail' },
+                                { text: 'Assinado via CâmaraAI', style: 'signatureAI' },
+                                {
+                                    text: `Verifique em: https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    link: `https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    style: 'signatureLink'
+                                }
+                            ]
+                        }
+                    ],
+                    columnGap: 10,
+                    margin: [0, 40, 0, 10]
+                }
+            ].filter(Boolean),
+            footer: (currentPage, pageCount) => ({
+                stack: [
+                    { canvas: [{ type: 'line', x1: 40, y1: 0, x2: 555, y2: 0, lineWidth: 0.5, lineColor: '#ccc' }] },
+                    { text: footerText, style: 'footerStyle', alignment: 'center', margin: [0, 5, 0, 0] }
+                ]
+            }),
+            styles: {
+                header: { fontSize: 14, bold: true, color: '#333' },
+                bodyText: { fontSize: 11, alignment: 'justify', lineHeight: 1.5, marginBottom: 8 },
+                textoLeiParagraph: { fontSize: 11, alignment: 'justify', lineHeight: 1.5, marginBottom: 10 },
+                footerStyle: { fontSize: 8, color: '#777', lineHeight: 1.3 },
+                signatureHeader: { fontSize: 8, bold: true, color: '#666' },
+                signatureName: { fontSize: 10, bold: true, color: '#000' },
+                signatureDetail: { fontSize: 8, color: '#444' },
+                signatureAI: { fontSize: 8, italics: true, color: '#126B5E' },
+                signatureLink: { fontSize: 7, color: '#0066cc' }
+            }
+        };
     };
 
     handleUrlInputChange = (e) => {
@@ -486,7 +804,9 @@ class PautasSessao extends Component {
             sessoes, selectedSessaoId, selectedMonth, showModal,
             novaData, novaLegislatura, novoNumeroPlenaria, novoTipo, novoTipoDeSessao, novaTransmissaoUrl,
             materiasDisponiveis, documentosAcessoriosDisponiveis, editalText, isGeneratingEdital, isFinalizing, roteiroPdfUrl,
-            isEditingUrl, editedTransmissaoUrl, materiaSearchTerm, viewingMateriaForDetail
+            isEditingUrl, editedTransmissaoUrl, materiaSearchTerm, viewingMateriaForDetail,
+            editalHorario, editalBaseLegal, editalOficio,
+            showPasswordModalEdital, passwordInputEdital, passwordErrorEdital, isSignedEdital
         } = this.state;
 
         const selectedSessao = sessoes.find(s => String(s.id) === String(selectedSessaoId));
@@ -499,6 +819,12 @@ class PautasSessao extends Component {
                     editalText={editalText}
                     isGeneratingEdital={isGeneratingEdital}
                     isFinalizing={isFinalizing}
+                    editalHorario={editalHorario}
+                    editalBaseLegal={editalBaseLegal}
+                    editalOficio={editalOficio}
+                    isSignedEdital={isSignedEdital}
+                    handleOpenSignEdital={this.handleOpenSignEdital}
+                    handleViewEditalPDF={this.handleViewEditalPDF}
                     roteiroPdfUrl={roteiroPdfUrl}
                     isEditingUrl={isEditingUrl}
                     editedTransmissaoUrl={editedTransmissaoUrl}
@@ -518,13 +844,13 @@ class PautasSessao extends Component {
             );
         }
 
-        const sortedSessoes = [...sessoes].sort((a, b) => 
-            this.parseDate(b.data) - this.parseDate(a.data)
+        const sortedSessoes = [...sessoes].sort((a, b) =>
+            parseSessionDate(b.data) - parseSessionDate(a.data)
         );
 
         const groupedSessoes = [];
-        sortedSessoes.forEach(sessao => {
-            const date = this.parseDate(sessao.data);
+        sortedSessoes.forEach(sessao => { // Usar parseSessionDate do utilitário
+            const date = parseSessionDate(sessao.data);
             if (!date || isNaN(date.getTime())) return;
 
             const key = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
@@ -552,10 +878,10 @@ class PautasSessao extends Component {
                     <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#666' }}>Filtrar Mês:</span>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         {availableMonths.map(m => (
-                            <button 
-                                key={m} 
+                            <button
+                                key={m}
                                 onClick={() => this.setState({ selectedMonth: m })}
-                                style={{ 
+                                style={{
                                     padding: '8px 15px', borderRadius: '20px', border: 'none', cursor: 'pointer',
                                     background: currentMonth === m ? 'var(--primary-color)' : '#f0f2f5',
                                     color: currentMonth === m ? '#fff' : '#666',
@@ -569,92 +895,117 @@ class PautasSessao extends Component {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
-                    {displayedSessoes.map(sessao => (
-                                        <div 
-                                            key={sessao.id} 
-                                            className="dashboard-card dashboard-card-hover" 
-                                            style={{ 
-                                                cursor: 'pointer', margin: 0, padding: '25px', borderRadius: '20px',
-                                                borderLeft: `6px solid ${sessao.status === 'Aberta' ? '#2e7d32' : (sessao.status === 'Em Elaboração' ? '#ef6c00' : '#126B5E')}`
-                                            }}
-                                            onClick={() => this.handleSelectSessao(sessao)}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                                                <span className="tag tag-primary">Sessão {sessao.numero}</span>
-                                                <span className={`tag ${sessao.status === 'Aberta' ? 'tag-success' : 'tag-warning'}`}>{sessao.status}</span>
-                                            </div>
-                                            <h3 style={{ fontSize: '1rem', color: '#1a1a1a', fontWeight: '700', marginBottom: '15px', height: '3.5em', overflow: 'hidden' }}>{sessao.tipo}</h3>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                                                <span style={{ color: '#666' }}><FaCalendarAlt /> {sessao.data}</span>
-                                                <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Gerenciar <FaArrowLeft style={{ transform: 'rotate(180deg)' }} /></span>
-                                            </div>
-                                        </div>
-                    ))}
+                    {displayedSessoes.map(sessao => {
+                        const { isAdmin } = this.state;
+                        return (
+                            <div
+                                key={sessao.id}
+                                className="dashboard-card dashboard-card-hover"
+                                style={{
+                                    cursor: 'pointer', margin: 0, padding: '25px', borderRadius: '20px',
+                                    borderLeft: `6px solid ${sessao.status === 'Aberta' ? '#2e7d32' : (sessao.status === 'Em Elaboração' ? '#ef6c00' : '#126B5E')}`,
+                                    display: 'flex',
+                                    flexDirection: 'column'
+                                }}
+                                onClick={() => this.handleSelectSessao(sessao)}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+                                    <span className="tag tag-primary">Sessão {sessao.numero}</span>
+                                    <span className={`tag ${sessao.status === 'Aberta' ? 'tag-success' : 'tag-warning'}`}>{sessao.status}</span>
+                                </div>
+                                <h3 style={{ fontSize: '1rem', color: '#1a1a1a', fontWeight: '700', marginBottom: '15px', height: '3.5em', overflow: 'hidden' }}>{sessao.tipo}</h3>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderTop: '1px solid #eee', paddingTop: '15px', marginTop: 'auto' }}>
+                                    <span style={{ color: '#666' }}><FaCalendarAlt /> {sessao.data}</span>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                        {isAdmin && sessao.status === 'Em Elaboração' && (
+                                            <button
+                                                className="btn-danger"
+                                                style={{
+                                                    padding: '5px',
+                                                    borderRadius: '8px',
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                                onClick={(e) => { e.stopPropagation(); this.handleDeleteSessao(sessao.id); }}
+                                                title="Excluir Sessão"
+                                            >
+                                                <FaTrash size={14} />
+                                            </button>
+                                        )}
+                                        <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Gerenciar <FaArrowLeft style={{ transform: 'rotate(180deg)' }} /></span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
                     {sessoes.length === 0 && <p style={{ gridColumn: '1/-1', color: '#666', textAlign: 'center' }}>Nenhuma sessão cadastrada.</p>}
                 </div>
 
                 {/* Modal Create Permanecido conforme original mas com z-index alto */}
-                    {showModal && (
-                        <div className="modal-overlay">
-                            <div className="modal-content" style={{ width: '400px' }}>
-                                <h2 className="modal-header">Nova Sessão</h2>
-                                <div style={{ marginBottom: '15px' }}>
-                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Data da Sessão</label>
-                                    <input type="date" className="modal-input" value={novaData} onChange={(e) => this.setState({ novaData: e.target.value })} />
-                                </div>
-                                <div style={{ marginBottom: '15px' }}>
-                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Legislatura (Ex: 20)</label>
-                                    <input type="number" className="modal-input" value={novaLegislatura} onChange={(e) => this.setState({ novaLegislatura: e.target.value })} placeholder="Ex: 20" />
-                                </div>
-                                <div style={{ marginBottom: '15px' }}>
-                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Número da Sessão Plenária (Ex: 1959)</label>
-                                    <input type="number" className="modal-input" value={novoNumeroPlenaria} onChange={(e) => this.setState({ novoNumeroPlenaria: e.target.value })} placeholder="Ex: 1959" />
-                                </div>
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Tipo de Sessão</label>
-                                    <select className="modal-input" value={novoTipo} onChange={(e) => this.setState({ novoTipo: e.target.value })}>
-                                        <option>Sessão Ordinária</option>
-                                        <option>Sessão Extraordinária</option>
-                                        <option>Sessão Solene</option>
-                                        <option>Audiência Pública</option>
-                                    </select>
-                                </div>
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Formato da Sessão</label>
-                                    <select className="modal-input" value={novoTipoDeSessao} onChange={(e) => this.setState({ novoTipoDeSessao: e.target.value })}>
-                                        <option>Presencial</option>
-                                        <option>Híbrida</option>
-                                        <option>Remota</option>
-                                    </select>
-                                </div>
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>URL da Transmissão (YouTube/Facebook)</label>
-                                    <div style={{position: 'relative'}}>
-                                        <FaLink style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#aaa'}} />
-                                        <input 
-                                            type="text" 
-                                            className="modal-input" 
-                                            style={{paddingLeft: '35px'}}
-                                            placeholder="https://www.youtube.com/watch?v=..." 
-                                            value={novaTransmissaoUrl} 
-                                            onChange={(e) => this.setState({ novaTransmissaoUrl: e.target.value })} 
-                                        />
-                                    </div>
-                                </div>
-                                <div className="modal-footer">
-                                    <button className="btn-secondary" onClick={this.handleCloseModal}>Cancelar</button>
-                                    <button className="btn-primary" onClick={this.handleCreateSessao}>Criar</button>
+                {showModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content" style={{ width: '400px' }}>
+                            <h2 className="modal-header">{selectedSessaoId ? 'Editar Sessão' : 'Nova Sessão'}</h2>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Data da Sessão</label>
+                                <input type="date" className="modal-input" value={novaData} onChange={(e) => this.setState({ novaData: e.target.value })} />
+                            </div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Legislatura (Ex: 20)</label>
+                                <input type="number" className="modal-input" value={novaLegislatura} onChange={(e) => this.setState({ novaLegislatura: e.target.value })} placeholder="Ex: 20" />
+                            </div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Número da Sessão Plenária (Ex: 1959)</label>
+                                <input type="number" className="modal-input" value={novoNumeroPlenaria} onChange={(e) => this.setState({ novoNumeroPlenaria: e.target.value })} placeholder="Ex: 1959" />
+                            </div>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Tipo de Sessão</label>
+                                <select className="modal-input" value={novoTipo} onChange={(e) => this.setState({ novoTipo: e.target.value })}>
+                                    <option>Sessão Ordinária</option>
+                                    <option>Sessão Extraordinária</option>
+                                    <option>Sessão Solene</option>
+                                    <option>Audiência Pública</option>
+                                </select>
+                            </div>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Formato da Sessão</label>
+                                <select className="modal-input" value={novoTipoDeSessao} onChange={(e) => this.setState({ novoTipoDeSessao: e.target.value })}>
+                                    <option>Presencial</option>
+                                    <option>Híbrida</option>
+                                    <option>Remota</option>
+                                </select>
+                            </div>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>URL da Transmissão (YouTube/Facebook)</label>
+                                <div style={{ position: 'relative' }}>
+                                    <FaLink style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#aaa' }} />
+                                    <input
+                                        type="text"
+                                        className="modal-input"
+                                        style={{ paddingLeft: '35px' }}
+                                        placeholder="https://www.youtube.com/watch?v=..."
+                                        value={novaTransmissaoUrl}
+                                        onChange={(e) => this.setState({ novaTransmissaoUrl: e.target.value })}
+                                    />
                                 </div>
                             </div>
+                            <div className="modal-footer">
+                                <button className="btn-secondary" onClick={this.handleCloseModal}>Cancelar</button>
+                                <button className="btn-primary" onClick={this.handleSaveSession}>{selectedSessaoId ? 'Salvar Alterações' : 'Criar'}</button>
+                            </div>
                         </div>
-                    )}
+                    </div>
+                )}
             </div>
         );
     }
 
     renderSessoesList = (status, title, subtitle) => {
-        const { sessoes, camaraId } = this.state;
-        const filteredSessoes = sessoes.filter(s => 
+        const { sessoes, camaraId, isAdmin } = this.state;
+        const filteredSessoes = sessoes.filter(s =>
             Array.isArray(status) ? status.includes(s.status) : s.status === status
         );
 
@@ -668,21 +1019,31 @@ class PautasSessao extends Component {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
                     {filteredSessoes.length > 0 ? filteredSessoes.map(sessao => (
-                        <div 
-                            key={sessao.id} 
-                            className="openai-card" 
+                        <div
+                            key={sessao.id}
+                            className="openai-card"
                             style={{ cursor: 'pointer', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
-                            onClick={() => {
+                        >
+                            <div className="card-content-openai" onClick={() => {
                                 const isClosed = ['Publicada', 'Encerrada'].includes(sessao.status);
                                 const path = isClosed ? `/admin/resumo-sessao/${camaraId}/${sessao.id}` : `/admin/sessao-plenaria/${camaraId}/${sessao.id}`;
                                 this.props.history.push(path);
-                            }}
-                        >
-                            <div className="card-content-openai">
-                                <span className="card-date">{sessao.data} • {sessao.tipo}</span>
-                                <h3>Sessão nº {sessao.numero}</h3>
+                            }}>
+                                <span className="card-date">{sessao.data} • Sessão {sessao.numero}</span>
+                                <h3 style={{ height: '3em', overflow: 'hidden' }}>{sessao.tipo}</h3>
                                 <p style={{ color: '#126B5E', fontWeight: '600', marginTop: '10px' }}>Clique para visualizar</p>
                             </div>
+                            {isAdmin && sessao.status === 'Em Elaboração' && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 15px' }}>
+                                    <button
+                                        className="btn-danger"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
+                                        onClick={(e) => { e.stopPropagation(); this.handleDeleteSessao(sessao.id, sessao.status); }}
+                                    >
+                                        <FaTrash size={14} /> Excluir
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )) : (
                         <div style={{ color: '#888', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', padding: '40px', background: '#f9f9f9', borderRadius: '8px' }}>
@@ -695,7 +1056,7 @@ class PautasSessao extends Component {
     }
 
     render() {
-        const { activeTab } = this.state;
+        const { activeTab, showPasswordModalEdital, passwordInputEdital, passwordErrorEdital, showPdfModal, pdfData } = this.state;
 
         const tabStyle = { padding: '15px 25px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '500', color: '#888', borderBottom: '3px solid transparent', display: 'flex', alignItems: 'center', gap: '8px' };
         const activeTabStyle = { ...tabStyle, fontWeight: '700', color: '#126B5E', borderBottom: '3px solid #126B5E' };
@@ -703,7 +1064,7 @@ class PautasSessao extends Component {
         return (
             <div className='App-header' style={{ alignItems: 'flex-start', flexDirection: 'row', background: '#f0f2f5' }}>
                 <MenuDashboard />
-                <div className="dashboard-content" style={{width: '100%'}}>
+                <div className="dashboard-content" style={{ width: '100%' }}>
                     {/* Tab Navigation */}
                     <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: '30px' }}>
                         <button className='btgManagerSection' onClick={() => this.setState({ activeTab: 'gerenciar' })} style={activeTab === 'gerenciar' ? activeTabStyle : tabStyle}>
@@ -721,6 +1082,72 @@ class PautasSessao extends Component {
                     {activeTab === 'abertas' && this.renderSessoesList('Aberta', 'Sessões Abertas', 'Acompanhe e participe das sessões em andamento.')}
                     {activeTab === 'fechadas' && this.renderSessoesList(['Publicada', 'Encerrada'], 'Sessões Finalizadas', 'Consulte o histórico de sessões já realizadas.')}
                 </div>
+
+                {/* Modal de Senha para Assinatura do Edital */}
+                {showPasswordModalEdital && (
+                    <div className="modal-overlay">
+                        <Box sx={{
+                            backgroundColor: 'white', p: 5, borderRadius: '32px', maxWidth: '480px', width: '90%', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                        }}>
+                            <Box sx={{
+                                width: 60, height: 60, borderRadius: '50%', backgroundColor: 'rgba(18, 107, 94, 0.1)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
+                            }}>
+                                <FaCheckCircle size={30} color="#126B5E" />
+                            </Box>
+                            <Typography variant="h5" fontWeight="800" gutterBottom>Assinatura do Edital</Typography>
+                            <Typography variant="body2" color="textSecondary" sx={{ mb: 4 }}>
+                                Confirme sua senha de acesso para assinar o edital de convocação.
+                            </Typography>
+
+                            <TextField
+                                fullWidth type="password" label="Sua Senha" variant="outlined"
+                                value={passwordInputEdital} onChange={(e) => this.setState({ passwordInputEdital: e.target.value })}
+                                error={!!passwordErrorEdital} helperText={passwordErrorEdital} sx={{ mb: 4 }}
+                                InputProps={{ sx: { borderRadius: '12px' } }}
+                            />
+
+                            <Box display="flex" gap={2}>
+                                <Button fullWidth variant="outlined" onClick={() => this.setState({ showPasswordModalEdital: false })} sx={{ borderRadius: '12px' }}>Cancelar</Button>
+                                <Button fullWidth variant="contained" onClick={this.confirmSignatureEdital} sx={{ borderRadius: '12px', backgroundColor: '#126B5E' }}>Confirmar Assinatura</Button>
+                            </Box>
+                        </Box>
+                    </div>
+                )}
+
+                {/* Modal de Visualização de PDF Unificado (Edital e Roteiro) */}
+                {showPdfModal && pdfData && (
+                    <div className="pdf-popup-overlay">
+                        <Box sx={{
+                            width: '90%',
+                            height: '90%',
+                            borderRadius: '32px',
+                            overflow: 'hidden',
+                            backgroundColor: 'white',
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                            position: 'relative'
+                        }}>
+                            <Button
+                                onClick={() => this.setState({ showPdfModal: false, pdfData: null })}
+                                sx={{
+                                    position: 'absolute',
+                                    top: 15,
+                                    right: 15,
+                                    minWidth: 40,
+                                    height: 40,
+                                    borderRadius: '50%',
+                                    backgroundColor: 'rgba(0,0,0,0.1)',
+                                    color: 'black',
+                                    fontWeight: 'bold',
+                                    zIndex: 10
+                                }}
+                            >
+                                X
+                            </Button>
+                            <iframe src={pdfData} title="Visualizador de PDF" width="100%" height="100%" style={{ border: 'none' }} />
+                        </Box>
+                    </div>
+                )}
             </div>
         );
     }

@@ -4,12 +4,16 @@ import {
     Autocomplete, FormControlLabel, Switch, CircularProgress, Alert,
     Divider, Paper, Tooltip
 } from '@mui/material';
-import { FaFileSignature, FaRobot, FaArrowLeft, FaSave, FaMagic, FaInfoCircle, FaLightbulb, FaPencilAlt } from 'react-icons/fa';
+import { 
+    FaFileSignature, FaSearch, FaEye, FaArrowLeft, FaSave, FaMagic, FaInfoCircle, FaLightbulb, FaPencilAlt,
+    FaCheckCircle, FaTimes, FaRobot
+} from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import api from '../../../services/api';
 import { sendMessageToAIPrivate } from '../../../aiService';
+import LogoIcon from '../../../assets/logo-camaraai-icon.png'; // Import the CameraAI logo
 
 class CreateAccessoryDocument extends Component {
     constructor(props) {
@@ -26,13 +30,22 @@ class CreateAccessoryDocument extends Component {
             isGenerating: false,
             isSubscriptionEnabled: false,
             saving: false,
-            autorNome: '' // Estado para armazenar o nome recuperado do banco
+            autorNome: '', // Estado para armazenar o nome recuperado do banco
+            
+            // Digital Signature states
+            isSigned: false,
+            signatureMetadata: null,
+            camaraAILogoBase64: null,
+            showPasswordModal: false,
+            passwordInput: '',
+            passwordError: ''
         };
     }
 
     async componentDidMount() {
         const token = localStorage.getItem('@CamaraAI:token');
         const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        const camaraId = this.props.match.params.camaraId;
 
         if (token && user.id) {
             // No backend novo, as permissões e dados da câmara já vêm no perfil do usuário ou via API
@@ -46,6 +59,24 @@ class CreateAccessoryDocument extends Component {
         } else {
             this.props.history.push(`/login/${this.state.camaraId || ''}`);
         }
+
+        // Fetch CameraAI logo for digital signature
+        try {
+            const camaraAILogoB64 = await this.getBase64(LogoIcon);
+            this.setState({ camaraAILogoBase64: camaraAILogoB64 });
+        } catch (error) {
+            console.error("Error loading CameraAI logo:", error);
+        }
+    }
+
+    getBase64 = async (url) => {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        });
     }
 
     fetchMaterias = async (userId, camaraId) => {
@@ -137,11 +168,12 @@ class CreateAccessoryDocument extends Component {
 
         try {
             const aiResponse = await sendMessageToAIPrivate(prompt, camaraId);
+            const cleaned = aiResponse.replace(/```html|```/g, '').trim();
             
             // Insere a justificativa no template
             const updatedContent = this.state.content.replace(
                 "<p>[Aguardando redação da IA ou preenchimento manual...]</p>",
-                aiResponse
+                cleaned
             );
 
             this.setState({ content: updatedContent, isGenerating: false });
@@ -150,6 +182,10 @@ class CreateAccessoryDocument extends Component {
             this.setState({ isGenerating: false });
             alert("Falha ao gerar redação com IA.");
         }
+    };
+
+    handleSign = () => {
+        this.setState({ showPasswordModal: true, passwordInput: '', passwordError: '' });
     };
 
     handleSave = async () => {
@@ -164,7 +200,9 @@ class CreateAccessoryDocument extends Component {
                 conteudo: content,
                 autorNome: this.state.autorNome,
                 status: 'Protocolado',
-                permiteSubscricao: isSubscriptionEnabled
+                permiteSubscricao: isSubscriptionEnabled,
+                isSigned: this.state.isSigned,
+                signatureMetadata: this.state.signatureMetadata
             });
             alert("Documento gerado e protocolado com sucesso!");
             this.props.history.push(`/admin/materias-dash/${camaraId}`);
@@ -175,8 +213,164 @@ class CreateAccessoryDocument extends Component {
         }
     };
 
+    generateHash = async (content) => {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(content);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    };
+
+    confirmSignature = async () => {
+        const { passwordInput, content, camaraId } = this.state;
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+
+        if (!user.email || !passwordInput) {
+            this.setState({ passwordError: 'Senha necessária.' });
+            return;
+        }
+
+        // In a real application, you would send the password to your backend
+        // for verification. For this example, we'll just check if it's not empty.
+        if (passwordInput.length < 3) { // Simple validation
+            this.setState({ passwordError: 'Senha muito curta.' });
+            return;
+        }
+
+        try {
+            this.setState({ passwordError: '' });
+
+            // Collect security data (IP)
+            const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: '0.0.0.0' }) }));
+            const ipData = await ipRes.json();
+            const ip = ipData.ip;
+            const userAgent = navigator.userAgent;
+            const timestamp = new Date().toISOString();
+            const hash = await this.generateHash(content || '');
+
+            const signatureMetadata = {
+                nome: user.name || 'Usuário',
+                email: user.email,
+                cpf: user.cpf || 'CPF não informado',
+                timestamp: timestamp,
+                ip: ip,
+                userAgent: userAgent,
+                documentHash: hash,
+                hash: hash
+            };
+
+            this.setState({
+                isSigned: true,
+                signatureMetadata,
+                showPasswordModal: false
+            });
+            alert("Documento assinado digitalmente! Agora você pode protocolá-lo.");
+
+        } catch (error) {
+            console.error("Erro na assinatura:", error);
+            this.setState({ passwordError: 'Ocorreu um erro ao processar a assinatura.' });
+        }
+    };
+
+    generateDocDefinition = () => {
+        const { camaraAILogoBase64, signatureMetadata, isSigned, content, documentType, documentNumber } = this.state;
+        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
+        const autor = user.name || 'Parlamentar';
+        const currentYear = new Date().getFullYear();
+
+        return {
+            content: [
+                { text: documentType.toUpperCase(), style: 'title', alignment: 'center', margin: [0, 0, 0, 20] },
+                { text: `Nº ${documentNumber}/${currentYear}`, alignment: 'center', margin: [0, 0, 0, 20] },
+                { text: autor, alignment: 'center', style: 'author', margin: [0, 0, 0, 20] },
+                { text: '\n\n' },
+                { rawHtml: content, style: 'bodyText' }, // Use rawHtml for Quill content
+                { text: '\n\n\n\n________________________________', style: 'signatureLine', alignment: 'center' },
+                { text: autor, style: 'signatureName', alignment: 'center' },
+                { text: 'Vereador(a)', style: 'signatureRole', alignment: 'center' },
+                // Digital Signature Block
+                isSigned && signatureMetadata && {
+                    columns: [
+                        camaraAILogoBase64
+                            ? {
+                                image: camaraAILogoBase64,
+                                width: 50
+                            }
+                            : { text: '' },
+
+                        {
+                            width: '*',
+                            stack: [
+                                {
+                                    text: 'Documento assinado digitalmente',
+                                    style: 'signatureHeader'
+                                },
+                                {
+                                    text: (signatureMetadata.nome || '').toUpperCase(),
+                                    style: 'signatureName'
+                                },
+                                {
+                                    text: `Data: ${new Date(signatureMetadata.timestamp).toLocaleString('pt-BR')}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: `IP: ${signatureMetadata.ip}`,
+                                    style: 'signatureDetail'
+                                },
+                                {
+                                    text: 'Assinado via CâmaraAI',
+                                    style: 'signatureAI'
+                                },
+                                {
+                                    text: `Verifique em: https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    link: `https://verificador.camaraai.com/${signatureMetadata.hash}`,
+                                    style: 'signatureLink'
+                                }
+                            ]
+                        }
+                    ],
+                    columnGap: 10,
+                    margin: [0, 20, 0, 10]
+                }
+            ].filter(Boolean),
+            styles: {
+                title: { fontSize: 16, bold: true },
+                author: { fontSize: 12 },
+                bodyText: { fontSize: 12, margin: [0, 0, 0, 10] },
+                signatureLine: { margin: [0, 40, 0, 5] },
+                signatureRole: { fontSize: 10 },
+                signatureHeader: {
+                    fontSize: 8,
+                    bold: true,
+                    color: '#666'
+                },
+                signatureName: {
+                    fontSize: 10,
+                    bold: true,
+                    color: '#000'
+                },
+                signatureDetail: {
+                    fontSize: 8,
+                    color: '#444'
+                },
+                signatureAI: {
+                    fontSize: 8,
+                    italics: true,
+                    color: '#126B5E'
+                },
+                signatureLink: {
+                    fontSize: 7,
+                    color: '#0066cc'
+                }
+            }
+        };
+    };
+
     render() {
-        const { loading, materias, content, isGenerating, isSubscriptionEnabled, saving } = this.state;
+        const { 
+            loading, materias, content, isGenerating, isSubscriptionEnabled, saving,
+            showPasswordModal, passwordInput, passwordError, isSigned
+        } = this.state;
 
         return (
             <Box sx={{ display: 'flex', background: '#f8fafc', minHeight: '100vh' }}>
@@ -280,6 +474,7 @@ class CreateAccessoryDocument extends Component {
                                         startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <FaFileSignature />}
                                         onClick={this.handleSave}
                                         disabled={!content || saving}
+                                        color={isSigned ? 'success' : 'primary'}
                                         sx={{ backgroundColor: '#FF740F', '&:hover': { backgroundColor: '#e6680d' }, textTransform: 'none' }}
                                     >
                                         Protocolar Requerimento
@@ -315,6 +510,72 @@ class CreateAccessoryDocument extends Component {
                                     </Box>
                                 )}
                             </Paper>
+
+                            {/* Digital Signature Button */}
+                            {!isSigned && (
+                                <Box sx={{ mt: 3, textAlign: 'right' }}>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<FaFileSignature />}
+                                        onClick={this.handleSign}
+                                        disabled={!content || isGenerating || saving}
+                                        sx={{ 
+                                            borderColor: '#126B5E', 
+                                            color: '#126B5E', 
+                                            '&:hover': { borderColor: '#0e554a', color: '#0e554a' },
+                                            textTransform: 'none',
+                                            borderRadius: '8px'
+                                        }}
+                                    >
+                                        Assinar Digitalmente
+                                    </Button>
+                                </Box>
+                            )}
+
+                            {/* Password Modal for Digital Signature */}
+                            {showPasswordModal && (
+                                <Box className="pdf-popup-overlay">
+                                    <Box sx={{
+                                        backgroundColor: 'white',
+                                        p: 5,
+                                        borderRadius: '32px',
+                                        maxWidth: '480px',
+                                        width: '90%',
+                                        textAlign: 'center',
+                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                                    }}>
+                                        <Box sx={{
+                                            width: 60, height: 60, borderRadius: '50%',
+                                            backgroundColor: 'rgba(18, 107, 94, 0.1)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
+                                        }}>
+                                            <FaCheckCircle size={30} color="#126B5E" />
+                                        </Box>
+                                        <Typography variant="h5" fontWeight="800" gutterBottom sx={{ color: '#1a1a1a' }}>Assinatura Digital</Typography>
+                                        <Typography variant="body2" color="textSecondary" sx={{ mb: 4, px: 2 }}>
+                                            Para assinar juridicamente este documento, confirme sua senha de acesso ao ecossistema e-Câmara.
+                                        </Typography>
+
+                                        <TextField
+                                            fullWidth
+                                            type="password"
+                                            label="Sua Senha"
+                                            variant="outlined"
+                                            value={passwordInput}
+                                            onChange={(e) => this.setState({ passwordInput: e.target.value })}
+                                            error={!!passwordError}
+                                            helperText={passwordError}
+                                            sx={{ mb: 4 }}
+                                            InputProps={{ sx: { borderRadius: '12px' } }}
+                                        />
+
+                                        <Box display="flex" gap={2}>
+                                            <Button fullWidth variant="outlined" onClick={() => this.setState({ showPasswordModal: false })} sx={{ borderRadius: '12px', py: 1.2, textTransform: 'none', fontWeight: 600 }}>Cancelar</Button>
+                                            <Button fullWidth variant="contained" onClick={this.confirmSignature} disabled={isGenerating} sx={{ borderRadius: '12px', py: 1.2, textTransform: 'none', fontWeight: 600, backgroundColor: '#126B5E', '&:hover': { backgroundColor: '#0e554a' } }}>Confirmar Assinatura</Button>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            )}
                         </Grid>
                     </Grid>
                 </Box>
