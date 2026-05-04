@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt, FaTimes, FaSearch, FaEye, FaArrowLeft, FaInfoCircle, FaGavel } from 'react-icons/fa';
+import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt, FaTimes, FaSearch, FaEye, FaArrowLeft, FaInfoCircle, FaGavel, FaRocket, FaArrowRight } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -9,6 +9,8 @@ import { sendMessageToAIPrivate } from '../../../aiService.js';
 import api from '../../../services/api.js';
 import { normalizeSessionList, parseSessionDate } from '../../../utils/sessionNormalizer';
 import { Box, Typography, TextField, Button, CircularProgress } from '@mui/material';
+import SessionStepper from './components/SessionStepper.jsx';
+
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -52,12 +54,16 @@ class PautasSessao extends Component {
             logoBase64: null,
             camaraAILogoBase64: null,
             camaraId: this.props.match.params.camaraId,
-            viewingMateriaForDetail: null, // Mantido aqui para o modal ser controlado pelo pai
             showPdfModal: false,
-            pdfData: null,
-            isAdmin: false
+            isAdmin: false,
+            // Stepper state
+            isStepping: false,
+            currentStep: 1,
+            searchSessionTerm: '',
+            filterSessionType: 'Todos'
         };
     }
+
 
     componentDidMount() {
         const token = localStorage.getItem('@CamaraAI:token');
@@ -98,7 +104,12 @@ class PautasSessao extends Component {
             const rawData = response.data;
             const data = Array.isArray(rawData) ? rawData : (rawData?.matters || rawData?.materias || Object.values(rawData || {}));
 
-            const materias = data.filter(m => m).map(m => ({ ...m, id: m.id || m._id }));
+            const materias = data.filter(m => m).map(m => ({ 
+                ...m, 
+                id: m.id || m._id,
+                titulo: m.titulo || m.title || 'Matéria sem título',
+                autor: m.autor || m.autorNome || 'Autor não informado'
+            }));
             const materiasDisponiveis = materias.filter(m => ['Enviado para Plenário', 'Parecer Favorável', 'Aprovado na Comissão'].includes(m.status));
             this.setState({ materiasDisponiveis });
         } catch (error) {
@@ -164,10 +175,32 @@ class PautasSessao extends Component {
 
     handleOpenModal = () => {
         this.setState({
-            showModal: true, selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária',
+            showModal: false, // Don't use modal anymore
+            isStepping: true,
+            currentStep: 1,
+            selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária',
             novaTransmissaoUrl: '', novoTipoDeSessao: 'Presencial', novaLegislatura: '', novoNumeroPlenaria: ''
         });
     };
+
+    handleNextStep = () => {
+        const { currentStep } = this.state;
+        if (currentStep === 1) {
+            this.handleSaveSession();
+        } else if (currentStep < 5) {
+            this.setState({ currentStep: currentStep + 1 });
+        }
+    };
+
+    handlePrevStep = () => {
+        const { currentStep } = this.state;
+        if (currentStep > 1) {
+            this.setState({ currentStep: currentStep - 1 });
+        } else {
+            this.setState({ isStepping: false });
+        }
+    };
+
 
     handleCloseModal = () => {
         this.setState({ showModal: false });
@@ -218,7 +251,12 @@ class PautasSessao extends Component {
     };
 
     handleSaveSession = async () => {
-        const { novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId, novoTipoDeSessao, novaLegislatura, novoNumeroPlenaria, selectedSessaoId } = this.state;
+        const { 
+            novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId, 
+            novoTipoDeSessao, novaLegislatura, novoNumeroPlenaria, homeConfig,
+            selectedSessaoId 
+        } = this.state;
+        
         if (!novaData || !novaLegislatura || !novoNumeroPlenaria) {
             alert("Por favor, preencha a data, legislatura e o número da sessão.");
             return;
@@ -252,12 +290,21 @@ class PautasSessao extends Component {
                 await api.patch(`/sessions/${selectedSessaoId}`, sessionData);
                 successMessage = "Sessão atualizada com sucesso!";
             } else {
-                await api.post(`/sessions/${camaraId}`, sessionData);
+                const response = await api.post(`/sessions/${camaraId}`, sessionData);
+                // After creating, we need the ID to move to the next step
+                if (response.data && response.data.id) {
+                    this.setState({ selectedSessaoId: response.data.id, currentStep: 2 });
+                } else {
+                    // Fallback if ID is not directly in data
+                    this.fetchSessoes();
+                    this.setState({ currentStep: 2 });
+                }
             }
-            this.setState({ showModal: false });
+            // this.setState({ showModal: false }); // No longer needed
             this.fetchSessoes();
-            alert(successMessage);
+            // alert(successMessage);
         } catch (error) {
+
             console.error("Erro detalhado ao criar sessão:", error.response?.data);
             
             let errorMessage = "Erro de comunicação com o servidor.";
@@ -286,24 +333,25 @@ class PautasSessao extends Component {
     };
 
     handleSelectSessao = (sessao) => {
+        const isEmElaboracao = sessao.status === 'Em Elaboração';
         this.setState({
+            isStepping: false,
             // If session is "Em Elaboração", open modal for editing
-            showModal: sessao.status === 'Em Elaboração',
+            showModal: isEmElaboracao,
             selectedSessaoId: sessao.id,
-            novaData: sessao.status === 'Em Elaboração' ? this.formatDateForInput(sessao.data) : '',
-            novoTipo: sessao.status === 'Em Elaboração' ? sessao.tipoSessao : 'Sessão Ordinária',
-            novaLegislatura: sessao.status === 'Em Elaboração' ? sessao.legislatura : '',
-            novoNumeroPlenaria: sessao.status === 'Em Elaboração' ? sessao.numero : '',
-            novoTipoDeSessao: sessao.status === 'Em Elaboração' ? sessao.formato : 'Presencial',
-            novaTransmissaoUrl: sessao.status === 'Em Elaboração' ? sessao.urlTransmissao : '',
 
+            novaData: isEmElaboracao ? this.formatDateForInput(sessao.data) : '',
+            novoTipo: isEmElaboracao ? sessao.tipoSessao : 'Sessão Ordinária',
+            novaLegislatura: isEmElaboracao ? sessao.legislatura : '',
+            novoNumeroPlenaria: isEmElaboracao ? sessao.numero : '',
+            novoTipoDeSessao: isEmElaboracao ? sessao.formato : 'Presencial',
+            novaTransmissaoUrl: isEmElaboracao ? sessao.urlTransmissao : '',
+
+            // Signature and edital data
             // These are for GerenciarSessao component
             // If not editing, clear edital and roteiro for the details view
-            editalText: sessao.status === 'Em Elaboração' ? sessao.edital || '' : '',
-            roteiroPdfUrl: sessao.status === 'Em Elaboração' ? sessao.roteiroPdfUrl || null : null,
-
             editalText: sessao.edital || '',
-            roteiroPdfUrl: null, // Reseta o PDF ao selecionar nova sessão
+            roteiroPdfUrl: isEmElaboracao ? sessao.roteiroPdfUrl || null : null,
             isEditingUrl: false, // Reseta o modo de edição da URL
             editedTransmissaoUrl: sessao.transmissaoUrl || '', // Define a URL atual para edição
         });
@@ -341,22 +389,23 @@ class PautasSessao extends Component {
                 return;
             }
 
-            const updatedItens = [...currentItens, materia];
+            const itemSimplificado = {
+                id: materia.id,
+                titulo: materia.titulo,
+                autor: materia.autor,
+                tipoMateria: materia.tipoMateria,
+                numero: materia.numero,
+                ementa: materia.ementa
+            };
+
+            const updatedItens = [...currentItens, itemSimplificado];
 
             try {
-                const payload = {
-                    itens: updatedItens,
-                    metadata: {
-                        ...(selectedSessao.metadata || {}),
-                        itens: updatedItens
-                    }
-                };
-
-                await api.patch(`/sessions/${selectedSessaoId}`, payload);
+                await api.patch(`/sessions/${selectedSessaoId}`, { matters: updatedItens });
                 await api.patch(`/legislative-matters/id/${materia.id}`, { status: 'Em Pauta' });
 
                 this.setState(prevState => ({
-                    sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s),
+                    sessoes: prevState.sessoes.map(s => String(s.id) === String(selectedSessaoId) ? { ...s, matters: updatedItens, itens: updatedItens } : s),
                     selectedMateriaToAdd: '',
                     materiaSearchTerm: ''
                 }));
@@ -367,14 +416,15 @@ class PautasSessao extends Component {
         }
     };
 
-    handleAddAcessorio = async () => {
+    handleAddAcessorio = async (docIdFromParam = null) => {
         const { selectedSessaoId, sessoes, selectedDocumentoToAdd, documentosAcessoriosDisponiveis, camaraId } = this.state;
-        if (!selectedDocumentoToAdd || !selectedSessaoId) return;
+        const docId = docIdFromParam || selectedDocumentoToAdd;
+        if (!docId || !selectedSessaoId) return;
 
         const selectedSessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!selectedSessao) return;
 
-        const doc = documentosAcessoriosDisponiveis.find(d => d.id === selectedDocumentoToAdd);
+        const doc = documentosAcessoriosDisponiveis.find(d => String(d.id) === String(docId));
         if (doc) {
             const currentItens = selectedSessao.itens || [];
             if (currentItens.some(item => item.id === doc.id)) {
@@ -385,7 +435,6 @@ class PautasSessao extends Component {
             const itemNormalizado = {
                 id: doc.id,
                 titulo: doc.titulo || 'Requerimento de Urgência',
-                ementa: "Requerimento de Urgência vinculado à matéria de referência.",
                 autor: doc.autorNome || 'Autor não informado',
                 tipoMateria: 'Requerimento',
                 isAcessorio: true
@@ -394,19 +443,11 @@ class PautasSessao extends Component {
             const updatedItens = [...currentItens, itemNormalizado];
 
             try {
-                const payload = {
-                    itens: updatedItens,
-                    metadata: {
-                        ...(selectedSessao.metadata || {}),
-                        itens: updatedItens
-                    }
-                };
-
-                await api.patch(`/sessions/${selectedSessaoId}`, payload);
+                await api.patch(`/sessions/${selectedSessaoId}`, { matters: updatedItens });
                 await api.patch(`/legislative-matters/accessory/${doc.id}`, { status: 'Em Pauta' });
 
                 this.setState(prevState => ({
-                    sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s),
+                    sessoes: prevState.sessoes.map(s => String(s.id) === String(selectedSessaoId) ? { ...s, matters: updatedItens, itens: updatedItens } : s),
                     selectedDocumentoToAdd: ''
                 }));
             } catch (error) {
@@ -426,15 +467,7 @@ class PautasSessao extends Component {
         const updatedItens = (selectedSessao.itens || []).filter(i => i.id !== itemId);
 
         try {
-            const payload = {
-                itens: updatedItens,
-                metadata: {
-                    ...(selectedSessao.metadata || {}),
-                    itens: updatedItens
-                }
-            };
-
-            await api.patch(`/sessions/${selectedSessaoId}`, payload);
+            await api.patch(`/sessions/${selectedSessaoId}`, { matters: updatedItens });
 
             if (itemToRemove) {
                 const isAcessorio = itemToRemove.isAcessorio;
@@ -446,7 +479,7 @@ class PautasSessao extends Component {
             }
 
             this.setState(prevState => ({
-                sessoes: prevState.sessoes.map(s => s.id === selectedSessaoId ? { ...s, itens: updatedItens } : s)
+                sessoes: prevState.sessoes.map(s => String(s.id) === String(selectedSessaoId) ? { ...s, matters: updatedItens, itens: updatedItens } : s)
             }));
         } catch (error) {
             console.error("Erro ao remover item:", error);
@@ -606,8 +639,7 @@ class PautasSessao extends Component {
 
         try {
             const response = await sendMessageToAIPrivate(prompt, camaraId);
-            const cleaned = response.replace(/```html|```/g, '').trim();
-            this.setState({ editalText: cleaned, isGeneratingEdital: false });
+            this.setState({ editalText: response, isGeneratingEdital: false });
         } catch (error) {
             console.error("Erro na IA:", error);
             this.setState({ editalText: "Erro ao gerar edital.", isGeneratingEdital: false });
@@ -670,7 +702,7 @@ class PautasSessao extends Component {
                 console.warn('[Upload] Falha no upload do edital:', uploadError);
             }
 
-            // 3. Salva no backend de forma robusta (raiz e metadata)
+            // 3. Salva no backend
             const updatePayload = {
                 edital: editalText,
                 isSignedEdital: true,
@@ -703,17 +735,16 @@ class PautasSessao extends Component {
     };
 
     handleViewEditalPDF = () => {
-        const { editalText, sessoes, selectedSessaoId, isSignedEdital, signatureMetadataEdital } = this.state;
+        const { editalText, sessoes, selectedSessaoId, isSignedEdital, signatureMetadataEdital, camaraId } = this.state;
         const sessao = sessoes.find(s => s.id === selectedSessaoId);
         if (!sessao) return;
 
-        // Se já existe uma URL de PDF salva, usamos ela, caso contrário geramos o preview base64
-        if (sessao.editalPdfUrl) {
-            this.setState({ pdfData: sessao.editalPdfUrl, showPdfModal: true });
+        if (sessao.editalPdfUrl || sessao.editalPath) {
+            this.setState({ pdfData: sessao.editalPdfUrl || sessao.editalPath, showPdfModal: true });
         } else {
             const docDefinition = this.getEditalDocDefinition(sessao, editalText, isSignedEdital, signatureMetadataEdital);
             pdfMake.createPdf(docDefinition).getBase64((data) => {
-                this.setState({ pdfData: `data:application/pdf;base64,${data}`, showPdfModal: true });
+                this.setState({ pdfData: `data:application/pdf;base64,${data}`, showPdfPopup: true, showPdfModal: true });
             });
         }
     };
@@ -799,17 +830,159 @@ class PautasSessao extends Component {
         this.setState(newState);
     };
 
+    renderStepper = () => {
+        const {
+            currentStep, novaData, novaLegislatura, novoNumeroPlenaria, novoTipo, novoTipoDeSessao, novaTransmissaoUrl,
+            sessoes, selectedSessaoId, materiasDisponiveis, documentosAcessoriosDisponiveis, editalText, isGeneratingEdital,
+            isFinalizing, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl, materiaSearchTerm, viewingMateriaForDetail,
+            editalHorario, editalBaseLegal, editalOficio, isSignedEdital
+        } = this.state;
+
+        const selectedSessao = sessoes.find(s => String(s.id) === String(selectedSessaoId));
+
+        return (
+            <div className="dashboard-card" style={{ padding: '40px', borderRadius: '32px', animation: 'fadeIn 0.5s', width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{ marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button onClick={this.handlePrevStep} className="btn-secondary" style={{ borderRadius: '12px', padding: '10px 20px' }}>
+                        <FaArrowLeft /> {currentStep === 1 ? 'Cancelar' : 'Voltar'}
+                    </button>
+                    <h2 style={{ margin: 0, color: '#126B5E', fontWeight: '800' }}>Configuração de Sessão</h2>
+                    <div style={{ width: '100px' }}></div> {/* Spacer */}
+                </div>
+
+                <SessionStepper currentStep={currentStep} />
+
+                {currentStep === 1 && (
+                    <div style={{ maxWidth: '600px', margin: '0 auto', animation: 'slideUp 0.4s' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '25px', marginBottom: '25px' }}>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>Data da Sessão</label>
+                                <input type="date" className="modal-input" style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee' }} value={novaData} onChange={(e) => this.setState({ novaData: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>Tipo de Sessão</label>
+                                <select className="modal-input" style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee' }} value={novoTipo} onChange={(e) => this.setState({ novoTipo: e.target.value })}>
+                                    <option>Sessão Ordinária</option>
+                                    <option>Sessão Extraordinária</option>
+                                    <option>Sessão Solene</option>
+                                    <option>Audiência Pública</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '25px', marginBottom: '25px' }}>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>Legislatura</label>
+                                <input type="number" className="modal-input" style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee' }} value={novaLegislatura} onChange={(e) => this.setState({ novaLegislatura: e.target.value })} placeholder="Ex: 20" />
+                            </div>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>Número da Sessão Plenária</label>
+                                <input type="number" className="modal-input" style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee' }} value={novoNumeroPlenaria} onChange={(e) => this.setState({ novoNumeroPlenaria: e.target.value })} placeholder="Ex: 1959" />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '25px', marginBottom: '30px' }}>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>Formato</label>
+                                <select className="modal-input" style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee' }} value={novoTipoDeSessao} onChange={(e) => this.setState({ novoTipoDeSessao: e.target.value })}>
+                                    <option>Presencial</option>
+                                    <option>Híbrida</option>
+                                    <option>Remota</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>URL da Transmissão (YouTube/Facebook)</label>
+                                <div style={{ position: 'relative' }}>
+                                    <FaLink style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+                                    <input 
+                                        type="text" 
+                                        className="modal-input" 
+                                        style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee', paddingLeft: '45px' }} 
+                                        value={novaTransmissaoUrl} 
+                                        onChange={(e) => this.setState({ novaTransmissaoUrl: e.target.value })} 
+                                        placeholder="Cole o link aqui..." 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '40px' }}>
+                            <button className="btn-primary" onClick={this.handleNextStep} style={{ padding: '15px 60px', borderRadius: '16px', fontSize: '1.1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '15px', boxShadow: '0 10px 20px rgba(18, 107, 94, 0.2)' }}>
+                                Continuar para Pautas <FaArrowRight />
+                            </button>
+                        </div>
+
+                    </div>
+                )}
+
+                {currentStep > 1 && selectedSessao && (
+                    <div>
+                        <GerenciarSessao
+                            sessao={selectedSessao}
+                            materiasDisponiveis={materiasDisponiveis}
+                            documentosAcessoriosDisponiveis={documentosAcessoriosDisponiveis}
+                            editalText={editalText}
+                            isGeneratingEdital={isGeneratingEdital}
+                            isFinalizing={isFinalizing}
+                            editalHorario={editalHorario}
+                            editalBaseLegal={editalBaseLegal}
+                            editalOficio={editalOficio}
+                            isSignedEdital={isSignedEdital}
+                            handleOpenSignEdital={this.handleOpenSignEdital}
+                            handleViewEditalPDF={this.handleViewEditalPDF}
+                            roteiroPdfUrl={roteiroPdfUrl}
+                            isEditingUrl={isEditingUrl}
+                            editedTransmissaoUrl={editedTransmissaoUrl}
+                            materiaSearchTerm={materiaSearchTerm}
+                            viewingMateriaForDetail={viewingMateriaForDetail}
+                            handleCloseDetails={this.handleCloseDetails}
+                            handleOpenSessao={this.handleOpenSessao}
+                            handleFinalizeSessao={this.handleFinalizeSessao}
+                            handleGenerateEditalWithAI={this.handleGenerateEditalWithAI}
+                            handleUrlInputChange={this.handleUrlInputChange}
+                            handleSaveUrl={this.handleSaveUrl}
+                            handleAddItem={this.handleAddItem}
+                            handleAddAcessorio={this.handleAddAcessorio}
+                            handleRemoveItem={this.handleRemoveItem}
+                            setParentState={this.setParentState}
+                            creationStep={currentStep - 1} // Step 2 here is creationStep 1 in GerenciarSessao
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '30px', padding: '20px', borderTop: '1px solid #eee' }}>
+                            {currentStep < 5 && (
+                                <button className="btn-primary" onClick={this.handleNextStep} style={{ padding: '12px 40px', borderRadius: '12px', fontWeight: 'bold' }}>
+                                    Próxima Etapa
+                                </button>
+                            )}
+                            {currentStep === 5 && (
+                                <button className="btn-secondary" onClick={() => this.setState({ isStepping: false, selectedSessaoId: null })} style={{ padding: '12px 40px', borderRadius: '12px' }}>
+                                    Finalizar e Sair
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     renderGerenciarSessoes = () => {
+
         const {
             sessoes, selectedSessaoId, selectedMonth, showModal,
             novaData, novaLegislatura, novoNumeroPlenaria, novoTipo, novoTipoDeSessao, novaTransmissaoUrl,
             materiasDisponiveis, documentosAcessoriosDisponiveis, editalText, isGeneratingEdital, isFinalizing, roteiroPdfUrl,
             isEditingUrl, editedTransmissaoUrl, materiaSearchTerm, viewingMateriaForDetail,
             editalHorario, editalBaseLegal, editalOficio,
-            showPasswordModalEdital, passwordInputEdital, passwordErrorEdital, isSignedEdital
+            showPasswordModalEdital, passwordInputEdital, passwordErrorEdital, isSignedEdital,
+            searchSessionTerm, filterSessionType
         } = this.state;
 
         const selectedSessao = sessoes.find(s => String(s.id) === String(selectedSessaoId));
+        
+        if (this.state.isStepping) {
+            return this.renderStepper();
+        }
+
         if (selectedSessaoId) {
             return (
                 <GerenciarSessao
@@ -844,6 +1017,7 @@ class PautasSessao extends Component {
             );
         }
 
+
         const sortedSessoes = [...sessoes].sort((a, b) =>
             parseSessionDate(b.data) - parseSessionDate(a.data)
         );
@@ -862,7 +1036,8 @@ class PautasSessao extends Component {
 
         const availableMonths = groupedSessoes.map(g => g.month);
         const currentMonth = selectedMonth || (availableMonths[0] || '');
-        const displayedSessoes = groupedSessoes.find(g => g.month === currentMonth)?.sessoes || [];
+        const isSearching = searchSessionTerm.trim() !== '' || filterSessionType !== 'Todos';
+        const displayedSessoes = isSearching ? sortedSessoes : (groupedSessoes.find(g => g.month === currentMonth)?.sessoes || []);
 
         return (
             <div style={{ animation: 'fadeIn 0.5s' }}>
@@ -874,7 +1049,7 @@ class PautasSessao extends Component {
                     <button className="btn-primary" onClick={this.handleOpenModal}><FaPlus /> Nova Sessão</button>
                 </div>
 
-                <div className="dashboard-card" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '30px', padding: '15px 25px' }}>
+                {!isSearching && availableMonths.length > 0 && <div className="dashboard-card" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '30px', padding: '15px 25px' }}>
                     <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#666' }}>Filtrar Mês:</span>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         {availableMonths.map(m => (
@@ -892,7 +1067,7 @@ class PautasSessao extends Component {
                             </button>
                         ))}
                     </div>
-                </div>
+                </div>}
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
                     {displayedSessoes.map(sessao => {
@@ -944,69 +1119,25 @@ class PautasSessao extends Component {
                     {sessoes.length === 0 && <p style={{ gridColumn: '1/-1', color: '#666', textAlign: 'center' }}>Nenhuma sessão cadastrada.</p>}
                 </div>
 
-                {/* Modal Create Permanecido conforme original mas com z-index alto */}
-                {showModal && (
-                    <div className="modal-overlay">
-                        <div className="modal-content" style={{ width: '400px' }}>
-                            <h2 className="modal-header">{selectedSessaoId ? 'Editar Sessão' : 'Nova Sessão'}</h2>
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Data da Sessão</label>
-                                <input type="date" className="modal-input" value={novaData} onChange={(e) => this.setState({ novaData: e.target.value })} />
-                            </div>
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Legislatura (Ex: 20)</label>
-                                <input type="number" className="modal-input" value={novaLegislatura} onChange={(e) => this.setState({ novaLegislatura: e.target.value })} placeholder="Ex: 20" />
-                            </div>
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Número da Sessão Plenária (Ex: 1959)</label>
-                                <input type="number" className="modal-input" value={novoNumeroPlenaria} onChange={(e) => this.setState({ novoNumeroPlenaria: e.target.value })} placeholder="Ex: 1959" />
-                            </div>
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Tipo de Sessão</label>
-                                <select className="modal-input" value={novoTipo} onChange={(e) => this.setState({ novoTipo: e.target.value })}>
-                                    <option>Sessão Ordinária</option>
-                                    <option>Sessão Extraordinária</option>
-                                    <option>Sessão Solene</option>
-                                    <option>Audiência Pública</option>
-                                </select>
-                            </div>
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>Formato da Sessão</label>
-                                <select className="modal-input" value={novoTipoDeSessao} onChange={(e) => this.setState({ novoTipoDeSessao: e.target.value })}>
-                                    <option>Presencial</option>
-                                    <option>Híbrida</option>
-                                    <option>Remota</option>
-                                </select>
-                            </div>
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>URL da Transmissão (YouTube/Facebook)</label>
-                                <div style={{ position: 'relative' }}>
-                                    <FaLink style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#aaa' }} />
-                                    <input
-                                        type="text"
-                                        className="modal-input"
-                                        style={{ paddingLeft: '35px' }}
-                                        placeholder="https://www.youtube.com/watch?v=..."
-                                        value={novaTransmissaoUrl}
-                                        onChange={(e) => this.setState({ novaTransmissaoUrl: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button className="btn-secondary" onClick={this.handleCloseModal}>Cancelar</button>
-                                <button className="btn-primary" onClick={this.handleSaveSession}>{selectedSessaoId ? 'Salvar Alterações' : 'Criar'}</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* O modal legado foi removido em favor do novo fluxo Step-by-Step */}
+
             </div>
         );
     }
 
     renderSessoesList = (status, title, subtitle) => {
-        const { sessoes, camaraId, isAdmin } = this.state;
+        const { sessoes, camaraId, isAdmin, searchSessionTerm, filterSessionType } = this.state;
         const filteredSessoes = sessoes.filter(s =>
-            Array.isArray(status) ? status.includes(s.status) : s.status === status
+            (Array.isArray(status) ? status.includes(s.status) : s.status === status) &&
+            (
+                s.tipo?.toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
+                String(s.numero || '').toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
+                s.data?.includes(searchSessionTerm)
+            ) &&
+            (
+                filterSessionType === 'Todos' || 
+                (s.tipoSessao || s.categoria || '').includes(filterSessionType)
+            )
         );
 
         return (
@@ -1056,7 +1187,7 @@ class PautasSessao extends Component {
     }
 
     render() {
-        const { activeTab, showPasswordModalEdital, passwordInputEdital, passwordErrorEdital, showPdfModal, pdfData } = this.state;
+        const { activeTab, showPasswordModalEdital, passwordInputEdital, passwordErrorEdital, showPdfModal, pdfData, searchSessionTerm, filterSessionType } = this.state;
 
         const tabStyle = { padding: '15px 25px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '500', color: '#888', borderBottom: '3px solid transparent', display: 'flex', alignItems: 'center', gap: '8px' };
         const activeTabStyle = { ...tabStyle, fontWeight: '700', color: '#126B5E', borderBottom: '3px solid #126B5E' };
@@ -1077,6 +1208,28 @@ class PautasSessao extends Component {
                             <FaCheckCircle /> Sessões Finalizadas
                         </button>
                     </div>
+
+                    {!this.state.isStepping && (
+                        <div className="dashboard-filter-bar" style={{ marginBottom: '30px', padding: '20px' }}>
+                            <div className="search-input-wrapper">
+                                <FaSearch className="search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por número, tipo ou data..."
+                                    className="search-input"
+                                    value={searchSessionTerm}
+                                    onChange={(e) => this.setState({ searchSessionTerm: e.target.value })}
+                                />
+                            </div>
+                            <select className="filter-select" value={filterSessionType} onChange={(e) => this.setState({ filterSessionType: e.target.value })}>
+                                <option value="Todos">Todos os Tipos</option>
+                                <option value="Ordinária">Ordinária</option>
+                                <option value="Extraordinária">Extraordinária</option>
+                                <option value="Solene">Solene</option>
+                                <option value="Audiência Pública">Audiência Pública</option>
+                            </select>
+                        </div>
+                    )}
 
                     {activeTab === 'gerenciar' && this.renderGerenciarSessoes()}
                     {activeTab === 'abertas' && this.renderSessoesList('Aberta', 'Sessões Abertas', 'Acompanhe e participe das sessões em andamento.')}
@@ -1115,7 +1268,7 @@ class PautasSessao extends Component {
                     </div>
                 )}
 
-                {/* Modal de Visualização de PDF Unificado (Edital e Roteiro) */}
+                {/* Modal de Visualização de PDF Unificado */}
                 {showPdfModal && pdfData && (
                     <div className="pdf-popup-overlay">
                         <Box sx={{

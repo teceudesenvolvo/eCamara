@@ -60,10 +60,6 @@ class JuizoMateria extends Component {
             ],
             currentInput: '',
             isGenerating: false,
-            showPasswordModal: false,
-            passwordInput: '',
-            passwordError: '',
-            pendingDecisao: null,
         };
         this.messagesEndRef = React.createRef();
         this.chatContainerRef = React.createRef();
@@ -199,7 +195,7 @@ class JuizoMateria extends Component {
         try {
             const { regimentoText, leiOrganicaText } = baseConhecimento;
 
-            const prompt = `Atue como um Consultor Jurídico Sênior de Direito Municipal para a ${councilName || 'Câmara Municipal'}.
+            const prompt = `Atue como um Consultor Jurídico Sênior de Direito Municipal.
             
             CONTEXTO DA MATÉRIA EM ANÁLISE:
             - Tipo: ${selectedMateria.tipoMateria}
@@ -241,7 +237,7 @@ class JuizoMateria extends Component {
 
         const { regimentoText, leiOrganicaText } = baseConhecimento;
 
-        const prompt = `Atue como um Procurador Jurídico experiente da ${councilName || 'Câmara Municipal'}. Elabore um parecer técnico-jurídico completo sobre o(a) ${selectedMateria.tipoMateria} nº ${selectedMateria.numero}.
+        const prompt = `Atue como um Procurador Jurídico experiente da Câmara Municipal. Elabore um parecer técnico-jurídico completo sobre o(a) ${selectedMateria.tipoMateria} nº ${selectedMateria.numero}.
         
         SUA CONCLUSÃO DEVE SER: ${this.state.decisao === 'favoravel' ? 'CONSTITUCIONALIDADE E LEGALIDADE (Favorável)' : 'INCONSTITUCIONALIDADE E ILEGALIDADE (Contrário)'}.
         
@@ -277,9 +273,8 @@ class JuizoMateria extends Component {
                 text: 'Gerei uma minuta completa do parecer baseada na legislação local. O texto já foi aplicado ao formulário para sua revisão.' 
             };
 
-            const cleaned = response.replace(/```html|```/g, '').trim();
             this.setState({ 
-                parecerText: cleaned, 
+                parecerText: response, 
                 isGeneratingParecer: false,
                 messages: [...this.state.messages, aiMessage]
             });
@@ -337,37 +332,6 @@ class JuizoMateria extends Component {
                 resolve(data);
             });
         });
-    };
-
-    openPasswordModal = (decisao) => {
-        this.setState({ showPasswordModal: true, pendingDecisao: decisao, passwordInput: '', passwordError: '' });
-    };
-
-    handlePasswordChange = (e) => {
-        this.setState({ passwordInput: e.target.value });
-    };
-
-    confirmSignature = async () => {
-        const { passwordInput, pendingDecisao } = this.state;
-        const user = JSON.parse(localStorage.getItem('@CamaraAI:user') || '{}');
-
-        if (!user.email || !passwordInput) {
-            this.setState({ passwordError: 'Senha necessária.' });
-            return;
-        }
-
-        // Validação simples de senha (pode ser integrada à API de login para validação real)
-        if (passwordInput.length < 3) {
-            this.setState({ passwordError: 'Senha incorreta ou muito curta.' });
-            return;
-        }
-
-        try {
-            await this.handleSubmitParecer(pendingDecisao);
-            this.setState({ showPasswordModal: false, passwordInput: '' });
-        } catch (error) {
-            this.setState({ passwordError: 'Erro ao processar assinatura digital.' });
-        }
     };
 
     handleSubmitParecer = async (decisao) => {
@@ -778,7 +742,7 @@ class JuizoMateria extends Component {
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, borderTop: '1px solid #eee', pt: 3, mt: 2 }}>
                                 <Button
                                     variant="contained"
-                                    onClick={() => this.openPasswordModal(this.state.decisao)}
+                                    onClick={() => this.handleSubmitParecer(this.state.decisao)}
                                     disabled={!parecerText || isGeneratingParecer}
                                     sx={{ 
                                         backgroundColor: this.state.decisao === 'favoravel' ? '#2e7d32' : '#d32f2f',

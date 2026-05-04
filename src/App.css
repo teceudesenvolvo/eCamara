@@ -117,8 +117,14 @@
   
 }
 
+.admin-scroll-area{
+  text-align: left;
+}
+
 .admin-header > div > h2{
 width: 100%;
+font-size: 15px;
+font-weight: 700;
 }
 
 .gCuKMa{

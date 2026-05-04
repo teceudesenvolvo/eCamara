@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { FaCalendarAlt, FaPlus, FaList, FaCheckCircle, FaFileSignature, FaPrint, FaTrash, FaFileAlt, FaMagic, FaVideo, FaLink, FaPencilAlt, FaTimes, FaSearch, FaEye, FaArrowLeft, FaInfoCircle, FaGavel, FaExclamationTriangle, FaFilePdf } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
-import { Box } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
 import 'react-quill/dist/quill.snow.css';
 
 class GerenciarSessao extends Component {
@@ -58,6 +58,7 @@ class GerenciarSessao extends Component {
             handleAddItem,
             handleRemoveItem,
             handleAddAcessorio,
+            creationStep,
             setParentState // Para atualizar o estado do componente pai
         } = this.props;
 
@@ -85,21 +86,23 @@ class GerenciarSessao extends Component {
 
         return (
             <div style={{ animation: 'fadeIn 0.3s' }}>
-                <div className="dashboard-header" style={{ marginBottom: '30px' }}>
-                    <button onClick={handleCloseDetails} className="btn-back">
-                        <FaArrowLeft /> Voltar para Lista
-                    </button>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        {sessao.status !== 'Aberta' && (
-                            <button onClick={handleOpenSessao} className="btn-success">
-                                <FaVideo /> Abrir Sessão
-                            </button>
-                        )}
-                        <button onClick={handleFinalizeSessao} disabled={isFinalizing} className="btn-primary">
-                            <FaCheckCircle /> {isFinalizing ? 'Gerando...' : 'Finalizar Sessão'}
+                {!creationStep && (
+                    <div className="dashboard-header" style={{ marginBottom: '30px' }}>
+                        <button onClick={handleCloseDetails} className="btn-back">
+                            <FaArrowLeft /> Voltar para Lista
                         </button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            {sessao.status !== 'Aberta' && (
+                                <button onClick={handleOpenSessao} className="btn-success">
+                                    <FaVideo /> Abrir Sessão
+                                </button>
+                            )}
+                            <button onClick={handleFinalizeSessao} disabled={isFinalizing} className="btn-primary">
+                                <FaCheckCircle /> {isFinalizing ? 'Gerando...' : 'Finalizar Sessão'}
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="dashboard-card" style={{ borderLeft: '6px solid var(--primary-color)', marginBottom: '30px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -116,7 +119,7 @@ class GerenciarSessao extends Component {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '30px', alignItems: 'start' }}>
+                {(!creationStep || creationStep === 1) && <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '30px', alignItems: 'start' }}>
                     {/* Inclusão de Matérias */}
                     <div className="dashboard-card" style={{ padding: '30px', borderRadius: '24px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
@@ -150,7 +153,7 @@ class GerenciarSessao extends Component {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', maxHeight: '550px', overflowY: 'auto', paddingRight: '10px' }}>
                             {filteredItems.length > 0 ? filteredItems.map(item => {
-                                const isIncluded = sessao.itens?.some(i => i.id === item.id);
+                                const isIncluded = sessao.itens?.some(i => String(i.id) === String(item.id));
                                 return (
                                     <div key={item.id} className="list-item" style={{ margin: 0, padding: '15px 20px', border: '1px solid #eee', opacity: isIncluded ? 0.6 : 1, background: isIncluded ? '#f9f9f9' : '#fff' }}>
                                         <div style={{ textAlign: 'left', flex: 1 }}>
@@ -205,8 +208,10 @@ class GerenciarSessao extends Component {
                             <FaList /> Ordem do Dia
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '550px', overflowY: 'auto' }}>
-                            {sessao.itens && sessao.itens.length > 0 ? sessao.itens.map((item, idx) => (
-                                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', border: '1px solid #eee', borderRadius: '12px', background: '#fff' }}>
+                            {(sessao.matters || sessao.itens)?.length > 0 ? (sessao.matters || sessao.itens).map((item, idx) => {
+                                const itemId = item.id || `item-${idx}`;
+                                return (
+                                <div key={itemId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', border: '1px solid #eee', borderRadius: '12px', background: '#fff' }}>
                                     <div style={{ textAlign: 'left', display: 'flex', gap: '15px', alignItems: 'center' }}>
                                         <span style={{ fontWeight: '900', color: 'var(--primary-color)', fontSize: '1.1rem' }}>{idx + 1}º</span>
                                         <div>
@@ -229,31 +234,47 @@ class GerenciarSessao extends Component {
                                             </button>
                                         </div>
                                 </div>
-                            )) : (
+                            ); }) : (
                                 <div style={{ padding: '40px', textAlign: 'center', border: '2px dashed #eee', borderRadius: '16px' }}>
                                     <p style={{ color: '#bbb', margin: 0 }}>Use o botão incluir para montar a pauta da sessão.</p>
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
+                </div>}
 
                 {/* Edital de Convocação - Full Width & Professional Editor */}
-                <div className="dashboard-card" style={{ padding: '30px', borderRadius: '24px', marginTop: '30px' }}>
+                {(!creationStep || creationStep === 2 || creationStep === 3) && <div className="dashboard-card" style={{ padding: '30px', borderRadius: '24px', marginTop: '30px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h3 style={{ margin: 0, color: '#333', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <FaFileAlt /> Edital de Convocação
                         </h3>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button 
-                                onClick={handleViewEditalPDF} 
-                                className="btn-secondary" 
-                                style={{ fontSize: '0.85rem', padding: '10px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                disabled={!editalText && !sessao.editalPdfUrl && !sessao.editalPath}
-                            >
-                                <FaFilePdf color="#d32f2f" /> Visualizar PDF
-                            </button>
-                            {!isSignedEdital && !sessao.editalPdfUrl && (
+                            {/* Mostrar Visualizar PDF se já estiver assinado ou se estiver na etapa de assinatura */}
+                            {(isSignedEdital || sessao.editalPdfUrl || sessao.editalPath || creationStep === 3) && (
+                                <button 
+                                    onClick={handleViewEditalPDF} 
+                                    className="btn-secondary" 
+                                    style={{ fontSize: '0.85rem', padding: '10px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                    disabled={!editalText && !sessao.editalPdfUrl && !sessao.editalPath}
+                                >
+                                    <FaFilePdf color="#d32f2f" /> Visualizar PDF
+                                </button>
+                            )}
+                            
+                            {/* Mostrar Assinar apenas na etapa 3 */}
+                            {creationStep === 3 && !isSignedEdital && !sessao.editalPdfUrl && (
+                                <button 
+                                    onClick={handleOpenSignEdital} 
+                                    className="btn-primary" 
+                                    style={{ fontSize: '0.85rem', padding: '10px 20px', borderRadius: '12px', background: '#FF740F' }}
+                                    disabled={!editalText}
+                                >
+                                    <FaFileSignature /> Assinar Edital
+                                </button>
+                            )}
+                            
+                            {/* Para visualização normal (fora do wizard) */}
+                            {!creationStep && !isSignedEdital && !sessao.editalPdfUrl && (
                                 <button 
                                     onClick={handleOpenSignEdital} 
                                     className="btn-primary" 
@@ -264,9 +285,10 @@ class GerenciarSessao extends Component {
                                 </button>
                             )}
                         </div>
-                    </div>
 
-                    {sessao.editalPdfUrl ? (
+                    {sessao.editalPdfUrl || isSignedEdital ? (
+
+
                         <Box sx={{ 
                             p: 4, 
                             textAlign: 'center', 
@@ -281,33 +303,35 @@ class GerenciarSessao extends Component {
                                 O edital desta sessão já foi assinado digitalmente.
                             </p>
                         </Box>
-                    ) : !isSignedEdital && (
+                    ) : (
                         <Box sx={{ animation: 'fadeIn 0.3s' }}>
-                            {/* Parâmetros Adicionais para a IA */}
-                            <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '16px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 2fr 1.5fr', gap: '15px' }}>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Horário da Sessão</label>
-                                    <input type="text" className="modal-input" value={editalHorario} onChange={(e) => setParentState({ editalHorario: e.target.value })} placeholder="Ex: 09h45" style={{ height: '40px' }} />
+                            {/* Parâmetros Adicionais para a IA - Apenas na etapa 2 ou se não for wizard */}
+                            {(!creationStep || creationStep === 2) && (
+                                <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '16px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 2fr 1.5fr', gap: '15px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Horário da Sessão</label>
+                                        <input type="text" className="modal-input" value={editalHorario} onChange={(e) => setParentState({ editalHorario: e.target.value })} placeholder="Ex: 09h45" style={{ height: '40px' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Base Legal (Lei Orgânica / RI)</label>
+                                        <input type="text" className="modal-input" value={editalBaseLegal} onChange={(e) => setParentState({ editalBaseLegal: e.target.value })} placeholder="Ex: Art. 25 Lei Orgânica..." style={{ height: '40px' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Ofício de Referência (Opcional)</label>
+                                        <input type="text" className="modal-input" value={editalOficio} onChange={(e) => setParentState({ editalOficio: e.target.value })} placeholder="Ex: Ofício nº 17/2025/GAB" style={{ height: '40px' }} />
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
+                                        <button 
+                                            onClick={handleGenerateEditalWithAI} 
+                                            disabled={isGeneratingEdital} 
+                                            className="btn-primary" 
+                                            style={{ width: '100%', justifyContent: 'center', height: '45px', background: '#126B5E' }}
+                                        >
+                                            <FaMagic /> {isGeneratingEdital ? 'IA Redigindo...' : 'Gerar Edital de Convocação com IA'}
+                                        </button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Base Legal (Lei Orgânica / RI)</label>
-                                    <input type="text" className="modal-input" value={editalBaseLegal} onChange={(e) => setParentState({ editalBaseLegal: e.target.value })} placeholder="Ex: Art. 25 Lei Orgânica..." style={{ height: '40px' }} />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '5px' }}>Ofício de Referência (Opcional)</label>
-                                    <input type="text" className="modal-input" value={editalOficio} onChange={(e) => setParentState({ editalOficio: e.target.value })} placeholder="Ex: Ofício nº 17/2025/GAB" style={{ height: '40px' }} />
-                                </div>
-                                <div style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
-                                    <button 
-                                        onClick={handleGenerateEditalWithAI} 
-                                        disabled={isGeneratingEdital} 
-                                        className="btn-primary" 
-                                        style={{ width: '100%', justifyContent: 'center', height: '45px', background: '#126B5E' }}
-                                    >
-                                        <FaMagic /> {isGeneratingEdital ? 'IA Redigindo...' : 'Gerar Edital de Convocação com IA'}
-                                    </button>
-                                </div>
-                            </div>
+                            )}
 
                             <div style={{ border: '1px solid #eee', borderRadius: '16px', overflow: 'hidden', background: '#fff' }}>
                                 <ReactQuill
@@ -318,11 +342,47 @@ class GerenciarSessao extends Component {
                                     formats={this.quillFormats}
                                     style={{ height: '300px', marginBottom: '50px' }}
                                     placeholder="Redija o edital ou use a IA para gerar uma base..."
+                                    readOnly={creationStep === 3} // Trava edição na etapa de assinatura
                                 />
                             </div>
                         </Box>
                     )}
-                </div>
+                </div>}
+
+
+                {creationStep === 4 && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, py: 8, animation: 'fadeIn 0.5s' }}>
+                        <div style={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: 'rgba(46, 125, 50, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <FaCheckCircle size={40} color="#2e7d32" />
+                        </div>
+                        <Typography variant="h6" color="textSecondary" sx={{ mb: 2, textAlign: 'center', maxWidth: '500px' }}>
+                            O edital foi assinado e a pauta está montada. <br/>Deseja abrir a sessão para participação agora ou apenas agendá-la?
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 3 }}>
+                            <Button 
+                                variant="contained" 
+                                color="success" 
+                                size="large" 
+                                onClick={handleOpenSessao}
+                                startIcon={<FaVideo />}
+                                sx={{ borderRadius: '16px', py: 2, px: 4, fontWeight: 'bold', textTransform: 'none' }}
+                            >
+                                Abrir Sessão Agora
+                            </Button>
+                            <Button 
+                                variant="contained" 
+                                color="primary" 
+                                size="large" 
+                                onClick={handleFinalizeSessao}
+                                disabled={isFinalizing}
+                                startIcon={<FaMagic />}
+                                sx={{ borderRadius: '16px', py: 2, px: 4, fontWeight: 'bold', textTransform: 'none', backgroundColor: '#126B5E' }}
+                            >
+                                {isFinalizing ? 'Gerando...' : 'Gerar Roteiro e Agendar'}
+                            </Button>
+                        </Box>
+                    </Box>
+                )}
 
                 {/* Popup de Detalhes da Matéria */}
                 {viewingMateriaForDetail && (

@@ -4,8 +4,7 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
+import { Box, Chip, CircularProgress } from '@mui/material';
 import { FaFileAlt, FaUsers, FaCheckCircle, FaInfoCircle, FaCalendarAlt, FaArrowLeft, FaVideo, FaVoteYea, FaUser } from 'react-icons/fa';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import api from '../../../services/api.js';
@@ -77,8 +76,18 @@ class ResumoSessao extends Component {
         return counts;
     };
 
-    handleOpenMateriaModal = (materia) => {
-        this.setState({ selectedMateria: materia, showMateriaModal: true });
+    handleOpenMateriaModal = async (materia) => {
+        if (!materia || !materia.id) return;
+        
+        this.setState({ selectedMateria: { ...materia, loading: true }, showMateriaModal: true });
+
+        try {
+            const response = await api.get(`/legislative-matter-detail/${materia.id}`);
+            this.setState({ selectedMateria: { ...response.data, loading: false } });
+        } catch (error) {
+            console.error("Erro ao buscar detalhes da matéria:", error);
+            this.setState({ selectedMateria: { ...materia, loading: false } });
+        }
     };
 
     handleCloseMateriaModal = () => {
@@ -99,7 +108,7 @@ class ResumoSessao extends Component {
         if (loading) return <div className='App-header' style={{ justifyContent: 'center' }}><p>Carregando resumo...</p></div>;
         if (!sessao) return <div className='App-header' style={{ justifyContent: 'center' }}><p>Sessão não encontrada.</p></div>;
 
-        const materias = sessao.itens || [];
+        const materias = sessao.matters || sessao.itens || [];
         const presenca = sessao.presenca || {};
         const presenceList = Object.keys(presenca).map(uid => {
             return parlamentares.find(p => p.id === uid);
@@ -214,9 +223,15 @@ class ResumoSessao extends Component {
                                     <button onClick={this.handleCloseMateriaModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
                                 </div>
                                 <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '15px', textAlign: 'left' }}>
-                                    <p><strong>Autor:</strong> {selectedMateria.autor}</p>
-                                    <p><strong>Ementa:</strong> {selectedMateria.ementa}</p>
-                                    <div style={{ marginTop: '20px' }} dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
+                                    {selectedMateria.loading ? (
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}><CircularProgress /></Box>
+                                    ) : (
+                                        <>
+                                            <p><strong>Autor:</strong> {selectedMateria.autor}</p>
+                                            <p><strong>Ementa:</strong> {selectedMateria.ementa}</p>
+                                            <div style={{ marginTop: '20px' }} dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>

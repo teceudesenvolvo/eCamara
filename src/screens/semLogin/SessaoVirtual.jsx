@@ -13,8 +13,7 @@ import Typography from '@mui/material/Typography';
 import {
   FaFileAlt, FaMicrophone, FaClock, FaCheckCircle
 } from "react-icons/fa";
-import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
+import { Box, Chip, CircularProgress } from '@mui/material';
 
 
 // Components
@@ -113,7 +112,7 @@ class SessaoVirtual extends Component {
       return <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Sessão não encontrada.</p></div>;
     }
 
-    const materias = sessao.itens || [];
+    const materias = sessao.matters || sessao.itens || [];
 
     return (
 
@@ -202,14 +201,20 @@ class SessaoVirtual extends Component {
                   <button onClick={this.handleCloseMateriaModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
                 </div>
                 <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '15px' }}>
-                  <p><strong>Autor:</strong> {selectedMateria.autor}</p>
-                  <p><strong>Tipo:</strong> {selectedMateria.tipoMateria}</p>
-                  <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                    <h4 style={{ marginTop: 0, color: '#126B5E' }}>Ementa</h4>
-                    <p style={{ fontStyle: 'italic' }}>"{selectedMateria.ementa}"</p>
-                    <h4 style={{ marginTop: '20px', color: '#126B5E' }}>Texto da Matéria</h4>
-                    <div dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
-                  </div>
+                  {selectedMateria.loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}><CircularProgress /></Box>
+                  ) : (
+                    <>
+                      <p><strong>Autor:</strong> {selectedMateria.autor}</p>
+                      <p><strong>Tipo:</strong> {selectedMateria.tipoMateria}</p>
+                      <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                        <h4 style={{ marginTop: 0, color: '#126B5E' }}>Ementa</h4>
+                        <p style={{ fontStyle: 'italic' }}>"{selectedMateria.ementa}"</p>
+                        <h4 style={{ marginTop: '20px', color: '#126B5E' }}>Texto da Matéria</h4>
+                        <div dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -5,7 +5,7 @@ import CardContent from '@mui/material/CardContent';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import { FaFileAlt, FaUserCheck, FaMicrophone, FaVoteYea, FaPlus, FaTrash, FaDesktop, FaUsers, FaClock, FaListUl } from "react-icons/fa";
-import Box from '@mui/material/Box';
+import { Box, CircularProgress } from '@mui/material';
 import Chip from '@mui/material/Chip';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import api from '../../../services/api.js';
@@ -101,8 +101,18 @@ class SessaoPlenariaRestrita extends Component {
         }
     };
 
-    handleOpenMateriaModal = (materia) => {
-        this.setState({ selectedMateria: materia, showMateriaModal: true });
+    handleOpenMateriaModal = async (materia) => {
+        if (!materia || !materia.id) return;
+        
+        this.setState({ selectedMateria: { ...materia, loading: true }, showMateriaModal: true });
+
+        try {
+            const response = await api.get(`/legislative-matter-detail/${materia.id}`);
+            this.setState({ selectedMateria: { ...response.data, loading: false } });
+        } catch (error) {
+            console.error("Erro ao buscar detalhes da matéria:", error);
+            this.setState({ selectedMateria: { ...materia, loading: false } });
+        }
     };
 
     handleCloseMateriaModal = () => {
@@ -143,9 +153,10 @@ class SessaoPlenariaRestrita extends Component {
 
     handleSetMateriaEmDiscussao = async (index) => {
         const { camaraId, sessao } = this.state;
-        if (!sessao || !sessao.itens || index === undefined) return;
+        if (!sessao || !(sessao.matters || sessao.itens) || index === undefined) return;
 
-        const updatedItens = sessao.itens.map((m, idx) => {
+        const currentMatters = sessao.matters || sessao.itens || [];
+        const updatedItens = currentMatters.map((m, idx) => {
             if (m.status === 'Em Discussão' || m.status === 'Em Votação') {
                 return { ...m, status: 'Encerrada Discussão/Votação' };
             }
@@ -157,13 +168,13 @@ class SessaoPlenariaRestrita extends Component {
 
         try {
             await api.patch(`/sessions/${sessao.id}`, { 
-                itens: updatedItens,
+                matters: updatedItens,
                 oradorAtual: null,
                 filaDeInscritos: []
             });
 
             // Sincronizar status global das matérias envolvidas
-            const targetMateria = sessao.itens[index];
+            const targetMateria = currentMatters[index];
             if (targetMateria.id) {
                 await api.patch(`/legislative-matters/id/${targetMateria.id}`, { status: 'Em Discussão' });
             }
@@ -178,9 +189,10 @@ class SessaoPlenariaRestrita extends Component {
 
     handleSetMateriaEmVotacao = async (index) => {
         const { camaraId, sessao } = this.state;
-        if (!sessao || !sessao.itens || index === undefined) return;
+        if (!sessao || !(sessao.matters || sessao.itens) || index === undefined) return;
 
-        const updatedItens = sessao.itens.map((m, idx) => {
+        const currentMatters = sessao.matters || sessao.itens || [];
+        const updatedItens = currentMatters.map((m, idx) => {
             if (m.status === 'Em Votação' || m.status === 'Em Discussão') {
                 return { ...m, status: 'Encerrada' };
             }
@@ -191,9 +203,9 @@ class SessaoPlenariaRestrita extends Component {
         });
 
         try {
-            await api.patch(`/sessions/${sessao.id}`, { itens: updatedItens });
+            await api.patch(`/sessions/${sessao.id}`, { matters: updatedItens });
 
-            const targetMateria = sessao.itens[index];
+            const targetMateria = currentMatters[index];
             if (targetMateria.id) {
                 await api.patch(`/legislative-matters/id/${targetMateria.id}`, { status: 'Em Votação' });
             }
@@ -206,14 +218,15 @@ class SessaoPlenariaRestrita extends Component {
 
     handleVote = async (index, voto) => {
         const { camaraId, sessao, user } = this.state;
-        if (!sessao || !sessao.itens[index] || !user) return;
+        const currentMatters = sessao.matters || sessao.itens || [];
+        if (!sessao || !currentMatters[index] || !user) return;
 
-        const materia = sessao.itens[index];
+        const materia = currentMatters[index];
         const updatedVotos = { ...materia.votos, [user.id]: { voto, nome: user.name || user.displayName, timestamp: new Date().toISOString() } };
-        const updatedItens = sessao.itens.map((m, idx) => idx === index ? { ...m, votos: updatedVotos } : m);
+        const updatedItens = currentMatters.map((m, idx) => idx === index ? { ...m, votos: updatedVotos } : m);
 
         try {
-            await api.patch(`/sessions/${sessao.id}`, { itens: updatedItens });
+            await api.patch(`/sessions/${sessao.id}`, { matters: updatedItens });
             this.setState(prevState => ({ sessao: { ...prevState.sessao, itens: updatedItens } }));
         } catch (error) {
             console.error("Erro ao votar:", error);
@@ -266,13 +279,14 @@ class SessaoPlenariaRestrita extends Component {
 
     checkAllVotings = async () => {
         const { camaraId, sessao } = this.state;
-        if (!sessao || !sessao.itens) return;
+        const currentMatters = sessao.matters || sessao.itens;
+        if (!sessao || !currentMatters) return;
         const presenca = sessao.presenca || {};
         const totalPresentes = Object.keys(presenca).length;
         if (totalPresentes === 0) return;
 
         let sessionUpdated = false;
-        const updatedItens = await Promise.all(sessao.itens.map(async (materia, index) => {
+        const updatedItens = await Promise.all(currentMatters.map(async (materia, index) => {
             if (materia.status === 'Em Votação') {
                 const votos = materia.votos || {};
                 const totalVotes = Object.keys(votos).length;
@@ -297,7 +311,7 @@ class SessaoPlenariaRestrita extends Component {
 
         if (sessionUpdated) {
             try {
-                await api.patch(`/sessions/${sessao.id}`, { itens: updatedItens });
+                await api.patch(`/sessions/${sessao.id}`, { matters: updatedItens });
                 this.setState(prevState => ({ sessao: { ...prevState.sessao, itens: updatedItens } }));
             } catch (error) {
                 console.error("Erro ao sincronizar status final:", error);
@@ -307,9 +321,10 @@ class SessaoPlenariaRestrita extends Component {
 
     handleYieldTime = async () => {
         const { camaraId, sessao, selectedVereadorToYieldTo, parlamentares } = this.state;
+        const currentMatters = sessao.matters || sessao.itens || [];
         if (!sessao || !selectedVereadorToYieldTo) return;
 
-        const materiaEmDiscussaoIndex = sessao.itens.findIndex(m => m.status === 'Em Discussão');
+        const materiaEmDiscussaoIndex = currentMatters.findIndex(m => m.status === 'Em Discussão');
         if (materiaEmDiscussaoIndex === -1) {
             alert("Nenhuma matéria em discussão para ceder a vez.");
             return;
@@ -323,7 +338,7 @@ class SessaoPlenariaRestrita extends Component {
             return;
         }
 
-        const updatedItens = [...sessao.itens];
+        const updatedItens = [...currentMatters];
         if (yieldingSpeakerUid) {
             updatedItens[materiaEmDiscussaoIndex] = {
                 ...updatedItens[materiaEmDiscussaoIndex],
@@ -336,7 +351,7 @@ class SessaoPlenariaRestrita extends Component {
 
         try {
             await api.patch(`/sessions/${sessao.id}`, { 
-                itens: updatedItens,
+                matters: updatedItens,
                 oradorAtual: oradorData,
                 filaDeInscritos: newQueue
             });
@@ -581,8 +596,16 @@ class SessaoPlenariaRestrita extends Component {
                         <div className="admin-card modal-content" style={{ maxWidth: '800px', pointerEvents: 'auto' }} onClick={e => e.stopPropagation()}>
                             <div className='admin-card-title'>{selectedMateria.titulo}</div>
                             <div className='admin-scroll-area' style={{ padding: '10px' }}>
-                                <p><strong>Ementa:</strong> {selectedMateria.ementa}</p>
-                                <div dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
+                                {selectedMateria.loading ? (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}><CircularProgress /></Box>
+                                ) : (
+                                    <>
+                                        <p><strong>Autor:</strong> {selectedMateria.autor}</p>
+                                        <p><strong>Tipo:</strong> {selectedMateria.tipoMateria}</p>
+                                        <p><strong>Ementa:</strong> {selectedMateria.ementa}</p>
+                                        <div dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

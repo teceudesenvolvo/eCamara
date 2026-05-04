@@ -54,9 +54,10 @@ export const normalizeSession = (s) => {
     }
 
     // Lógica robusta para itens: prioriza metadata se contiver dados, caso contrário usa a raiz
-    const itens = (metadata.itens && Array.isArray(metadata.itens) && metadata.itens.length > 0)
-        ? metadata.itens
-        : (Array.isArray(s.itens) ? s.itens : []);
+    const itens = (metadata.itens && Array.isArray(metadata.itens) && metadata.itens.length > 0) ? metadata.itens : 
+                  (metadata.matters && Array.isArray(metadata.matters) && metadata.matters.length > 0) ? metadata.matters :
+                  (Array.isArray(s.itens) && s.itens.length > 0) ? s.itens : 
+                  (Array.isArray(s.matters) ? s.matters : []);
 
     return {
         ...s,
@@ -65,6 +66,7 @@ export const normalizeSession = (s) => {
         data: sessionDate,
         tipo: titulo,
         itens: itens,
+        matters: itens, // Garante que a pauta também esteja acessível via 'matters'
         edital: metadata.edital || s.edital || '',
         // Recupera o caminho do edital e dados de assinatura do metadata ou raiz
         editalPdfUrl: s.editalPath || metadata.editalPath || metadata.editalPdfUrl || s.editalPdfUrl || metadata.pdfUrl || null,
