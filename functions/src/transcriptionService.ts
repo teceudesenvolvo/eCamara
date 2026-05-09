@@ -41,7 +41,14 @@ export const transcriptionService = {
           fileUri: uploadResponse.file.uri,
         },
       },
-      { text: "Transcreva este áudio com precisão, identificando os oradores se possível." },
+      { 
+        text: `Transcreva este áudio de uma sessão legislativa com precisão. 
+               Siga estas regras:
+               1. Corrija erros óbvios de português automaticamente.
+               2. Identifique, quando possível, o nome do vereador, Presidente da sessão e Secretário.
+               3. Marque trechos inaudíveis como: [inaudível].
+               4. Mantenha a fidelidade ao conteúdo original.` 
+      },
     ]);
 
     return result.response.text();

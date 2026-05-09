@@ -58,7 +58,11 @@ class ResumoSessao extends Component {
         try {
             const response = await api.get(`/users/council/${camaraId}`);
             const allUsers = response.data || [];
-            const parlamentares = allUsers.filter(u => u.tipo === 'vereador' || u.tipo === 'presidente');
+            const parlamentares = allUsers.filter(u => u.tipo === 'vereador' || u.tipo === 'presidente').map(u => ({
+                ...u,
+                id: u.id || u.uid || u._id,
+                nome: u.nome || u.name || u.displayName || 'Parlamentar'
+            }));
             this.setState({ parlamentares });
         } catch (error) {
             console.error("Erro ao buscar parlamentares:", error);
@@ -69,9 +73,9 @@ class ResumoSessao extends Component {
         const counts = { sim: 0, nao: 0, abstencao: 0 };
         if (!votos) return counts;
         Object.values(votos).forEach(v => {
-            if (v.voto === 'sim') counts.sim++;
-            else if (v.voto === 'nao') counts.nao++;
-            else if (v.voto === 'abstencao' || v.voto === 'abstencão') counts.abstencao++;
+            const vKey = v.voto?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (counts.hasOwnProperty(vKey)) counts[vKey]++;
+            else if (vKey?.includes('abs')) counts.abstencao++;
         });
         return counts;
     };
@@ -111,7 +115,7 @@ class ResumoSessao extends Component {
         const materias = sessao.matters || sessao.itens || [];
         const presenca = sessao.presenca || {};
         const presenceList = Object.keys(presenca).map(uid => {
-            return parlamentares.find(p => p.id === uid);
+            return parlamentares.find(p => (p.id || p.uid) === uid);
         }).filter(Boolean);
 
         return (

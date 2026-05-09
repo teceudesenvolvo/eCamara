@@ -604,8 +604,8 @@ class AddProducts extends Component {
         // Monta FormData para suportar envio de arquivo real (Supabase Storage)
         const formData = new FormData();
 
-        // O backend espera a chave 'file' para o documento principal da matéria.
-        formData.append('file', pdfFile); 
+        // O backend espera a chave 'pdf' para o documento principal da matéria.
+        formData.append('pdf', pdfFile); 
         // Campos simples
         formData.append('userId', user.id || '');
         formData.append('userEmail', user.email || '');
@@ -646,7 +646,7 @@ class AddProducts extends Component {
         // Arquivo real (se houver anexo)
         if (this.state.file) {
             // Renomeamos o campo do anexo opcional para não conflitar com o PDF oficial
-            formData.append('attachment', this.state.file, this.state.fileName);
+            formData.append('anexo', this.state.file, this.state.fileName);
         }
 
         try {

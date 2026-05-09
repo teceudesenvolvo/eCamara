@@ -5,7 +5,7 @@ import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
 import LogoIcon from '../../../assets/logo-camaraai-icon.png';
 import AssinaturaComponent from '../../../componets/Assinatura.jsx'; // Importa o novo componente de assinatura (renomeado para evitar conflito)
-import { sendMessageToAIPrivate } from '../../../aiService.ts';
+import { sendMessageToAIPrivate } from '../../../aiService.js';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import api from '../../../services/api.js';
@@ -661,12 +661,14 @@ ${footer?.copyright || ''}`;
 
     const renderFormFields = () => {
         const schema = documentSchemas[docType];
-        return schema.map(field => (
-            <div key={field.name} className="mb-4">
-                <label htmlFor={field.name} className="block text-sm font-medium text-gray-700 mb-1 label-form">{field.label}</label>
-                {field.type === 'textarea' ? (
-                    <textarea
-                        id={field.name}
+        return (
+            <>
+                {schema.map(field => (
+                    <div key={field.name} className="mb-4">
+                        <label htmlFor={field.name} className="block text-sm font-medium text-gray-700 mb-1 label-form">{field.label}</label>
+                        {field.type === 'textarea' ? (
+                            <textarea
+                                id={field.name}
                         name={field.name}
                         value={formData[field.name] || ''}
                         onChange={handleInputChange}
@@ -685,8 +687,10 @@ ${footer?.copyright || ''}`;
                         className="modal-input"
                     />
                 )}
+                    </div>
+                ))}
 
-                {/* Assinatura Digital - Movido para fora do loop de campos */}
+                {/* Assinatura Digital - Agora fora do loop de campos */}
                 {showPasswordModal && (
                     <div className="pdf-popup-overlay">
                         <Box sx={{
@@ -711,7 +715,7 @@ ${footer?.copyright || ''}`;
                             </Typography>
 
                             <TextField
-                                fullWidth // Use TextField do MUI
+                                fullWidth
                                 type="password"
                                 label="Sua Senha"
                                 variant="outlined"
@@ -724,34 +728,16 @@ ${footer?.copyright || ''}`;
                             />
 
                             <Box display="flex" gap={2}>
-                                <Button
-                                    fullWidth
-                                    variant="outlined"
-                                    onClick={() => setShowPasswordModal(false)}
-                                    sx={{ borderRadius: '12px', textTransform: 'none' }}
-                                >
-                                    Cancelar
-                                </Button>
-                                <Button
-                                    fullWidth
-                                    variant="contained"
-                                    onClick={confirmSignature}
-                                    disabled={isLoading}
-                                    sx={{
-                                        borderRadius: '12px',
-                                        backgroundColor: '#126B5E',
-                                        '&:hover': { backgroundColor: '#0e554a' },
-                                        textTransform: 'none'
-                                    }}
-                                >
+                                <Button fullWidth variant="outlined" onClick={() => setShowPasswordModal(false)} sx={{ borderRadius: '12px', textTransform: 'none' }}>Cancelar</Button>
+                                <Button fullWidth variant="contained" onClick={confirmSignature} disabled={isLoading} sx={{ borderRadius: '12px', backgroundColor: '#126B5E', '&:hover': { backgroundColor: '#0e554a' }, textTransform: 'none' }}>
                                     {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Confirmar'}
                                 </Button>
                             </Box>
                         </Box>
                     </div>
                 )}
-            </div>
-        ));
+            </>
+        );
     };
 
     if (loadingConfigs) {
@@ -862,7 +848,7 @@ ${footer?.copyright || ''}`;
                 </div>
 
                 {/* Visualização do Documento (Direita) */}
-                <div style={{ position: 'sticky', top: '40px' }}>
+                <div style={{ position: 'sticky', top: '40px', flex: 1 }}>
                     <div className="dashboard-card" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
                         {/* Barra de Ações do Documento */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingBottom: '15px', borderBottom: '1px solid #e0e0e0', marginBottom: '15px' }}>

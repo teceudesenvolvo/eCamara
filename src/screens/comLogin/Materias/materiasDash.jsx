@@ -36,7 +36,9 @@ class loginDashboard extends Component {
 
         try {
             const response = await api.get(`/legislative-matters/${camaraId}`);
-            const allMaterias = response.data;
+            const rawData = response.data;
+
+            const allMaterias = Array.isArray(rawData) ? rawData : (rawData?.matters || rawData?.materias || Object.values(rawData || {}));
 
             const myMaterias = [];
             const subscribedMaterias = [];
@@ -46,18 +48,19 @@ class loginDashboard extends Component {
                     // Adaptando para os nomes de campos prováveis do backend (authorId ou userId)
                     const mAuthorId = materia.authorId || materia.userId;
 
+                    // Normalize subscricoes to an array for consistent processing
+                    const normalizedSubscricoes = materia.subscricoes ?
+                        (Array.isArray(materia.subscricoes) ? materia.subscricoes : Object.values(materia.subscricoes)) : [];
+
                     // Se a matéria é do usuário logado
-                    if (mAuthorId === user.id) {
+                    const currentUserId = user.id || user.uid;
+                    if (mAuthorId === currentUserId) {
                         myMaterias.push(materia);
                     }
-
                     // Se o usuário subscreveu a matéria (e não é a própria matéria dele)
-                    // Nota: O backend pode retornar subscricoes como um array ou objeto
-                    const hasSubscribed = Array.isArray(materia.subscricoes)
-                        ? materia.subscricoes.some(s => s.userId === user.id)
-                        : (materia.subscricoes && materia.subscricoes[user.id]);
+                    const hasSubscribed = normalizedSubscricoes.some(s => s === currentUserId || (s && (s.userId || s.uid || s.id) === currentUserId));
 
-                    if (hasSubscribed && mAuthorId !== user.id) {
+                    if (hasSubscribed && mAuthorId !== currentUserId) {
                         subscribedMaterias.push(materia);
                     }
                 });
@@ -131,7 +134,7 @@ class loginDashboard extends Component {
                                 className="btn-primary"
                                 style={{ width: 'auto' }}
                                 onClick={() => this.props.history.push('/admin/protocolar-materia/' + this.state.camaraId)}
-                            >   
+                            >
                                 <FaPlus /> Nova Matéria
                             </button>
                         </div>

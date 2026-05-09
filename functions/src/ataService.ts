@@ -10,28 +10,42 @@ export const ataService = {
     console.log("[Ata] Gerando ata legislativa...");
 
     const prompt = `
-      Você é um secretário legislativo especializado em câmaras municipais brasileiras.
-      Com base na transcrição abaixo, gere uma ATA DE SESSÃO LEGISLATIVA formal e completa.
+      Você é um sistema especialista em processamento de sessões legislativas municipais brasileiras.
+      Seu objetivo é transformar a transcrição de uma sessão plenária em uma ATA OFICIAL estruturada, clara e juridicamente adequada, além de gerar um resumo executivo.
 
       Sua resposta DEVE ser estritamente um objeto JSON válido com a seguinte estrutura:
       {
         "metadata": {
           "reuniao": "Tipo da reunião identificada (ex: Sessão Ordinária, Extraordinária)",
-          "dataHora": "Data e hora identificada no formato YYYY-MM-DDThh:mm (ex: 2024-03-15T14:00)",
+          "dataHora": "Data e hora identificada no formato YYYY-MM-DDThh:mm",
           "local": "Local da reunião identificado",
-          "participantes": "Lista de nomes dos vereadores presentes separados por vírgula",
+          "participantes": "Lista de nomes dos vereadores presentes",
           "pauta": "Resumo sucinto da pauta discutida"
         },
-        "html": "O texto completo da ata formatado em HTML"
+        "transcription": "A transcrição completa e corrigida que foi fornecida",
+        "ataHtml": "O texto da ATA OFICIAL formatado em HTML (texto corrido, formal, institucional)",
+        "summaryHtml": "O RESUMO EXECUTIVO formatado em HTML (até 10 linhas + lista de projetos votados)"
       }
 
-      DIRETRIZES PARA O CAMPO "html":
-      - Use tags <p> para cada parágrafo.
-      - Use <h3> para os títulos das seções (ex: <h3>ABERTURA</h3>).
-      - Use <strong> para destacar nomes de vereadores e resultados (ex: <strong>APROVADO</strong>).
-      - Use <ul> e <li> para listas (presença, matérias).
-      - NÃO use Markdown (como **, ##, -). Use apenas tags HTML.
-      - Evite caracteres especiais desnecessários.
+      REGRAS PARA A ATA OFICIAL (ataHtml):
+      - Use linguagem formal, institucional e impessoal.
+      - Formato: Texto corrido (não em tópicos).
+      - Seções Obrigatórias: 
+        1. ABERTURA DA SESSÃO
+        2. PRESENÇA DOS VEREADORES
+        3. EXPEDIENTE
+        4. USO DA TRIBUNA
+        5. ORDEM DO DIA
+        6. DISCUSSÃO E VOTAÇÃO DE PROJETOS
+        7. CONSIDERAÇÕES FINAIS
+        8. ENCERRAMENTO
+      - Siga o padrão: "Aos [dia] dias do mês de [mês] de [ano], às [hora], no plenário da Câmara Municipal de [cidade]..."
+      - Use tags HTML: <p>, <h3> para seções, <strong> para nomes e resultados.
+
+      REGRAS PARA O RESUMO EXECUTIVO (summaryHtml):
+      - Resumo em até 10 linhas com os principais acontecimentos.
+      - Lista de projetos votados com seus respectivos resultados.
+      - Use tags HTML: <p>, <ul>, <li>.
 
       Transcrição:
       ${transcription}

@@ -19,26 +19,22 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
     const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
-        if (!materia || !materia.id) return;
-
-        const fetchSubscriptions = async () => {
-            try {
-                const response = await api.get(`/legislative-matter-detail/${materia.id}`);
-                if (response.data && response.data.subscricoes) {
-                    setSubscricoes(response.data.subscricoes);
-                } else {
-                    setSubscricoes({});
-                }
-            } catch (error) {
-                console.error("Erro ao buscar subscrições:", error);
+        if (materia && materia.subscricoes) {
+            // Sincroniza subscrições vindas do polling do componente pai (sessão)
+            if (Array.isArray(materia.subscricoes)) {
+                const subObj = {};
+                materia.subscricoes.forEach(s => { 
+                    const key = s.uid || s.id || s.userId;
+                    if (key) subObj[key] = s; 
+                });
+                setSubscricoes(subObj);
+            } else {
+                setSubscricoes(materia.subscricoes);
             }
-        };
-
-        fetchSubscriptions();
-        const intervalId = setInterval(fetchSubscriptions, 5000); // Polling every 5 seconds
-
-        return () => clearInterval(intervalId);
-    }, [camaraId, materia.id]);
+        } else {
+            setSubscricoes({});
+        }
+    }, [materia]);
 
     const handleOpenMenu = (event) => {
         setAnchorEl(event.currentTarget);
@@ -61,23 +57,46 @@ const MateriaCard = ({ materia, user, camaraId, sessaoId, index, isAdmin, onOpen
 
         try {
             const updatedSubscricoes = { ...subscricoes, [subData.uid]: subData };
-            await api.patch(`/legislative-matters/${materia.id}`, { subscricoes: updatedSubscricoes, updateType: 'subscription' });
+
+            // O backend espera um ARRAY de subscrições.
+            const payload = Object.values(updatedSubscricoes);
+            
+            const materiaId = materia.id || materia._id;
+            if (!materiaId) {
+                console.error("ID da matéria não encontrado:", materia);
+                setToast({ open: true, message: "Erro: ID da matéria não identificado.", severity: 'error' });
+                return;
+            }
+
+            const endpoint = (materia.isAcessorio || materia.isAccessory)
+                ? `/legislative-matters/accessory/${materiaId}`
+                : `/legislative-matters/id/${materiaId}`; // Usa o prefixo /id/ para garantir que o backend trate como UUID
+            
+            console.log("Sending subscription payload:", { subscricoes: payload, updateType: 'subscription' }); 
+            await api.patch(endpoint, { subscricoes: payload, updateType: 'subscription' });
             
             // Também salva um log na sessão para o operador ver instantaneamente
-            if (sessaoId) {
-                try {
+            // Isolei em um bloco separado para que falhas no log não invalidem a subscrição bem-sucedida
+            this?.updateSessionLog(sessaoId, subData, tipo, materia); 
+            // Nota: Como estamos em um componente funcional, a lógica de log deve ser tratada com cuidado.
+            // Vou manter o fluxo original mas com proteção de erro aprimorada:
+            
+            try {
+                if (sessaoId && sessaoId !== 'undefined') {
                     const sessionResponse = await api.get(`/session-detail/${sessaoId}`);
-                    const currentLogs = sessionResponse.data?.logs || [];
+                    const sessionData = Array.isArray(sessionResponse.data) ? sessionResponse.data[0] : sessionResponse.data;
+                    const currentLogs = sessionData?.logs || [];
+                    const materiaIdent = `${materia.tipoMateria || materia.tipo || 'Matéria'} ${materia.numero || ''}`.trim();
                     const newLog = {
                         id: Date.now().toString(),
                         tipo: 'subscricao',
-                        texto: `${subData.nome} subscreveu a matéria ${materia.tipoMateria} ${materia.numero} como ${tipo}`,
+                        texto: `${subData.nome} subscreveu a matéria ${materiaIdent} como ${tipo}`,
                         timestamp: subData.timestamp
                     };
                     await api.patch(`/sessions/${sessaoId}`, { logs: [...currentLogs, newLog] });
-                } catch (logError) {
-                    console.error("Erro ao salvar log da sessão:", logError);
                 }
+            } catch (logError) {
+                console.warn("Falha ao registrar log na sessão:", logError);
             }
 
             setSubscricoes(updatedSubscricoes);

@@ -708,13 +708,6 @@ class PautasSessao extends Component {
                 isSignedEdital: true,
                 editalSignatureMetadata: meta,
                 editalPath: editalPdfUrl,
-                metadata: {
-                    ...(sessao.metadata || {}),
-                    editalSignatureMetadata: meta,
-                    editalPath: editalPdfUrl,
-                    isSignedEdital: true,
-                    edital: editalText
-                }
             };
 
             await api.patch(`/sessions/${selectedSessaoId}`, updatePayload);

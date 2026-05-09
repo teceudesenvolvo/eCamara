@@ -59,14 +59,25 @@ export const normalizeSession = (s) => {
                   (Array.isArray(s.itens) && s.itens.length > 0) ? s.itens : 
                   (Array.isArray(s.matters) ? s.matters : []);
 
+    // Extrai campos de tempo real do metadata se não estiverem na raiz
+    const presenca = s.presenca || metadata.presenca || {};
+    const filaDeInscritos = s.filaDeInscritos || metadata.filaDeInscritos || [];
+    const oradorAtual = s.oradorAtual || metadata.oradorAtual || null;
+    const logs = s.logs || metadata.logs || [];
+
     return {
         ...s,
         id,
+        metadata, // Garante que metadata seja um objeto
         numero: numero || numPlenaria,
         data: sessionDate,
         tipo: titulo,
         itens: itens,
         matters: itens, // Garante que a pauta também esteja acessível via 'matters'
+        presenca,
+        filaDeInscritos,
+        oradorAtual,
+        logs,
         edital: metadata.edital || s.edital || '',
         // Recupera o caminho do edital e dados de assinatura do metadata ou raiz
         editalPdfUrl: s.editalPath || metadata.editalPath || metadata.editalPdfUrl || s.editalPdfUrl || metadata.pdfUrl || null,

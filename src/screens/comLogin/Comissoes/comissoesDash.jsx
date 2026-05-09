@@ -120,7 +120,7 @@ class ComissoesDash extends Component {
                             </div>
                         )) : (
                             <div className="dashboard-card" style={{gridColumn: '1 / -1', textAlign: 'center', color: '#888'}}>
-                                <p>Você ainda não faz parte de nenhuma comissão.</p>
+                                <p style={{fontSize: "14px", color: "rgb(119, 119, 119)" }} >Você ainda não faz parte de nenhuma comissão.</p>
                             </div>
                         )}
                     </div>

@@ -47,7 +47,16 @@ class PainelSessao extends Component {
     try {
       const response = await api.get(`/users/council/${camaraId}`);
       const allUsers = response.data || [];
-      const parlamentares = allUsers.filter(u => u.tipo === 'vereador' || u.tipo === 'presidente');
+      const parlamentares = allUsers.filter(u => {
+          const role = (u.role || u.tipo || '').toLowerCase();
+          const cargo = (u.cargo || '').toLowerCase();
+          return role === 'vereador' || role === 'presidente' || role === 'admin' || 
+                 cargo.includes('vereador') || cargo.includes('presidente');
+      }).map(u => ({
+        ...u,
+        id: u.id || u.uid || u._id,
+        nome: u.nome || u.name || u.displayName || 'Parlamentar'
+      }));
       this.setState({ parlamentares });
     } catch (error) {
       console.error("Erro ao buscar parlamentares:", error);
@@ -98,7 +107,9 @@ class PainelSessao extends Component {
 
     const counts = { sim: 0, nao: 0, abstencao: 0 };
     Object.values(votos).forEach(v => {
-      if (counts.hasOwnProperty(v.voto)) counts[v.voto]++;
+      // Normaliza para tratar "nao", "não", "abstencao", "abstencão"
+      const vKey = v.voto?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (counts.hasOwnProperty(vKey)) counts[vKey]++;
     });
 
     let timeLeft = 0;
@@ -174,8 +185,9 @@ class PainelSessao extends Component {
             <div className='section-title' style={{ marginBottom: '10px' }}><FaUsers /> Parlamentares ({Object.keys(presenca).length}/{parlamentares.length})</div>
             <div className='presence-scroll' style={{ maxHeight: 'calc(100% - 30px)' }}>
               {parlamentares.map(p => (
-                <div key={p.id} className={`parlamentar-row ${presenca[p.id] ? 'presente' : ''}`} style={{ padding: '8px 0' }}>
-                  <div className={`led-indicator ${presenca[p.id] ? 'active' : ''}`} style={{ width: '8px', height: '8px' }}></div>
+                <div key={p.id} className={`parlamentar-row ${presenca[p.id] || presenca[p.uid] ? 'presente' : ''}`} style={{ padding: '8px 0' }}>
+                  {/* Verifica presença tanto por id quanto por uid para compatibilidade */}
+                  <div className={`led-indicator ${presenca[p.id] || presenca[p.uid] ? 'active' : ''}`} style={{ width: '8px', height: '8px' }}></div>
                   <div style={{ fontSize: '0.9rem' }}>{p.nome}</div>
                 </div>
               ))}
@@ -211,6 +223,17 @@ class PainelSessao extends Component {
                     {Object.keys(votos).filter(uid => votos[uid].voto === 'nao').map(uid => {
                       const p = parlamentares.find(parl => parl.id === uid);
                       return <img key={uid} src={p?.foto || 'https://via.placeholder.com/50'} title={p?.nome} className='voter-photo nao' style={{ width: '35px', height: '35px' }} />;
+                    })}
+                  </div>
+                </div>
+              )}
+              {counts.abstencao > 0 && (
+                <div className='voters-group'>
+                  <div className='group-label' style={{ color: 'var(--neon-cyan)', fontSize: '0.7rem' }}>Abstenção</div>
+                  <div className='photos-grid'>
+                    {Object.keys(votos).filter(uid => votos[uid].voto?.toLowerCase().includes('abs')).map(uid => {
+                      const p = parlamentares.find(parl => parl.id === uid);
+                      return <img key={uid} src={p?.foto || 'https://via.placeholder.com/50'} title={p?.nome} className='voter-photo abs' style={{ width: '35px', height: '35px' }} />;
                     })}
                   </div>
                 </div>
