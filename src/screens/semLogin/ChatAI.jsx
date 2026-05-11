@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaArrowLeft, FaPaperPlane, FaRobot, FaUser } from 'react-icons/fa';
+import { FaArrowLeft, FaPaperPlane, FaRobot, FaUser, FaTimes } from 'react-icons/fa';
 import '../../App.css';
 
 import { sendMessageToAIPublic } from '../../aiService';
+import api from '../../services/api'; // Import api
+import logoCamaraAI from '../../assets/logo-camaraai-icon.png'; // Fallback logo
 
 const ChatAI = ({ onClose, city }) => {
+    const [councilName, setCouncilName] = useState('sua cidade');
+    const [councilLogo, setCouncilLogo] = useState(logoCamaraAI);
     const [messages, setMessages] = useState([
-        { id: 1, text: `Olá! Sou o Camara AI. Como posso ajudar você a entender melhor as leis e projetos de ${city || 'sua cidade'} hoje?`, sender: 'ai' }
     ]);
     const [inputText, setInputText] = useState('');
     const [isClosing, setIsClosing] = useState(false);
@@ -17,6 +20,28 @@ const ChatAI = ({ onClose, city }) => {
         setIsClosing(true);
         setTimeout(onClose, 300); // Aguarda a animação terminar (300ms)
     };
+
+    useEffect(() => {
+        const fetchCouncilConfig = async () => {
+            if (!city || city === 'master') return;
+            try {
+                const response = await api.get(`/councils/${city}`);
+                const councilData = response.data || {};
+                const config = councilData.config || councilData.dadosConfig || {};
+                const homeConfig = config.home || {};
+                const layoutConfig = config.layout || {};
+
+                setCouncilName(homeConfig.titulo || councilData.name || city);
+                setCouncilLogo(layoutConfig.logoDark || layoutConfig.logo || logoCamaraAI);
+            } catch (error) {
+                console.error("Erro ao carregar configurações da câmara para o chat:", error);
+            }
+        };
+
+        fetchCouncilConfig();
+        // Set initial greeting message once councilName is loaded
+        setMessages([ { id: 1, text: `Olá! Sou o Camara AI. Como posso ajudar você a entender melhor as leis e projetos da ${councilName} hoje?`, sender: 'ai' } ]);
+    }, [city, councilName]); // Depend on city and councilName
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -56,14 +81,14 @@ const ChatAI = ({ onClose, city }) => {
 
     return (
         <div className={`chat-popup-overlay ${isClosing ? 'closing' : ''}`}>
-        <div className={`chat-ai-container ${isClosing ? 'closing' : ''}`}>
+        <div className={`chat-modal-content ${isClosing ? 'closing' : ''}`}>
             <div className="chat-header">
-                <button onClick={handleClose} className="back-button">
-                    <FaArrowLeft /> Voltar
-                </button>
                 <div className="chat-header-info">
-                    <h2>Camara AI</h2>
+                    {councilLogo && <img src={councilLogo} alt="Logo" style={{ height: '50px', marginBottom: '8px', objectFit: 'contain' }} />}
                 </div>
+                <button onClick={handleClose} className="close-button-chat" title="Fechar">
+                    <FaTimes />
+                </button>
             </div>
             
             <div className="chat-messages">

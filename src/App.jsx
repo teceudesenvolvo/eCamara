@@ -157,10 +157,22 @@ function App() {
     fetchCamaraConfig();
   }, [camaraId]);
 
+  const hexToRgb = (hex) => {
+    if (!hex || typeof hex !== 'string') return '0, 0, 0';
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(s => s + s).join('');
+    const r = parseInt(h.slice(0, 2), 16) || 0;
+    const g = parseInt(h.slice(2, 4), 16) || 0;
+    const b = parseInt(h.slice(4, 6), 16) || 0;
+    return `${r}, ${g}, ${b}`;
+  };
+
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('--primary-color', layoutConfig.corPrimaria);
     root.style.setProperty('--secondary-color', layoutConfig.corDestaque);
+    root.style.setProperty('--primary-color-rgb', hexToRgb(layoutConfig.corPrimaria));
+    root.style.setProperty('--secondary-color-rgb', hexToRgb(layoutConfig.corDestaque));
   }, [layoutConfig]);
 
   return (
