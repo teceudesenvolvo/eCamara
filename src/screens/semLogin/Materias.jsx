@@ -33,7 +33,7 @@ class Materias extends Component {
         exercicio: '',
         data: '',
       },
-      showFilters: false,
+      showFilters: true,
     };
   }
 
@@ -107,7 +107,7 @@ class Materias extends Component {
     const filteredRows = rows.filter((row) => {
       return Object.keys(filterText).every(key => {
         const rowValue = String(row[key] || '').toLowerCase();
-        const filterValue = filterText[key].toLowerCase();
+        const filterValue = String(filterText[key] || '').toLowerCase();
         return rowValue.includes(filterValue);
       });
     });
@@ -120,12 +120,9 @@ class Materias extends Component {
     const selectFields = ['autor', 'apresentacao', 'tramitacao', 'exercicio', 'data'];
 
     return (
-      <div className='App-header'>
-        <div className='openai-section'>
-          <PageHeader 
-            title="Matérias Legislativas" 
-            onToggleFilters={this.toggleFilters} 
-          />
+      <div className='App-header-modern'>
+        <div className='home-content-wrapper' style={{ gap: '30px' }}>
+          
           
           <div>
           
@@ -135,70 +132,66 @@ class Materias extends Component {
               </div>
           )}
 
-          {showFilters && (
-            <Box sx={{ mb: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-              <Grid container spacing={2}>
-                {['materia', 'situacao', 'autor', 'apresentacao', 'tramitacao', 'exercicio', 'data'].map((column) => (
-                  <Grid item xs={12} sm={6} md={3} key={column}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <Typography variant="caption" style={{ fontWeight: 'bold', color: '#555' }}>
-                        {column.charAt(0).toUpperCase() + column.slice(1)}
-                      </Typography>
-                      {selectFields.includes(column) ? (
-                        <TextField
-                          select
-                          name={column}
-                          value={filterText[column]}
-                          onChange={this.handleFilterChange}
-                          variant="outlined"
-                          size="small"
-                          fullWidth
-                          sx={{ bgcolor: '#fff' }}
-                        >
-                          <MenuItem value=""><em>Todos</em></MenuItem>
-                          {getUniqueValues(column).map((option) => (
-                            <MenuItem key={option} value={option}>{option}</MenuItem>
-                          ))}
-                        </TextField>
-                      ) : (
-                        <TextField
-                          name={column}
-                          value={filterText[column]}
-                          onChange={this.handleFilterChange}
-                          placeholder={`Buscar...`}
-                          variant="outlined"
-                          size="small"
-                          fullWidth
-                          sx={{ bgcolor: '#fff' }}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <SearchIcon fontSize="small" style={{ color: '#999' }} />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    </div>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
+          <div className="search-box-wrapper-openai" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', width: '100%', maxWidth: 'none', marginBottom: '10px', padding: '10px 5px', borderRadius: '24px', background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)' }}>
+              {['materia', 'situacao', 'autor', 'apresentacao', 'tramitacao', 'exercicio', 'data'].map((column, index, array) => (
+                <div key={column} style={{ flex: '1 1 calc(25% - 10px)', minWidth: '200px', borderRight: (index + 1) % 4 !== 0 && index !== array.length - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none', padding: '5px 15px' }}>
+                  {selectFields.includes(column) ? (
+                    <TextField
+                      select
+                      name={column}
+                      value={filterText[column]}
+                      onChange={this.handleFilterChange}
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      label={column.charAt(0).toUpperCase() + column.slice(1)}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: '50px', bgcolor: 'transparent', '& fieldset': { border: 'none' } }, '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#777' } }}
+                    >
+                      <MenuItem value=""><em>{column.charAt(0).toUpperCase() + column.slice(1)}: Todos</em></MenuItem>
+                      {getUniqueValues(column).map((option) => (
+                        <MenuItem key={option} value={option}>{option}</MenuItem>
+                      ))}
+                    </TextField>
+                  ) : (
+                    <TextField
+                      name={column}
+                      value={filterText[column]}
+                      onChange={this.handleFilterChange}
+                      placeholder={column.charAt(0).toUpperCase() + column.slice(1)}
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: '50px', bgcolor: 'transparent', '& fieldset': { border: 'none' } } }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" style={{ color: '#bbb' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  )}
+                </div>
+              ))}
+          </div>
 
-          <div className="openai-grid">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '50px' }}></div>
+
+          <div className="modern-grid">
             {filteredRows.map((row) => (
-              <div className="openai-card" key={row.id} onClick={() => this.props.history.push(`/materia/${row.camaraId}/${row.id}`)} style={{ cursor: 'pointer' }}>
+              <div className="glass-card" key={row.id} onClick={() => this.props.history.push(`/materia/${row.camaraId}/${row.id}`)} style={{ cursor: 'pointer', padding: '24px' }}>
                 
-                <div className="card-content-openai">
-                  <span className="card-date">{row.data} • {row.situacao}</span>
-                  <h3>
+                <div className="card-content-modern">
+                  <span className="card-tag">{row.data} • {row.situacao}</span>
+                  <h3 className="card-title-modern">
                     {row.materia}
                   </h3>
-                  <p style={{fontSize: '0.9rem', marginBottom: '10px', color: '#555', fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
+                  <p className="card-desc-modern" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {row.tituloCompleto}
                   </p>
-                  <p>{row.autor} • {row.tramitacao}</p>
+                  <p style={{ color: '#888', fontSize: '0.85rem', fontWeight: 600, marginTop: 'auto', paddingTop: '15px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+                    {row.autor} • {row.tramitacao}
+                  </p>
                 </div>
               </div>
             ))}

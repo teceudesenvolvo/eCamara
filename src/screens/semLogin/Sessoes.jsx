@@ -26,7 +26,7 @@ class Sessoes extends Component {
                 tipo: '',
                 legislatura: '',
             },
-            showFilters: false,
+            showFilters: true,
             activeTab: 'todas', // 'todas' ou 'abertas'
             camaraId: this.props.match.params.camaraId || 'camara-teste',
         };
@@ -38,7 +38,7 @@ class Sessoes extends Component {
 
     fetchSessoes = async () => {
         const { camaraId } = this.state;
-        
+
         try {
             const response = await api.get(`/sessions/${camaraId}`);
             const sessoes = response.data;
@@ -72,13 +72,20 @@ class Sessoes extends Component {
         this.setState(prevState => ({ showFilters: !prevState.showFilters }));
     };
 
+    getYouTubeID = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
     render() {
         const { sessoes, filterText, showFilters, loading, camaraId, activeTab } = this.state;
 
         const filteredSessoes = sessoes.filter((sessao) => {
             const matchesFilter = Object.keys(filterText).every((key) => {
                 const sessaoValue = String(sessao[key] || '').toLowerCase();
-                const filterValue = filterText[key].toLowerCase();
+                const filterValue = String(filterText[key] || '').toLowerCase();
                 return sessaoValue.includes(filterValue);
             });
 
@@ -97,14 +104,9 @@ class Sessoes extends Component {
         const selectFields = ['data', 'tipo', 'exercicio'];
 
         return (
-            <div className='App-header'>
-                <div className='openai-section'>
-                    <PageHeader 
-                        title="Sessões Legislativas" 
-                        onToggleFilters={this.toggleFilters} 
-                        showPdfButton={false}
-                        showPrintButton={false}
-                    />
+            <div className='App-header-modern'>
+                <div className='home-content-wrapper' style={{ gap: '30px' }}>
+                   
 
                     {loading && (
                         <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
@@ -113,87 +115,93 @@ class Sessoes extends Component {
                     )}
 
                     {!loading && (
-                         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, display: 'flex', gap: 2 }}>
-                            <button className={`tab-button ${activeTab === 'todas' ? 'active' : ''}`} onClick={() => this.setState({ activeTab: 'todas' })} style={{fontWeight: activeTab === 'todas' ? 'bold' : 'normal', color: activeTab === 'todas' ? '#126B5E' : '#555', borderBottom: activeTab === 'todas' ? '2px solid #126B5E' : '2px solid transparent', padding: '10px 15px', background: 'none', border: 'none', cursor: 'pointer'}}>
-                                Todas as Sessões
-                            </button>
-                            <button className={`tab-button ${activeTab === 'abertas' ? 'active' : ''}`} onClick={() => this.setState({ activeTab: 'abertas' })} style={{fontWeight: activeTab === 'abertas' ? 'bold' : 'normal', color: activeTab === 'abertas' ? '#126B5E' : '#555', borderBottom: activeTab === 'abertas' ? '2px solid #126B5E' : '2px solid transparent', padding: '10px 15px', background: 'none', border: 'none', cursor: 'pointer'}}>
-                                Sessões Abertas
-                            </button>
-                        </Box>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0px' }}>
+                            <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.4)', borderRadius: '30px', padding: '5px', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                                <button onClick={() => this.setState({ activeTab: 'todas' })} style={{ background: activeTab === 'todas' ? '#fff' : 'transparent', color: activeTab === 'todas' ? '#1a1a1a' : '#555', border: 'none', borderRadius: '25px', padding: '12px 24px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: activeTab === 'todas' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>
+                                    Todas as Sessões
+                                </button>
+                                <button onClick={() => this.setState({ activeTab: 'abertas' })} style={{ background: activeTab === 'abertas' ? '#fff' : 'transparent', color: activeTab === 'abertas' ? '#1a1a1a' : '#555', border: 'none', borderRadius: '25px', padding: '12px 24px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: activeTab === 'abertas' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>
+                                    Sessões Abertas
+                                </button>
+                            </div>
+                        </div>
                     )}
 
-                    {showFilters && (
-                        <Box sx={{ mb: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-                            <Grid container spacing={2}>
-                                {['numero', 'data', 'tipo', 'legislatura'].map((column) => (
-                                    <Grid item xs={12} sm={6} md={3} key={column}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                            <Typography variant="caption" style={{ fontWeight: 'bold', color: '#555' }}>
-                                                {column === 'numero' ? 'Nº da Sessão' : column.charAt(0).toUpperCase() + column.slice(1)}
-                                            </Typography>
-                                            {selectFields.includes(column) ? (
-                                                <TextField
-                                                    select
-                                                    name={column}
-                                                    value={filterText[column]}
-                                                    onChange={this.handleFilterChange}
-                                                    variant="outlined"
-                                                    size="small"
-                                                    fullWidth
-                                                    sx={{ bgcolor: '#fff' }}
-                                                >
-                                                    <MenuItem value=""><em>Todos</em></MenuItem>
-                                                    {getUniqueValues(column).map((option) => (
-                                                        <MenuItem key={option} value={option}>{option}</MenuItem>
-                                                    ))}
-                                                </TextField>
-                                            ) : (
-                                                <TextField
-                                                    name={column}
-                                                    value={filterText[column]}
-                                                    onChange={this.handleFilterChange}
-                                                    placeholder={`Buscar...`}
-                                                    variant="outlined"
-                                                    size="small"
-                                                    fullWidth
-                                                    sx={{ bgcolor: '#fff' }}
-                                                    InputProps={{
-                                                        startAdornment: (
-                                                            <InputAdornment position="start">
-                                                                <SearchIcon fontSize="small" style={{ color: '#999' }} />
-                                                            </InputAdornment>
-                                                        ),
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                    </Grid>
-                                ))}
-                            </Grid>
-                        </Box>
-                    )}
-                    
-                    <div className="openai-grid">
-                        {filteredSessoes.map((sessao) => (
-                            <div className="openai-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })} style={{cursor: 'pointer'}}>
-                                <div className="card-content-openai">
-                                <span className="card-date">{sessao.data} • {sessao.createdAt ? new Date(sessao.createdAt).getFullYear() : ''}</span>
-                                    <h3>
-                                    {(sessao.tipo || '').includes('Sessão Plenária') 
-                                            ? sessao.tipo 
-                                        : `${sessao.tipo || 'Sessão'} nº ${sessao.numero || 'S/N'}`}
-                                    </h3>
-                                    <p>Clique para ver os detalhes</p>
+                    <div className="search-box-wrapper-openai" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', width: '100%', maxWidth: 'none', marginBottom: '10px', padding: '10px 5px', borderRadius: '24px', background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)' }}>
+                            {['numero', 'data', 'tipo', 'legislatura'].map((column, index, array) => (
+                                <div key={column} style={{ flex: '1 1 calc(20% - 10px)', minWidth: '200px', borderRight: (index + 1) % 4 !== 0 && index !== array.length - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none', padding: '5px 15px' }}>
+                                    {selectFields.includes(column) ? (
+                                        <TextField
+                                            select
+                                            name={column}
+                                            value={filterText[column]}
+                                            onChange={this.handleFilterChange}
+                                            variant="outlined"
+                                            size="small"
+                                            fullWidth
+                                            label={column === 'numero' ? 'Nº da Sessão' : column.charAt(0).toUpperCase() + column.slice(1)}
+                                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '50px', bgcolor: 'transparent', '& fieldset': { border: 'none' } }, '& .MuiInputLabel-root': { fontSize: '0.85rem', color: '#777' } }}
+                                        >
+                                            <MenuItem value=""><em>{column.charAt(0).toUpperCase() + column.slice(1)}: Todos</em></MenuItem>
+                                            {getUniqueValues(column).map((option) => (
+                                                <MenuItem key={option} value={option}>{option}</MenuItem>
+                                            ))}
+                                        </TextField>
+                                    ) : (
+                                        <TextField
+                                            name={column}
+                                            value={filterText[column]}
+                                            onChange={this.handleFilterChange}
+                                            placeholder={column === 'numero' ? 'Nº da Sessão' : column.charAt(0).toUpperCase() + column.slice(1)}
+                                            variant="outlined"
+                                            size="small"
+                                            fullWidth
+                                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '50px', bgcolor: 'transparent', '& fieldset': { border: 'none' } } }}
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <SearchIcon fontSize="small" style={{ color: '#bbb' }} />
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
-                    
+
+                    <div className="modern-grid no-hover-container">
+                        {filteredSessoes.map((sessao) => {
+                            const videoId = this.getYouTubeID(sessao.transmissaoUrl);
+                            const thumbUrl = videoId
+                                ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                                : 'https://via.placeholder.com/480x270?text=Sessão+Sem+Vídeo';
+
+                            return (
+                                <div className="glass-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })}>
+                                    <div className="card-image-wrapper">
+                                        <img src={thumbUrl} alt={sessao.tipo} className="card-image-modern" />
+                                    </div>
+                                    <div className="card-content-modern">
+                                        <span className="card-tag">{sessao.data} • {sessao.status}</span>
+                                        <h3 className="card-title-modern">
+                                            {(sessao.tipo || '').includes('Sessão Plenária')
+                                                ? sessao.tipo
+                                                : `${sessao.tipo || 'Sessão'} nº ${sessao.numero || 'S/N'}`}
+                                        </h3>
+                                        <p className="card-desc-modern">Acompanhe os detalhes e os documentos pautados.</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
                     {filteredSessoes.length === 0 && (
-                        <Typography variant="body1" align="center" style={{ padding: '30px', color: '#666' }}>
-                            Nenhum resultado encontrado.
-                        </Typography>
+                        <div style={{ width: '100%', textAlign: 'center', marginTop: '40px' }}>
+                            <p style={{ color: '#555', fontSize: '1.2rem', fontWeight: 500 }}>
+                                Nenhum resultado encontrado.
+                            </p>
+                        </div>
                     )}
                 </div>
             </div>

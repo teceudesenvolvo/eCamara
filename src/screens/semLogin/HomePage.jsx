@@ -63,8 +63,8 @@ class HomePage extends Component {
                 .filter(u => {
                     const role = (u.role || u.tipo || '').toLowerCase();
                     const cargo = (u.cargo || '').toLowerCase();
-                    return role === 'vereador' || role === 'presidente' || role === 'parlamentar' || 
-                           cargo.includes('vereador') || cargo.includes('presidente');
+                    return role === 'vereador' || role === 'presidente' || role === 'parlamentar' ||
+                        cargo.includes('vereador') || cargo.includes('presidente');
                 })
                 .map(u => ({
                     ...u,
@@ -121,24 +121,24 @@ class HomePage extends Component {
 
         if (loading) {
             return (
-                <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}>
-                    <p>Carregando dados da câmara...</p>
+                <div className='App-header-modern' style={{ justifyContent: 'center', alignItems: 'center' }}>
+                    <p style={{ color: '#333', fontSize: '1.2rem', fontWeight: 500, backdropFilter: 'blur(10px)', padding: '20px 40px', borderRadius: '30px', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>Carregando dados da câmara...</p>
                 </div>
             );
         }
 
         return (
-            <div className='App-header'>
-                <div className='Home-Dach'>
+            <div className='App-header-modern'>
+                <div className='home-content-wrapper'>
 
                     {/* 1. Hero Section (Gradient Style) */}
                     <div className="hero-section-new">
-                        <div className="hero-content-openai">
+                        <div className="hero-content-modern">
                             <h1>{homeConfig.titulo || 'Camara AI'}</h1>
-                            <p>{homeConfig.slogan || `Inteligência Artificial para uma legislação mais transparente e acessível em ${camaraId}.`}</p>
-                            <div className="hero-buttons-openai">
-                                <Link to={`/materias/${camaraId}`} className="btn-openai btn-primary">Explorar Projetos</Link>
-                                <Link to={`/login/${camaraId}`} className="btn-openai btn-secondary">Acesso Restrito</Link>
+                            <p style={{ color: '#ffffff !important' }}>{homeConfig.slogan || `Inteligência Artificial para uma legislação mais transparente e acessível em ${camaraId}.`}</p>
+                            <div className="hero-buttons-modern">
+                                <Link to={`/materias/${camaraId}`} className="btn-modern btn-primary-modern">Explorar Projetos</Link>
+                                <Link to={`/login/${camaraId}`} className="btn-modern btn-secondary-modern">Acesso Restrito</Link>
                             </div>
                         </div>
                     </div>
@@ -148,11 +148,11 @@ class HomePage extends Component {
                         <div className="search-box-wrapper-openai">
                             <input
                                 type="text"
-                                className="smart-search-input-openai"
+                                className="smart-search-input-modern"
                                 placeholder="Pergunte sobre leis, sessões ou vereadores..."
                                 onFocus={this.openChat}
                             />
-                            <button className="smart-search-btn-openai"><FaSearch /></button>
+                            <button className="smart-search-btn-modern"><FaSearch /></button>
                         </div>
                     </div>
 
@@ -162,16 +162,16 @@ class HomePage extends Component {
                             <h2>Acontece na Câmara</h2>
                             <Link to={`/materias/${camaraId}`} className="view-all-link">Ver tudo <FaArrowRight /></Link>
                         </div>
-                        <div className="openai-grid">
+                        <div className="modern-grid">
                             {agenda.length > 0 ? agenda.map(item => (
-                                <div className="openai-card" key={item.id} onClick={() => this.props.history.push(`/materia/${camaraId}/${item.id}`)} style={{ cursor: 'pointer' }}>
-                                    <div className="card-content-openai">
-                                        <span className="card-date">{item.day} {item.month} • {item.time}</span>
-                                        <h3>{item.title}</h3>
-                                        <p>{item.location}</p>
+                                <div className="glass-card" key={item.id} onClick={() => this.props.history.push(`/materia/${camaraId}/${item.id}`)}>
+                                    <div className="card-content-modern">
+                                        <span className="card-tag">{item.day} {item.month} • {item.time}</span>
+                                        <h3 className="card-title-modern">{item.title}</h3>
+                                        <p className="card-desc-modern">{item.location}</p>
                                     </div>
                                 </div>
-                            )) : <p>Nenhuma matéria votada recentemente.</p>}
+                            )) : <p style={{ color: '#555', textAlign: 'center', width: '100%', fontWeight: 500 }}>Nenhuma matéria votada recentemente.</p>}
                         </div>
                     </div>
 
@@ -181,24 +181,26 @@ class HomePage extends Component {
                             <h2>Sessões Plenárias</h2>
                             <Link to={`/sessoes/${camaraId}`} className="view-all-link">Ver tudo <FaArrowRight /></Link>
                         </div>
-                        <div className="openai-grid">
+                        <div className="modern-grid no-hover-container">
                             {sessoes.length > 0 ? sessoes.map(sessao => {
                                 const videoId = this.getYouTubeID(sessao.transmissaoUrl);
-                                const thumbUrl = videoId 
+                                const thumbUrl = videoId
                                     ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
                                     : 'https://via.placeholder.com/480x270?text=Sessão+Sem+Vídeo';
-                                
+
                                 return (
-                                    <div className="openai-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })} style={{ cursor: 'pointer' }}>
-                                        <img src={thumbUrl} alt={sessao.tipo} className="card-image" />
-                                        <div className="card-content-openai">
-                                            <span className="card-date">{sessao.data} • {sessao.status}</span>
-                                            <h3>{sessao.tipo} nº {sessao.numero}</h3>
-                                            <p>Clique para acompanhar os detalhes</p>
+                                    <div className="glass-card" key={sessao.id} onClick={() => this.props.history.push(`/sessao-virtual/${camaraId}`, { sessaoId: sessao.id })}>
+                                        <div className="card-image-wrapper">
+                                            <img src={thumbUrl} alt={sessao.tipo} className="card-image-modern" />
+                                        </div>
+                                        <div className="card-content-modern">
+                                            <span className="card-tag">{sessao.data} • {sessao.status}</span>
+                                            <h3 className="card-title-modern">{sessao.tipo} nº {sessao.numero}</h3>
+                                            <p className="card-desc-modern">Acompanhe os detalhes da sessão</p>
                                         </div>
                                     </div>
                                 );
-                            }) : <p>Nenhuma sessão plenária registrada recentemente.</p>}
+                            }) : <p style={{ color: '#555', textAlign: 'center', width: '100%', fontWeight: 500 }}>Nenhuma sessão plenária registrada recentemente.</p>}
                         </div>
                     </div>
 

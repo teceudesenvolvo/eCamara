@@ -19,7 +19,7 @@ class NormasJuridicas extends Component {
         this.state = {
             normas: [],
             searchTerm: '',
-            showFilters: false,
+            showFilters: true,
             loading: true,
             camaraId: this.props.match.params.camaraId || '',
             showModal: false,
@@ -112,12 +112,9 @@ class NormasJuridicas extends Component {
         });
 
         return (
-            <div className='App-header'>
-                <div className='openai-section'>
-                    <PageHeader 
-                        title="Normas Jurídicas" 
-                        onToggleFilters={this.toggleFilters} 
-                    />
+            <div className='App-header-modern'>
+                <div className='home-content-wrapper' style={{ gap: '30px' }}>
+                   
 
                     {loading && (
                         <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
@@ -125,8 +122,8 @@ class NormasJuridicas extends Component {
                         </div>
                     )}
 
-                    {showFilters && (
-                        <Box sx={{ mb: 4 }}>
+                    <div className="search-box-wrapper-openai" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', width: '100%', maxWidth: 'none', marginBottom: '10px', padding: '10px 5px', borderRadius: '24px', background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)' }}>
+                        <div style={{ flex: 1, padding: '5px 15px' }}>
                             <TextField
                                 fullWidth
                                 variant="outlined"
@@ -136,24 +133,24 @@ class NormasJuridicas extends Component {
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <SearchIcon />
+                                            <SearchIcon style={{ color: '#555' }} />
                                         </InputAdornment>
                                     ),
                                 }}
-                                sx={{ bgcolor: '#fff', borderRadius: 1 }}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '50px', bgcolor: 'transparent', '& fieldset': { border: 'none' } } }}
                             />
-                        </Box>
-                    )}
+                        </div>
+                    </div>
 
-                    <div className="openai-grid">
+                    <div className="modern-grid">
                         {filteredNormas.map((norma) => (
-                            <div className="openai-card" key={norma.id} onClick={() => this.handleOpenModal(norma)} style={{ cursor: 'pointer' }}>
-                                <div className="card-content-openai">
-                                    <span className="card-date">{norma.data}</span>
-                                    <h3>
+                            <div className="glass-card" key={norma.id} onClick={() => this.handleOpenModal(norma)} style={{ cursor: 'pointer', padding: '24px' }}>
+                                <div className="card-content-modern">
+                                    <span className="card-tag">{norma.data}</span>
+                                    <h3 className="card-title-modern">
                                         {norma.tipo} {norma.numero ? `nº ${norma.numero}/${norma.ano}` : ''}
                                     </h3>
-                                    <p>{norma.descricao}</p>
+                                    <p className="card-desc-modern">{norma.descricao}</p>
                                 </div>
                             </div>
                         ))}
@@ -166,15 +163,15 @@ class NormasJuridicas extends Component {
                     )}
 
                     {showModal && selectedNorma && (
-                        <div className="modal-overlay">
-                            <div className="modal-content" style={{ maxWidth: '800px', height: '80vh', display: 'flex', flexDirection: 'column' }}>
-                                <div className="modal-header">
-                                    <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{selectedNorma.tipo}</h2>
+                        <div className="modal-overlay" style={{ backdropFilter: 'blur(10px)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                            <div className="modal-content" style={{ maxWidth: '800px', height: '80vh', display: 'flex', flexDirection: 'column', padding: '0', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(25px) saturate(200%)', borderRadius: '24px', border: '1px solid rgba(255,255,255,1)' }}>
+                                <div className="modal-header" style={{ padding: '20px 30px', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#1a1a1a', fontWeight: '700' }}>{selectedNorma.tipo}</h2>
                                     <button onClick={this.handleCloseModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>
                                         <FaTimes />
                                     </button>
                                 </div>
-                                <div style={{ flex: 1, overflowY: 'auto', padding: '20px', textAlign: 'left', whiteSpace: 'pre-wrap', background: '#f9f9f9', borderRadius: '8px', border: '1px solid #eee', color: '#333' }}>
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '30px', textAlign: 'left', whiteSpace: 'pre-wrap', background: 'rgba(255,255,255,0.4)', borderRadius: '0 0 24px 24px', color: '#333', lineHeight: '1.6' }}>
                                     {selectedNorma.textoCompleto}
                                 </div>
                             </div>

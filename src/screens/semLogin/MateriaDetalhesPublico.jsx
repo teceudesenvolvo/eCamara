@@ -62,7 +62,7 @@ class MateriaDetalhesPublico extends Component {
 
         if (loading) {
             return (
-                <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}>
+                <div className='App-header-modern' style={{ justifyContent: 'center', alignItems: 'center', minHeight: '100vh', display: 'flex' }}>
                     <FaSpinner className="animate-spin" size={40} color="#126B5E" />
                 </div>
             );
@@ -70,9 +70,9 @@ class MateriaDetalhesPublico extends Component {
 
         if (!materia) {
             return (
-                <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}>
-                    <p>Matéria não encontrada.</p>
-                    <Link to={`/materias/`} className="btn-secondary">Voltar</Link>
+                <div className='App-header-modern' style={{ justifyContent: 'center', alignItems: 'center', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <p style={{ fontSize: '1.2rem', color: '#555' }}>Matéria não encontrada.</p>
+                    <Link to={`/materias/`} className="btn-apple-pill" style={{ textDecoration: 'none' }}>Voltar</Link>
                 </div>
             );
         }
@@ -81,12 +81,12 @@ class MateriaDetalhesPublico extends Component {
         const dataApresentacao = materia.dataApresenta || (materia.createdAt ? new Date(materia.createdAt).toLocaleDateString('pt-BR') : '-');
 
         return (
-            <div className='App-header'>
-                <div className='openai-section' style={{ marginTop: '40px', maxWidth: '1000px' }}>
+            <div className='App-header-modern'>
+                <div className='home-content-wrapper' style={{ marginTop: '40px', maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
                     
                     
                     {/* Cabeçalho da Matéria */}
-                    <div className="dashboard-card" style={{ borderLeft: '5px solid #126B5E' }}>
+                    <div className="glass-card" style={{ borderLeft: '5px solid #126B5E', padding: '30px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
                             <div style={{ flex: 1 }}>
                                 <span style={{ textTransform: 'uppercase', fontSize: '0.85rem', color: '#888', fontWeight: 'bold' }}>
@@ -101,7 +101,7 @@ class MateriaDetalhesPublico extends Component {
                             
                             {materia.pdfBase64 && (
                                 <div>
-                                    <button onClick={this.openPdf} className="btn-primary" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <button onClick={this.openPdf} className="btn-apple-pill" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <FaFilePdf /> Visualizar Documento Oficial
                                     </button>
                                 </div>
@@ -134,15 +134,15 @@ class MateriaDetalhesPublico extends Component {
                     </div>
 
                     {/* Conteúdo Principal */}
-                    <div className="dashboard-card" style={{ marginTop: '20px' }}>
-                        <h3 style={{ color: '#126B5E', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Ementa</h3>
+                    <div className="glass-card" style={{ marginTop: '20px', padding: '30px' }}>
+                        <h3 style={{ color: '#1a1a1a', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '15px', marginBottom: '20px', fontWeight: 700 }}>Ementa</h3>
                         <p style={{ fontSize: '1.1rem', lineHeight: '1.6', color: '#333', fontStyle: 'italic', background: '#f9f9f9', padding: '15px', borderRadius: '8px', borderLeft: '4px solid #ccc' }}>
                             "{materia.ementa}"
                         </p>
 
                         {materia.textoMateria && (
                             <>
-                                <h3 style={{ color: '#126B5E', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '20px', marginTop: '40px' }}>Texto Integral</h3>
+                                <h3 style={{ color: '#1a1a1a', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '15px', marginBottom: '20px', marginTop: '40px', fontWeight: 700 }}>Texto Integral</h3>
                                 <div 
                                     className="texto-lei-content"
                                     style={{ textAlign: 'justify', lineHeight: '1.8', color: '#333' }}

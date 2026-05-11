@@ -63,8 +63,8 @@ class slideFeactures extends Component {
                     const role = (u.role || u.tipo || '').toLowerCase();
                     const cargo = (u.cargo || '').toLowerCase();
                     // Filtra por nível de acesso ou cargo institucional para identificar parlamentares
-                    return role === 'vereador' || role === 'presidente' || role === 'parlamentar' || 
-                           cargo.includes('vereador') || cargo.includes('presidente');
+                    return role === 'vereador' || role === 'presidente' || role === 'parlamentar' ||
+                        cargo.includes('vereador') || cargo.includes('presidente');
                 })
                 .map(u => ({
                     ...u,
@@ -95,7 +95,7 @@ class slideFeactures extends Component {
         const listVereadores = vereadores.map((vereador) =>
             <SplideSlide key={vereador.id} className="representative-card-slide"
                 onClick={
-                    () => { 
+                    () => {
                         if (camaraId) {
                             this.props.history.push(`/vereador/${camaraId}/${vereador.id}`);
                         } else {
@@ -108,20 +108,33 @@ class slideFeactures extends Component {
                 <div className="representative-card">
                     <div className="representative-header">
                         <div className="representative-image-wrapper">
-                            <img className="representative-image" src={vereador.foto || vereador.avatar || vereador.photoURL || 'https://via.placeholder.com/150'} alt={vereador.nome} />
+                            <img
+                                className="representative-image"
+                                src={vereador.foto || vereador.avatar || vereador.photoURL || 'https://via.placeholder.com/150'}
+                                alt={vereador.nome}
+                                onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150'; }}
+                            />
                         </div>
                         <div className="representative-info">
-                            <h5 className="representative-name">{vereador.nome} </h5>
+                            <h5 className="representative-name">{vereador.nome}</h5>
                             <p className="representative-role" style={{ textTransform: 'capitalize' }}>{vereador.cargo || vereador.tipo || vereador.role}</p>
                         </div>
                     </div>
-                    <div className="representative-stats">
-                        <p className="stat-item">
-                            <span className="stat-value">{vereador.materiasCount}</span> Matérias
-                        </p>
-                        <p className="stat-item">
-                            <span className="stat-value">{vereador.comissoesCount}</span> Comissões
-                        </p>
+
+                    <div className="representative-stats-apple">
+                        <div className="stat-item-apple">
+                            <span className="stat-value-apple">{vereador.materiasCount}</span>
+                            <span className="stat-label-apple">Matérias</span>
+                        </div>
+                        <div className="stat-divider"></div>
+                        <div className="stat-item-apple">
+                            <span className="stat-value-apple">{vereador.comissoesCount}</span>
+                            <span className="stat-label-apple">Comissões</span>
+                        </div>
+                    </div>
+
+                    <div className="representative-action">
+                        <button className="btn-apple-pill">Ver Perfil</button>
                     </div>
                 </div>
             </SplideSlide>
@@ -136,7 +149,7 @@ class slideFeactures extends Component {
                         perMove: 1, // Move 1 item por vez
                         gap: '1rem', // Espaçamento entre os slides
                         pagination: false, // Remove a paginação inferior
-                        arrows: true, // Exibe as setas de navegação
+                        arrows: false, // Exibe as setas de navegação
                         breakpoints: {
                             768: { // Para telas menores que 768px
                                 perPage: 1,

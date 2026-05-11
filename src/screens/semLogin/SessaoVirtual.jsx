@@ -11,13 +11,12 @@ import Typography from '@mui/material/Typography';
 
 // Icones
 import {
-  FaFileAlt, FaMicrophone, FaClock, FaCheckCircle
+  FaFileAlt, FaMicrophone, FaClock, FaCheckCircle, FaFilePdf, FaScroll, FaQuoteLeft, FaFileSignature, FaDownload, FaTimes, FaUsers, FaMapMarkerAlt
 } from "react-icons/fa";
 import { Box, Chip, CircularProgress } from '@mui/material';
 
 
 // Components
-import HistoricoSessao from '../../componets/HistoricoSessao.jsx';
 import { normalizeSession } from '../../utils/sessionNormalizer';
 
 import api from '../../services/api.js';
@@ -32,6 +31,8 @@ class SessaoVirtual extends Component {
       camaraId: this.props.match.params.camaraId || 'camara-teste',
       selectedMateria: null,
       showMateriaModal: false,
+      showFilePopup: false,
+      fileUrl: null,
     };
   }
 
@@ -39,9 +40,9 @@ class SessaoVirtual extends Component {
     this.fetchSessaoData();
     // Inicia polling para dados em tempo real
     this.pollingInterval = setInterval(this.fetchSessaoData, 3000);
-    
+
     this.uiTimer = setInterval(() => {
-        this.forceUpdate();
+      this.forceUpdate();
     }, 1000);
   }
 
@@ -70,23 +71,41 @@ class SessaoVirtual extends Component {
   }
 
   componentWillUnmount() {
-      if (this.uiTimer) clearInterval(this.uiTimer);
-      if (this.pollingInterval) clearInterval(this.pollingInterval);
+    if (this.uiTimer) clearInterval(this.uiTimer);
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
   }
 
   countVotes = (votos) => {
-      const counts = { sim: 0, nao: 0, abstencao: 0 };
-      if (!votos) return counts;
-      Object.values(votos).forEach(v => {
-          if (counts.hasOwnProperty(v.voto)) counts[v.voto]++;
-      });
-      return counts;
+    const counts = { sim: 0, nao: 0, abstencao: 0 };
+    if (!votos) return counts;
+    Object.values(votos).forEach(v => {
+      const vKey = v.voto?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (counts.hasOwnProperty(vKey)) counts[vKey]++;
+      else if (vKey?.includes('abs')) counts.abstencao++;
+    });
+    return counts;
   };
 
   formatCountdown = (seconds) => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  scrollToSection = (id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 100;
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = element.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
   };
 
   toggleFilters = () => {
@@ -101,125 +120,278 @@ class SessaoVirtual extends Component {
     this.setState({ showMateriaModal: false, selectedMateria: null });
   };
 
+  openFilePopup = (url) => {
+    this.setState({ fileUrl: url, showFilePopup: true });
+  };
+
+  closeFilePopup = () => {
+    this.setState({ showFilePopup: false, fileUrl: null });
+  };
+
   render() {
     const { sessao, loading, showMateriaModal, selectedMateria, user, userRole } = this.state;
 
     if (loading) {
-      return <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Carregando sessão...</p></div>;
+      return <div className='App-header-modern' style={{ justifyContent: 'center', alignItems: 'center', minHeight: '100vh', display: 'flex' }}><p>Carregando sessão...</p></div>;
     }
 
     if (!sessao) {
-      return <div className='App-header' style={{ justifyContent: 'center', alignItems: 'center' }}><p>Sessão não encontrada.</p></div>;
+      return <div className='App-header-modern' style={{ justifyContent: 'center', alignItems: 'center', minHeight: '100vh', display: 'flex' }}><p>Sessão não encontrada.</p></div>;
     }
 
-    const materias = sessao.matters || sessao.itens || [];
+    const materiasRaw = sessao.matters || sessao.itens || [];
+    const materias = Array.isArray(materiasRaw) ? materiasRaw : Object.values(materiasRaw);
+
+    const presencaRaw = sessao.presenca || [];
+    const presenca = (Array.isArray(presencaRaw) ? presencaRaw : Object.values(presencaRaw)).map(p => ({
+        ...p,
+        foto: p.foto || p.avatar || p.photoURL || 'https://via.placeholder.com/150'
+    }));
 
     return (
-
-      <div className='App-header' >
-        <div className='sessao-virtual-container'>
-          <Typography variant="h4" component="h1" gutterBottom style={{ marginBottom: '10px', color: '#333', fontWeight: 'bold', textAlign: 'left' }}>
-            {sessao.tipo}
-          </Typography>
-          <Typography variant="subtitle1" gutterBottom style={{ marginBottom: '30px', color: '#666', textAlign: 'left' }}>
-            Data: {sessao.data} | Formato: {sessao.formato} | Legislatura: {sessao.legislatura}ª | Status: {sessao.status}
-          </Typography>
-
-          <div className='sessao-virtual-main-content'>
-            <div className='sessao-virtual-video-wrapper'>
-              <div className='player-wrapper'>
-                <ReactPlayer className='react-player' url={sessao.transmissaoUrl || 'https://www.youtube.com/watch?v=PDtvNjcgqdI'} width='100%' height='100%' controls={true} />
+      <div className='App-header-modern'>
+        <div className='home-content-wrapper'>
+          <div className='sv-page-wrapper'>
+            
+            {/* ── HEADER APPLE STYLE ── */}
+            <header className='sv-hero-header'>
+              <div className='sv-meta-pills'>
+                <span className={`sv-pill ${sessao.status === 'Aberta' ? 'sv-pill-live' : sessao.status === 'Encerrada' ? 'sv-pill-closed' : ''}`}>
+                  {sessao.status === 'Aberta' && <span className='sv-live-dot'></span>}
+                  {sessao.status}
+                </span>
+                <span className='sv-pill'><FaClock /> {sessao.data}</span>
+                <span className='sv-pill'>{sessao.formato}</span>
+                <span className='sv-pill'>{sessao.legislatura}ª Legislatura</span>
+                {sessao.tipoSessao && <span className='sv-pill'>{sessao.tipoSessao}</span>}
+                {sessao.metadata?.local && <span className='sv-pill'><FaMapMarkerAlt /> {sessao.metadata.local}</span>}
+                
               </div>
-            </div>
-            <div className='sessao-virtual-historico-wrapper'>
-              {sessao.oradorAtual && (
-                <div className="dashboard-card" style={{ background: '#fff9c4', borderLeft: '5px solid #fbc02d', marginBottom: '15px' }}>
-                    <h4 style={{ margin: '0 0 5px 0', color: '#f57f17', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FaMicrophone /> Tribuna Virtual
-                    </h4>
-                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{sessao.oradorAtual.nome}</div>
-                    <div style={{ fontSize: '2rem', fontFamily: 'monospace', color: '#333' }}>
-                        {(() => {
-                            const now = Date.now();
-                            const elapsedSeconds = Math.floor((now - sessao.oradorAtual.inicio) / 1000);
-                            const timeLeft = Math.max(0, sessao.oradorAtual.tempo - elapsedSeconds);
-                            return this.formatCountdown(timeLeft);
-                        })()}
-                    </div>
+              <h1 className='sv-title'>{sessao.tipo} nº {sessao.numero || 'S/N'}</h1>
+            </header>
+
+            {/* ── VIDEO HERO ── */}
+            <section className='sv-video-hero'>
+              <div className='sv-player-ratio'>
+                <ReactPlayer 
+                  className='react-player' 
+                  url={sessao.urlTransmissao || sessao.transmissaoUrl || 'https://www.youtube.com/watch?v=PDtvNjcgqdI'} 
+                  width='100%' 
+                  height='100%' 
+                  controls={true} 
+                  playsinline={true}
+                />
+              </div>
+            </section>
+
+            {/* ── ACTION BAR (Apple-style Quick Actions) ── */}
+            {(sessao.editalPath || sessao.ataHtml || sessao.storagePath) && (
+              <div className='sv-action-bar glass-card'>
+                <div className='sv-action-label'>
+                   <FaScroll /> Documentos Oficiais
                 </div>
-              )}
-              <HistoricoSessao sessao={sessao} />
-            </div>
-          </div>
-
-          <div className='sessao-virtual-materias-wrapper'>
-
-
-            <Grid container spacing={2} justifyContent="flex-start">
-              {materias.map((materia, index) => (
-                <Grid item xs={12} key={materia.id || index}>
-                  <Card elevation={2} sx={{ borderRadius: '12px', transition: '0.3s', '&:hover': { boxShadow: 4 }, cursor: 'pointer' }} onClick={() => this.handleOpenMateriaModal(materia)}>
-                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <FaFileAlt color="#126B5E" />
-                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#333' }}>
-                            {materia.tipoMateria} {materia.numero}
-                          </Typography>
-                        </Box>
-                        <Chip label={materia.status || 'Em Votação'} size="small" color={materia.status === 'Em Votação' ? 'warning' : 'default'} />
-                      </Box>
-
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, ml: 3 }}>
-                        Autor: {materia.autor} | Tramitação: {materia.regTramita}
-                      </Typography>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, ml: 3 }}>
-                        {(() => {
-                          const voteCounts = this.countVotes(materia.votos);
-                          return (
-                            <>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-sim-circle">{voteCounts.sim}</span> <Typography variant="caption">Sim</Typography></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-nao-circle">{voteCounts.nao}</span> <Typography variant="caption">Não</Typography></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span className="vote-circle vote-abs-circle">{voteCounts.abstencao}</span> <Typography variant="caption">Abstenção</Typography></div>
-                            </>
-                          )
-                        })()}
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </div>
-
-          {showMateriaModal && selectedMateria && (
-            <div className="modal-overlay">
-              <div className="modal-content" style={{ maxWidth: '700px' }}>
-                <div className="modal-header">
-                  <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{selectedMateria.titulo}</h2>
-                  <button onClick={this.handleCloseMateriaModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
-                </div>
-                <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '15px' }}>
-                  {selectedMateria.loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}><CircularProgress /></Box>
-                  ) : (
-                    <>
-                      <p><strong>Autor:</strong> {selectedMateria.autor}</p>
-                      <p><strong>Tipo:</strong> {selectedMateria.tipoMateria}</p>
-                      <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                        <h4 style={{ marginTop: 0, color: '#126B5E' }}>Ementa</h4>
-                        <p style={{ fontStyle: 'italic' }}>"{selectedMateria.ementa}"</p>
-                        <h4 style={{ marginTop: '20px', color: '#126B5E' }}>Texto da Matéria</h4>
-                        <div dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
-                      </div>
-                    </>
+                <div className='sv-action-buttons'>
+                  {sessao.editalPath && (
+                    <button className='sv-btn-action' onClick={() => this.openFilePopup(sessao.editalPath)}>
+                      <FaFilePdf /> Edital
+                    </button>
+                  )}
+                  {sessao.ataHtml && (
+                    <button className='sv-btn-action' onClick={() => this.scrollToSection('ata-sessao')}>
+                      <FaFileSignature /> Ata da Sessão
+                    </button>
+                  )}
+                  {sessao.storagePath && (
+                    <button className='sv-btn-action' onClick={() => this.openFilePopup(sessao.storagePath)}>
+                      <FaDownload /> Gravação
+                    </button>
                   )}
                 </div>
               </div>
+            )}
+
+            {/* ── TRIBUNA VIRTUAL ── */}
+            {sessao.oradorAtual && (
+              <div className='sv-tribuna-bar'>
+                <div className='sv-tribuna-icon'><FaMicrophone /></div>
+                <div className='sv-tribuna-info'>
+                  <span className='sv-tribuna-label'>Orador na Tribuna</span>
+                  <span className='sv-tribuna-name'>{sessao.oradorAtual.nome}</span>
+                </div>
+                <div className='sv-tribuna-timer'>
+                    {(() => {
+                      const now = Date.now();
+                      const elapsedSeconds = Math.floor((now - sessao.oradorAtual.inicio) / 1000);
+                      const timeLeft = Math.max(0, sessao.oradorAtual.tempo - elapsedSeconds);
+                      return this.formatCountdown(timeLeft);
+                    })()}
+                </div>
+              </div>
+            )}
+
+            {/* ── GRID DE CONTEÚDO ── */}
+            <div className='sv-bottom-grid'>
+              
+              {/* Coluna Esquerda – Presença (Estilo Matérias) */}
+              <aside className='sv-col-presenca'>
+                <h2 className='sv-section-title'>
+                  <FaUsers /> Vereadores Presentes
+                  <span className='sv-count-badge'>{presenca.length}</span>
+                </h2>
+                {presenca.length === 0 ? (
+                  <div className='sv-empty-state'>Nenhum vereador identificado.</div>
+                ) : (
+                  <div className='sv-presence-vertical-list no-hover-container'>
+                    {presenca.map((parlamentar, idx) => (
+                      <div key={parlamentar.uid || parlamentar.id || idx} className='sv-presence-card glass-card'>
+                        <div className='sv-avatar-ring' style={{ width: '40px', height: '40px' }}>
+                          <img src={parlamentar.foto || 'https://via.placeholder.com/150'} alt={parlamentar.nome} />
+                        </div>
+                        <div className='sv-presence-info'>
+                          <span className='sv-presence-name'>{parlamentar.nome}</span>
+                          <span className='sv-presence-role'>{parlamentar.partido || parlamentar.cargo || 'Vereador(a)'}</span>
+                        </div>
+                        <span className='sv-status-badge sv-badge-ok'>Conectado</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </aside>
+
+              {/* Coluna Direita – Matérias em Pauta */}
+              <main className='sv-col-materias'>
+              <h2 className='sv-section-title'>
+                Matérias em Pauta
+                <span className='sv-count-badge'>{materias.length}</span>
+              </h2>
+              {materias.length === 0 ? (
+                <div className='sv-empty-state'>Nenhuma matéria em pauta.</div>
+              ) : (
+                <div className='sv-materias-list no-hover-container'>
+                  {materias.map((materia, index) => {
+                    const voteCounts = this.countVotes(materia.votos);
+                    return (
+                      <div
+                        className='sv-materia-card glass-card'
+                        key={materia.id || index}
+                        onClick={() => this.handleOpenMateriaModal(materia)}
+                      >
+                        <div className='sv-materia-top'>
+                          <div className='sv-materia-id'>
+                            <FaFileAlt color='#126B5E' />
+                            <span>{materia.tipoMateria} {materia.numero}/{materia.ano}</span>
+                          </div>
+                          <span className={`sv-status-badge ${materia.status === 'Em Votação' ? 'sv-badge-warn' : materia.status === 'Aprovada' ? 'sv-badge-ok' : 'sv-badge-neutral'}`}>
+                            {materia.status || 'Pautada'}
+                          </span>
+                        </div>
+                        <p className='sv-materia-ementa'>{materia.ementa || materia.titulo}</p>
+                        <div className='sv-materia-meta'>
+                          <span>{materia.autor}</span>
+                          <span>·</span>
+                          <span>{materia.regTramita}</span>
+                        </div>
+                        <div className='sv-vote-row'>
+                          <div className='sv-vote-item sv-vote-sim'>
+                            <span className='vote-circle vote-sim-circle'>{voteCounts.sim}</span>
+                            <span>Sim</span>
+                          </div>
+                          <div className='sv-vote-item sv-vote-nao'>
+                            <span className='vote-circle vote-nao-circle'>{voteCounts.nao}</span>
+                            <span>Não</span>
+                          </div>
+                          <div className='sv-vote-item sv-vote-abs'>
+                            <span className='vote-circle vote-abs-circle'>{voteCounts.abstencao}</span>
+                            <span>Abst.</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              </main>
             </div>
-          )}
+
+            {/* ── DOCUMENTAÇÃO DETALHADA ── */}
+            <div className='sv-documentation-grid'>
+              {sessao.ataHtml && (
+                <section id='ata-sessao' className='sv-content-card glass-card'>
+                  <div className='sv-card-header'>
+                    <h2 className='sv-section-title'><FaFileSignature /> Ata da Sessão</h2>
+                    <span className='sv-pill'>Consolidada</span>
+                  </div>
+                  <div className='sv-html-content' dangerouslySetInnerHTML={{ __html: sessao.ataHtml }} />
+                </section>
+              )}
+
+              {sessao.transcription && (
+                <section className='sv-content-card glass-card'>
+                  <div className='sv-card-header'>
+                    <h2 className='sv-section-title'><FaQuoteLeft /> Transcrição (IA)</h2>
+                    <span className='sv-pill'>Automatizada</span>
+                  </div>
+                  <div className='sv-text-content'>
+                    {sessao.transcription}
+                  </div>
+                </section>
+              )}
+            </div>
+
+          </div>
         </div>
+
+        {/* ── MODAL DE MATÉRIA ─────────────────────────────────────── */}
+        {showMateriaModal && selectedMateria && (
+          <div className='modal-overlay' style={{ backdropFilter: 'blur(10px)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+            <div className='modal-content' style={{ maxWidth: '700px', width: '90%', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(30px) saturate(200%)', borderRadius: '28px', border: '1px solid rgba(255,255,255,0.9)', padding: 0, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '28px 28px 0' }}>
+                <div>
+                  <p style={{ margin: '0 0 6px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#126B5E' }}>
+                    {selectedMateria.tipoMateria} {selectedMateria.numero}
+                  </p>
+                  <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1a1a1a', fontWeight: 700, lineHeight: 1.3 }}>{selectedMateria.titulo || selectedMateria.ementa}</h2>
+                </div>
+                <button onClick={this.handleCloseMateriaModal} style={{ background: 'rgba(0,0,0,0.06)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', color: '#555', flexShrink: 0, marginLeft: '15px' }}>×</button>
+              </div>
+              <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '20px 28px 28px' }}>
+                <>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                    <span style={{ background: 'rgba(18,107,94,0.08)', color: '#126B5E', fontWeight: 700, padding: '5px 12px', borderRadius: '20px', fontSize: '0.85rem' }}>{selectedMateria.autor}</span>
+                    <span style={{ background: 'rgba(0,0,0,0.05)', color: '#555', fontWeight: 600, padding: '5px 12px', borderRadius: '20px', fontSize: '0.85rem' }}>{selectedMateria.regTramita}</span>
+                  </div>
+                  <div style={{ background: 'rgba(18,107,94,0.04)', borderLeft: '4px solid #126B5E', borderRadius: '0 12px 12px 0', padding: '16px', marginBottom: '20px' }}>
+                    <p style={{ margin: 0, fontStyle: 'italic', color: '#333', lineHeight: 1.6 }}>"{selectedMateria.ementa}"</p>
+                  </div>
+                  {selectedMateria.textoMateria && (
+                    <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '20px' }}>
+                      <h4 style={{ margin: '0 0 12px', color: '#1a1a1a', fontWeight: 700 }}>Texto da Matéria</h4>
+                      <div style={{ lineHeight: 1.7, color: '#444', fontSize: '0.95rem' }} dangerouslySetInnerHTML={{ __html: selectedMateria.textoMateria }} />
+                    </div>
+                  )}
+                </>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── POPUP DE DOCUMENTOS ─────────────────────────────────── */}
+        {this.state.showFilePopup && this.state.fileUrl && (
+          <div className="pdf-popup-overlay" style={{ backdropFilter: 'blur(10px)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+            <div className="pdf-popup-content" style={{ width: '90%', height: '90%', maxWidth: '1100px', padding: 0, overflow: 'hidden', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)' }}>
+              <button className="pdf-popup-close-button" onClick={this.closeFilePopup} style={{ zIndex: 10001 }}>
+                <FaTimes />
+              </button>
+              <iframe
+                title="Visualizador de Arquivo"
+                src={this.state.fileUrl}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
