@@ -1217,39 +1217,27 @@ class AddProducts extends Component {
 
                 {/* Janela de Chat AI (Widget no Canto Inferior Direito) */}
                 {showAiChat && (
-                    <div className="chat-popup-overlay" style={{ background: 'transparent', pointerEvents: 'none' }}>
-                        <div className="chat-ai-container" style={{
-                            position: 'fixed',
-                            bottom: 110,
-                            right: 30,
-                            width: '50%',
-                            maxWidth: '800px',
-                            height: '80vh',
-                            maxHeight: '85vh',
-                            borderRadius: '24px',
-                            boxShadow: '0 15px 50px rgba(0,0,0,0.2)',
-                            pointerEvents: 'auto',
-                            margin: 0,
-                            zIndex: 5000,
-                            border: '1px solid rgba(0,0,0,0.05)'
-                        }}>
-                            <div className="chat-header">
-                                <div className="chat-header-info">
+                    <div className="am-chat-overlay">
+                        <div className="am-chat-container">
+                            {/* Header */}
+                            <div className="am-chat-header">
+                                <div className="am-chat-header-info">
                                     <h2><FaRobot /> Assistente Legislativo</h2>
                                     <p>IA treinada com o seu Regimento Interno</p>
                                 </div>
-                                <button className="back-button" onClick={this.toggleAiChat} style={{ left: 'auto', right: '20px' }}>
+                                <button className="am-close-btn" onClick={this.toggleAiChat}>
                                     <FaTimes />
                                 </button>
                             </div>
 
-                            <div className="chat-messages" ref={this.chatContainerRef}>
+                            {/* Mensagens */}
+                            <div className="am-chat-messages" ref={this.chatContainerRef}>
                                 {messages.map((msg) => (
-                                    <div key={msg.id} className={`message ${msg.sender === 'ai' ? 'message-ai' : 'message-user'}`}>
-                                        <div className="message-icon">
+                                    <div key={msg.id} className={`am-message ${msg.sender === 'ai' ? 'am-message-ai' : 'am-message-user'}`}>
+                                        <div className="am-message-icon">
                                             {msg.sender === 'ai' ? <FaRobot /> : <FaEdit />}
                                         </div>
-                                        <div className="message-bubble">
+                                        <div className="am-message-bubble">
                                             <div dangerouslySetInnerHTML={{ __html: msg.text }} />
                                             {msg.sender === 'ai' && this.state.chatStep === 3 && (
                                                 <Button
@@ -1266,27 +1254,27 @@ class AddProducts extends Component {
                                     </div>
                                 ))}
                                 {isGenerating && (
-                                    <div className="message message-ai">
-                                        <div className="message-icon"><FaSpinner className="animate-spin" /></div>
-                                        <div className="message-bubble">Analisando regimento e redigindo...</div>
+                                    <div className="am-message am-message-ai">
+                                        <div className="am-message-icon"><FaSpinner className="animate-spin" /></div>
+                                        <div className="am-message-bubble">Analisando regimento e redigindo...</div>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="chat-input-area" style={{ padding: '15px' }}>
-                                <div className="search-box-wrapper-chat">
+                            {/* Input */}
+                            <div className="am-chat-input-area">
+                                <div className="am-search-wrapper">
                                     <input
                                         type="text"
-                                        className="smart-search-input-chat"
+                                        className="am-search-input"
                                         placeholder="Digite aqui..."
                                         value={currentInput}
                                         onChange={(e) => this.setState({ currentInput: e.target.value })}
                                         onKeyPress={(e) => e.key === 'Enter' && this.handleSendMessage()}
                                         disabled={isGenerating}
-                                        style={{ width: '100%' }}
                                     />
                                     <button
-                                        className="smart-search-btn-chat"
+                                        className="am-search-btn"
                                         onClick={this.handleSendMessage}
                                         disabled={isGenerating}
                                     >

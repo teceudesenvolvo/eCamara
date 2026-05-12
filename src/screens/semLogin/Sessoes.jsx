@@ -105,6 +105,7 @@ class Sessoes extends Component {
 
         return (
             <div className='App-header-modern'>
+                
                 <div className='home-content-wrapper' style={{ gap: '30px' }}>
                    
 
@@ -169,6 +170,8 @@ class Sessoes extends Component {
                                 </div>
                             ))}
                     </div>
+
+                    <h1 style={{ marginBottom: '10px', color: '#333' }}>Sessões Legislativas</h1>
 
                     <div className="modern-grid no-hover-container">
                         {filteredSessoes.map((sessao) => {

@@ -302,10 +302,11 @@ class VereadorProfile extends Component {
                                     <FaUsers style={{ color: '#126B5E' }} /> Comissões
                                 </h3>
                                 {comissoes.length > 0 ? (
+                                    console.log("Comissões do vereador:", comissoes) ||
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                         {comissoes.map(comissao => (
                                             <div key={comissao.id} style={{ padding: '15px', background: 'rgba(0,0,0,0.03)', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontWeight: 700, color: '#333', fontSize: '0.9rem' }}>{comissao.nome}</span>
+                                                <span style={{ fontWeight: 700, color: '#333', fontSize: '0.9rem' }}>{comissao.name || comissao.nome || 'Comissão sem nome' }</span>
                                                 <span className="tag tag-primary" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>{comissao.cargo}</span>
                                             </div>
                                         ))}

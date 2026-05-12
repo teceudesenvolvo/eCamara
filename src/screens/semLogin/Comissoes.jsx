@@ -169,6 +169,8 @@ class Comissoes extends Component {
                         ))}
                     </div>
 
+                    <h1 style={{ marginBottom: '10px', color: '#333' }}>Comissões Legislativas</h1>
+
                     <div className="modern-grid">
                         {filteredComissoes.map((row) => (
                             <div className="glass-card" key={row.id} onClick={() => this.handleOpenModal(row)} style={{ cursor: 'pointer', padding: '24px' }}>

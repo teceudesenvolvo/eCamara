@@ -142,6 +142,8 @@ class NormasJuridicas extends Component {
                         </div>
                     </div>
 
+                    <h1 style={{ marginBottom: '10px', color: '#333' }}>Normas Jurídicas</h1>
+
                     <div className="modern-grid">
                         {filteredNormas.map((norma) => (
                             <div className="glass-card" key={norma.id} onClick={() => this.handleOpenModal(norma)} style={{ cursor: 'pointer', padding: '24px' }}>

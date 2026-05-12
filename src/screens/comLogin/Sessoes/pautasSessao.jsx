@@ -958,6 +958,46 @@ class PautasSessao extends Component {
         );
     };
 
+    renderSessionCard = (sessao, onClickFn) => {
+        const { isAdmin } = this.state;
+        const statusColor = sessao.status === 'Aberta' ? '#2e7d32' : (sessao.status === 'Em Elaboração' ? '#ef6c00' : '#126B5E');
+        const statusTagClass = sessao.status === 'Aberta' ? 'tag-success' : (sessao.status === 'Em Elaboração' ? 'tag-warning' : 'tag-primary');
+        return (
+            <div
+                key={sessao.id}
+                className="dashboard-card dashboard-card-hover"
+                style={{
+                    cursor: 'pointer', margin: 0, padding: '25px', borderRadius: '20px',
+                    borderLeft: `6px solid ${statusColor}`,
+                    display: 'flex', flexDirection: 'column', transition: 'all 0.2s ease', marginBottom: 0
+                }}
+                onClick={() => onClickFn(sessao)}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+                    <span className="tag tag-primary">Sessão {sessao.numero}</span>
+                    <span className={`tag ${statusTagClass}`}>{sessao.status}</span>
+                </div>
+                <h3 style={{ fontSize: '1rem', color: '#1a1a1a', fontWeight: '700', marginBottom: '15px', height: '3.5em', overflow: 'hidden' }}>{sessao.tipo}</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderTop: '1px solid #eee', paddingTop: '15px', marginTop: 'auto' }}>
+                    <span style={{ color: '#666' }}><FaCalendarAlt /> {sessao.data}</span>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        {isAdmin && sessao.status === 'Em Elaboração' && (
+                            <button
+                                className="btn-danger"
+                                style={{ padding: '5px', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                onClick={(e) => { e.stopPropagation(); this.handleDeleteSessao(sessao.id); }}
+                                title="Excluir Sessão"
+                            >
+                                <FaTrash size={14} />
+                            </button>
+                        )}
+                        <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Visualizar <FaArrowLeft style={{ transform: 'rotate(180deg)' }} /></span>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     renderGerenciarSessoes = () => {
 
         const {
@@ -1063,52 +1103,7 @@ class PautasSessao extends Component {
                 </div>}
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
-                    {displayedSessoes.map(sessao => {
-                        const { isAdmin } = this.state;
-                        return (
-                            <div
-                                key={sessao.id}
-                                className="dashboard-card dashboard-card-hover"
-                                style={{
-                                    cursor: 'pointer', margin: 0, padding: '25px', borderRadius: '20px',
-                                    borderLeft: `6px solid ${sessao.status === 'Aberta' ? '#2e7d32' : (sessao.status === 'Em Elaboração' ? '#ef6c00' : '#126B5E')}`,
-                                    display: 'flex',
-                                    flexDirection: 'column'
-                                }}
-                                onClick={() => this.handleSelectSessao(sessao)}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                                    <span className="tag tag-primary">Sessão {sessao.numero}</span>
-                                    <span className={`tag ${sessao.status === 'Aberta' ? 'tag-success' : 'tag-warning'}`}>{sessao.status}</span>
-                                </div>
-                                <h3 style={{ fontSize: '1rem', color: '#1a1a1a', fontWeight: '700', marginBottom: '15px', height: '3.5em', overflow: 'hidden' }}>{sessao.tipo}</h3>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderTop: '1px solid #eee', paddingTop: '15px', marginTop: 'auto' }}>
-                                    <span style={{ color: '#666' }}><FaCalendarAlt /> {sessao.data}</span>
-                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                        {isAdmin && sessao.status === 'Em Elaboração' && (
-                                            <button
-                                                className="btn-danger"
-                                                style={{
-                                                    padding: '5px',
-                                                    borderRadius: '8px',
-                                                    width: '32px',
-                                                    height: '32px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}
-                                                onClick={(e) => { e.stopPropagation(); this.handleDeleteSessao(sessao.id); }}
-                                                title="Excluir Sessão"
-                                            >
-                                                <FaTrash size={14} />
-                                            </button>
-                                        )}
-                                        <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Gerenciar <FaArrowLeft style={{ transform: 'rotate(180deg)' }} /></span>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                    {displayedSessoes.map(sessao => this.renderSessionCard(sessao, this.handleSelectSessao))}
                     {sessoes.length === 0 && <p style={{ gridColumn: '1/-1', color: '#666', textAlign: 'center' }}>Nenhuma sessão cadastrada.</p>}
                 </div>
 
@@ -1119,59 +1114,78 @@ class PautasSessao extends Component {
     }
 
     renderSessoesList = (status, title, subtitle) => {
-        const { sessoes, camaraId, isAdmin, searchSessionTerm, filterSessionType } = this.state;
-        const filteredSessoes = sessoes.filter(s =>
-            (Array.isArray(status) ? status.includes(s.status) : s.status === status) &&
-            (
-                s.tipo?.toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
-                String(s.numero || '').toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
-                s.data?.includes(searchSessionTerm)
-            ) &&
-            (
-                filterSessionType === 'Todos' || 
-                (s.tipoSessao || s.categoria || '').includes(filterSessionType)
-            )
+        const { sessoes, camaraId, selectedMonth, searchSessionTerm, filterSessionType } = this.state;
+
+        const statusFiltered = sessoes.filter(s =>
+            Array.isArray(status) ? status.includes(s.status) : s.status === status
         );
 
+        const isSearching = searchSessionTerm.trim() !== '' || filterSessionType !== 'Todos';
+        const searchFiltered = statusFiltered.filter(s =>
+            (s.tipo?.toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
+            String(s.numero || '').toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
+            s.data?.includes(searchSessionTerm)) &&
+            (filterSessionType === 'Todos' || (s.tipoSessao || s.categoria || '').includes(filterSessionType))
+        );
+
+        const sortedSessoes = [...searchFiltered].sort((a, b) => parseSessionDate(b.data) - parseSessionDate(a.data));
+        const groupedSessoes = [];
+        sortedSessoes.forEach(sessao => {
+            const date = parseSessionDate(sessao.data);
+            if (!date || isNaN(date.getTime())) return;
+            const key = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
+            let group = groupedSessoes.find(g => g.month === formattedKey);
+            if (!group) { group = { month: formattedKey, sessoes: [] }; groupedSessoes.push(group); }
+            group.sessoes.push(sessao);
+        });
+
+        const availableMonths = groupedSessoes.map(g => g.month);
+        const currentMonth = selectedMonth || (availableMonths[0] || '');
+        const displayedSessoes = isSearching ? sortedSessoes : (groupedSessoes.find(g => g.month === currentMonth)?.sessoes || []);
+
+        const handleCardClick = (sessao) => {
+            const isClosed = ['Publicada', 'Encerrada'].includes(sessao.status);
+            const path = isClosed ? `/admin/resumo-sessao/${camaraId}/${sessao.id}` : `/admin/sessao-plenaria/${camaraId}/${sessao.id}`;
+            this.props.history.push(path);
+        };
+
         return (
-            <div className="dashboard-card" style={{ animation: 'fadeIn 0.5s' }}>
-                <div className="dashboard-header" style={{ marginBottom: '20px' }}>
+            <div style={{ animation: 'fadeIn 0.5s' }}>
+                <div className="dashboard-header" style={{ marginBottom: '30px' }}>
                     <div>
                         <h1 className="dashboard-header-title">{title}</h1>
                         <p className="dashboard-header-desc">{subtitle}</p>
                     </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
-                    {filteredSessoes.length > 0 ? filteredSessoes.map(sessao => (
-                        <div
-                            key={sessao.id}
-                            className="openai-card"
-                            style={{ cursor: 'pointer', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
-                        >
-                            <div className="card-content-openai" onClick={() => {
-                                const isClosed = ['Publicada', 'Encerrada'].includes(sessao.status);
-                                const path = isClosed ? `/admin/resumo-sessao/${camaraId}/${sessao.id}` : `/admin/sessao-plenaria/${camaraId}/${sessao.id}`;
-                                this.props.history.push(path);
-                            }}>
-                                <span className="card-date">{sessao.data} • Sessão {sessao.numero}</span>
-                                <h3 style={{ height: '3em', overflow: 'hidden' }}>{sessao.tipo}</h3>
-                                <p style={{ color: '#126B5E', fontWeight: '600', marginTop: '10px' }}>Clique para visualizar</p>
-                            </div>
-                            {isAdmin && sessao.status === 'Em Elaboração' && (
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 15px' }}>
-                                    <button
-                                        className="btn-danger"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
-                                        onClick={(e) => { e.stopPropagation(); this.handleDeleteSessao(sessao.id, sessao.status); }}
-                                    >
-                                        <FaTrash size={14} /> Excluir
-                                    </button>
-                                </div>
-                            )}
+
+                {!isSearching && availableMonths.length > 0 && (
+                    <div className="dashboard-card" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '30px', padding: '15px 25px' }}>
+                        <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#666' }}>Filtrar Mês:</span>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {availableMonths.map(m => (
+                                <button
+                                    key={m}
+                                    onClick={() => this.setState({ selectedMonth: m })}
+                                    style={{
+                                        padding: '8px 15px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+                                        background: currentMonth === m ? 'var(--primary-color)' : '#f0f2f5',
+                                        color: currentMonth === m ? '#fff' : '#666',
+                                        fontWeight: '600', transition: '0.3s'
+                                    }}
+                                >
+                                    {m}
+                                </button>
+                            ))}
                         </div>
-                    )) : (
-                        <div style={{ color: '#888', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', padding: '40px', background: '#f9f9f9', borderRadius: '8px' }}>
-                            Nenhuma sessão encontrada com o status "{Array.isArray(status) ? status.join(' ou ') : status}".
+                    </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
+                    {displayedSessoes.map(sessao => this.renderSessionCard(sessao, handleCardClick))}
+                    {displayedSessoes.length === 0 && (
+                        <div style={{ color: '#888', fontStyle: 'italic', gridColumn: '1 / -1', textAlign: 'center', padding: '40px', background: '#f9f9f9', borderRadius: '12px' }}>
+                            Nenhuma sessão encontrada.
                         </div>
                     )}
                 </div>

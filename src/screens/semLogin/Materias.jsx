@@ -174,9 +174,11 @@ class Materias extends Component {
                 </div>
               ))}
           </div>
+          <h1 style={{ marginBottom: '0px', color: '#333', textAlign: 'left', marginTop: '30px' }}>Matérias Legislativas</h1>  
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '50px' }}></div>
 
+          
           <div className="modern-grid">
             {filteredRows.map((row) => (
               <div className="glass-card" key={row.id} onClick={() => this.props.history.push(`/materia/${row.camaraId}/${row.id}`)} style={{ cursor: 'pointer', padding: '24px' }}>
