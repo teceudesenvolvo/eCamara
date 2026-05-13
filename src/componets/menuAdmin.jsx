@@ -218,7 +218,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
                 </nav>
 
                 <div style={{ marginTop: 'auto', padding: '20px 0', textAlign: 'center', width: '100%' }}>
-                    <p className="text-desktop" style={{ margin: 0, fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginLeft: 0 }}>
+                    <p className="text-desktop" style={{ margin: 0, fontSize: '10px', color: '#ffffff', marginLeft: 0 }}>
                         Desenvolvido por <a href="https://blu-tecnologias-site.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontWeight: 'bold', textDecoration: 'none' }}>Blu Tecnologias</a>
                     </p>
                 </div>

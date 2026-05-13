@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaArrowLeft, FaPaperPlane, FaRobot, FaUser, FaTimes } from 'react-icons/fa';
+import { FaArrowLeft, FaPaperPlane, FaRobot, FaUser, FaTimes, FaUndo } from 'react-icons/fa';
 import '../../App.css';
 
 import { sendMessageToAIPublic } from '../../aiService';
@@ -15,6 +15,7 @@ const ChatAI = ({ onClose, city }) => {
     const [isClosing, setIsClosing] = useState(false);
     const messagesEndRef = useRef(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [lastMessage, setLastMessage] = useState('');
 
     const handleClose = () => {
         setIsClosing(true);
@@ -54,25 +55,26 @@ const ChatAI = ({ onClose, city }) => {
         if (!inputText.trim() || isGenerating) return;
 
         const newMsg = { id: Date.now(), text: inputText, sender: 'user' };
+        setLastMessage(inputText);
         setMessages(prev => [...prev, newMsg]);
         const currentInputText = inputText;
         setInputText('');
+        await sendToAI(currentInputText);
+    };
+
+    const sendToAI = async (text) => {
         setIsGenerating(true);
 
         try {
-            // Envia a mensagem do usuário com o slug da cidade (prop 'city').
-            const aiResponse = await sendMessageToAIPublic(currentInputText, city);
-            setMessages(prev => [...prev, {
-                id: Date.now() + 1,
-                text: aiResponse,
-                sender: 'ai'
-            }]);
+            const aiResponse = await sendMessageToAIPublic(text, city);
+            setMessages(prev => [...prev, { id: Date.now() + 1, text: aiResponse, sender: 'ai' }]);
         } catch (error) {
             console.error("Erro ao chamar a IA:", error);
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
-                text: "Desculpe, ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.",
-                sender: 'ai'
+                text: "Desculpe, ocorreu um erro ao processar sua solicitação.",
+                sender: 'ai',
+                isError: true
             }]);
         } finally {
             setIsGenerating(false);
@@ -98,6 +100,23 @@ const ChatAI = ({ onClose, city }) => {
                             {msg.sender === 'ai' ? <FaRobot /> : <FaUser />}
                         </div>
                         <div className="message-bubble" dangerouslySetInnerHTML={{ __html: msg.text }} />
+                        {msg.isError && (
+                            <button 
+                                onClick={() => sendToAI(lastMessage)} 
+                                className="btn-apple-pill" 
+                                style={{ 
+                                    marginTop: '8px', 
+                                    fontSize: '0.75rem', 
+                                    padding: '6px 12px', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '6px',
+                                    width: 'fit-content'
+                                }}
+                            >
+                                <FaUndo size={10} /> Tentar Novamente
+                            </button>
+                        )}
                     </div>
                 ))}
                 {isGenerating && (

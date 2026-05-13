@@ -94,11 +94,30 @@ function App() {
   const location = useLocation();
   const pathParts = location.pathname.split('/').filter(Boolean);
   
-  // Extração robusta: identifica se é uma rota de detalhes ou lista para pegar o slug correto
-  const isDetailRoute = pathParts.includes('materia') || pathParts.includes('painel-sessao') || pathParts.includes('reuniao-virtual') || pathParts.includes('vereador');
-  const isAdminDocumentDetailRoute = pathParts[0] === 'admin' && pathParts[1] === 'assistente-admin' && pathParts[2] === 'detalhes';
-  
-  const camaraIdFromUrl = pathParts.length > 0 ? ((isDetailRoute || isAdminDocumentDetailRoute) ? pathParts[pathParts.length - 2] : pathParts[pathParts.length - 1]) : null;
+  // Extração robusta do camaraId da URL baseada na estrutura da rota
+  const getCamaraIdFromUrl = () => {
+    if (pathParts.length === 0) return null;
+    
+    if (pathParts[0] === 'admin') {
+      // Casos especiais: admin/assistente-admin/detalhes/:camaraId/:id ou admin/servicos/:page/:camaraId
+      const isSubPage = 
+        (pathParts[1] === 'assistente-admin' && (pathParts[2] === 'novo' || pathParts[2] === 'detalhes')) ||
+        (pathParts[1] === 'servicos' && pathParts.length > 3);
+        
+      if (isSubPage) return pathParts[3];
+      
+      // Padrão para a maioria das rotas admin: /admin/:page/:camaraId/...
+      // Abrange: /admin/reuniao-virtual/:camaraId/:comissaoId/:reuniaoId
+      // Abrange: /admin/comissao-detalhes/:camaraId
+      return pathParts[2];
+    }
+    
+    // Rotas públicas: /:page/:camaraId/:optionalId
+    // Ex: /home/:camaraId, /materia/:camaraId/:id, /login/:camaraId
+    return pathParts[1];
+  };
+
+  const camaraIdFromUrl = getCamaraIdFromUrl();
   const camaraId = (camaraIdFromUrl && camaraIdFromUrl !== 'admin' && camaraIdFromUrl !== 'perfil') 
     ? camaraIdFromUrl 
     : (localStorage.getItem('@CamaraAI:councilId') || 'master');

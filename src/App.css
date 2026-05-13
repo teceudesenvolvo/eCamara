@@ -4813,6 +4813,7 @@ footer>p {
   transition: opacity 0.2s ease-in-out;
   font-size: 0.95rem;
   font-weight: 500;
+  color: #fff;
 }
 
 @media (min-width: 769px) {
@@ -6722,6 +6723,7 @@ footer>p {
   box-sizing: border-box;
   color: #000 !important;
   background-color: #f9f9f9 !important;
+  min-height: 100px; /* Garante altura mínima para o textarea */
   height: 50px;
 }
 
@@ -6732,8 +6734,10 @@ footer>p {
 
 .process-text {
   margin-top: 10px;
-  font-size: 12px !important;
-  color: #04b398;
+  font-size: 17px !important;
+  height: 50px !important;
+  width: 100%;
+  background-color: transparent;
 }
 
 .modal-input {
@@ -7342,6 +7346,7 @@ footer>p {
 .text-desktop {
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
+  color: #fff !important;
 }
 
 .menuDesktop:hover .text-desktop {

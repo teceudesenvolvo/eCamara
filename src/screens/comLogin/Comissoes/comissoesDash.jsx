@@ -31,9 +31,9 @@ class ComissoesDash extends Component {
         try {
             const response = await api.get(`/commissions/${camaraId}`);
             const allComissoes = response.data || [];
-            
+
             // Filtra para mostrar apenas as comissões das quais o usuário é membro
-            const myComissoes = allComissoes.filter(c => 
+            const myComissoes = allComissoes.filter(c =>
                 c.membros && (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)).some(m => m.id === userId)
             ).map(c => ({
                 ...c,
@@ -55,7 +55,7 @@ class ComissoesDash extends Component {
         const { comissoes, loading } = this.state;
 
         if (loading) {
-            return <div className='App-header' style={{justifyContent: 'center'}}>Carregando suas comissões...</div>;
+            return <div className='App-header' style={{ justifyContent: 'center' }}>Carregando suas comissões...</div>;
         }
 
         return (
@@ -63,7 +63,7 @@ class ComissoesDash extends Component {
                 <MenuDashboard />
 
                 <div className="dashboard-content">
-                    
+
                     {/* Header */}
                     <div className="dashboard-header">
                         <div>
@@ -81,24 +81,24 @@ class ComissoesDash extends Component {
                                 <div style={{ padding: '25px', flex: 1 }}>
                                     <h3 style={{ margin: '0 0 10px 0', color: '#126B5E', fontSize: '1.2rem' }}>{comissao.nome}</h3>
                                     <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>{comissao.descricao}</p>
-                                    
+
                                     {/* Grupo de Avatares (Apenas Imagens) */}
                                     <div style={{ display: 'flex', alignItems: 'center', marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
                                         {comissao.membros && comissao.membros.length > 0 ? (
                                             <>
                                                 {comissao.membros.slice(0, 6).map((membro, index) => (
-                                                    <img 
-                                                        key={membro.id || index} 
-                                                        src={membro.foto || membro.avatar} 
-                                                        alt={membro.name || membro.nome} 
+                                                    <img
+                                                        key={membro.id || index}
+                                                        src={membro.foto || membro.avatar}
+                                                        alt={membro.name || membro.nome}
                                                         title={`${membro.name || membro.nome} - ${membro.cargo}`}
-                                                        style={{ 
-                                                            width: '35px', height: '35px', borderRadius: '50%', 
-                                                            objectFit: 'cover', border: '2px solid #fff', 
-                                                            marginLeft: index > 0 ? '-12px' : 0, 
-                                                            boxShadow: '0 2px 5px rgba(0,0,0,0.1)', 
-                                                            zIndex: 10 - index 
-                                                        }} 
+                                                        style={{
+                                                            width: '35px', height: '35px', borderRadius: '50%',
+                                                            objectFit: 'cover', border: '2px solid #fff',
+                                                            marginLeft: index > 0 ? '-12px' : 0,
+                                                            boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                                                            zIndex: 10 - index
+                                                        }}
                                                     />
                                                 ))}
                                                 {comissao.membros.length > 6 && (
@@ -119,8 +119,8 @@ class ComissoesDash extends Component {
                                 </div>
                             </div>
                         )) : (
-                            <div className="dashboard-card" style={{gridColumn: '1 / -1', textAlign: 'center', color: '#888'}}>
-                                <p style={{fontSize: "14px", color: "rgb(119, 119, 119)" }} >Você ainda não faz parte de nenhuma comissão.</p>
+                            <div className="dashboard-card" style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#888' }}>
+                                <p style={{ fontSize: "14px", color: "rgb(119, 119, 119)" }} >Você ainda não faz parte de nenhuma comissão.</p>
                             </div>
                         )}
                     </div>

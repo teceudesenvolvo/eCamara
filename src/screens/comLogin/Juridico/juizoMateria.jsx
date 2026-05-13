@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaGavel, FaSearch, FaTimes, FaCheckCircle, FaBalanceScale, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye, FaSpinner, FaHistory, FaUserTie, FaCalendarAlt, FaExchangeAlt, FaRobot, FaPaperPlane, FaEdit } from 'react-icons/fa';
+import { FaGavel, FaSearch, FaTimes, FaCheckCircle, FaBalanceScale, FaTimesCircle, FaExclamationTriangle, FaPenFancy, FaMagic, FaFileAlt, FaEye, FaSpinner, FaHistory, FaUserTie, FaCalendarAlt, FaExchangeAlt, FaRobot, FaPaperPlane, FaEdit, FaUndo } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
@@ -59,6 +59,7 @@ class JuizoMateria extends Component {
                 { id: 1, sender: 'ai', text: 'Olá! Sou o Assistente Jurídico do e-Câmara. <br/>Estou pronto para ajudar na análise técnica e redação do seu parecer. Qual ponto deseja analisar primeiro?' }
             ],
             currentInput: '',
+            lastCommandText: '',
             isGenerating: false,
         };
         this.messagesEndRef = React.createRef();
@@ -181,16 +182,20 @@ class JuizoMateria extends Component {
         }).filter(Boolean);
     };
 
-    handleSendMessage = async () => {
+    handleSendMessage = async (retryText = null) => {
         const { currentInput, messages, selectedMateria, baseConhecimento, camaraId } = this.state;
-        if (!currentInput.trim() || !selectedMateria) return;
+        const textToSend = retryText || currentInput;
+        if (!textToSend.trim() || !selectedMateria) return;
 
-        const userMessage = { id: Date.now(), sender: 'user', text: currentInput };
-        this.setState({
-            messages: [...messages, userMessage],
-            currentInput: '',
-            isGenerating: true
-        });
+        if (!retryText) {
+            const userMessage = { id: Date.now(), sender: 'user', text: textToSend };
+            this.setState({
+                messages: [...messages, userMessage],
+                currentInput: '',
+                lastCommandText: textToSend
+            });
+        }
+        this.setState({ isGenerating: true });
 
         try {
             const { regimentoText, leiOrganicaText } = baseConhecimento;
@@ -209,7 +214,7 @@ class JuizoMateria extends Component {
             - Lei Orgânica: ${leiOrganicaText ? leiOrganicaText.substring(0, 3000) : 'Seguir normas padrão'}
 
             TAREFA:
-            Responda à seguinte solicitação do procurador: "${currentInput}".
+            Responda à seguinte solicitação do procurador: "${textToSend}".
             Use linguagem jurídica formal, cite artigos se o contexto permitir e foque na constitucionalidade e legalidade.
             Ao sugerir trechos de redação, utilize a decisão alvo como base e use parágrafos HTML (<p>).`;
 
@@ -223,7 +228,12 @@ class JuizoMateria extends Component {
         } catch (error) {
             console.error("Erro no chat IA Jurídico:", error);
             this.setState(prevState => ({
-                messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: "Desculpe, ocorreu um erro ao processar sua análise jurídica." }],
+                messages: [...prevState.messages, { 
+                    id: Date.now() + 1, 
+                    sender: 'ai', 
+                    text: "Erro na análise jurídica. Tente novamente.",
+                    isError: true 
+                }],
                 isGenerating: false
             }));
         }
@@ -1116,6 +1126,17 @@ class JuizoMateria extends Component {
                                         </div>
                                         <div className="message-bubble">
                                             <div dangerouslySetInnerHTML={{ __html: msg.text }} />
+                                            {msg.isError && (
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    startIcon={<FaUndo />}
+                                                    onClick={() => this.handleSendMessage(this.state.lastCommandText)}
+                                                    sx={{ mt: 1, textTransform: 'none', borderRadius: '8px', fontSize: '0.75rem', borderColor: '#126B5E', color: '#126B5E' }}
+                                                >
+                                                    Tentar Novamente
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}

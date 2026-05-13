@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import pdfMake from 'pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash, FaInfoCircle, FaRobot, FaMagic, FaTimes, FaCommentDots, FaArrowLeft } from 'react-icons/fa';
+import { FaPaperPlane, FaFileAlt, FaCheckCircle, FaEdit, FaSpinner, FaPaperclip, FaTrash, FaInfoCircle, FaRobot, FaMagic, FaTimes, FaCommentDots, FaArrowLeft, FaUndo } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import LogoIcon from '../../../assets/logo-camaraai-icon.png';
 import 'react-quill/dist/quill.snow.css';
@@ -85,6 +85,7 @@ class AddProducts extends Component {
             currentInput: '',
             isGenerating: false,
             chatStep: 0, // 0: Tema, 1: Tipo, 2: Detalhes
+            lastCommandText: '',
             showEditor: false, // Controla a exibição do editor
             showAiChat: false, // Controla o modal de chat
             protocolGenerated: null, // Armazena o protocolo gerado
@@ -440,9 +441,10 @@ class AddProducts extends Component {
     };
     // ...
     // Função para gerar conteúdo com IA (Real)
-    handleSendMessage = async () => {
+    handleSendMessage = async (retryText = null) => {
         const { currentInput, messages, chatStep, objeto, tipoMateria, fileName, baseConhecimento, camaraId } = this.state;
-        if (!currentInput.trim()) return;
+        const textToSend = retryText || currentInput;
+        if (!textToSend.trim()) return;
 
         const token = localStorage.getItem('@CamaraAI:token');
         if (!token) {
@@ -453,13 +455,16 @@ class AddProducts extends Component {
             return;
         }
 
-        const userMessage = { id: Date.now(), sender: 'user', text: currentInput };
+        if (!retryText) {
+            const userMessage = { id: Date.now(), sender: 'user', text: textToSend };
+            this.setState({
+                messages: [...messages, userMessage],
+                currentInput: '',
+                lastCommandText: textToSend,
+            });
+        }
 
-        this.setState({
-            messages: [...messages, userMessage],
-            currentInput: '',
-            isGenerating: true
-        });
+        this.setState({ isGenerating: true });
 
         try {
             let prompt = '';
@@ -491,14 +496,14 @@ class AddProducts extends Component {
 
             if (chatStep === 0) {
                 // Passo 0: Usuário informa o Tema
-                prompt = `Você é um assistente legislativo da ${this.state.councilName || 'Câmara Municipal'}. O usuário deseja criar uma nova matéria. O tema informado foi: "${currentInput}". Confirme que entendeu o tema e pergunte qual é o tipo da matéria (ex: Projeto de Lei, Requerimento, Indicação, Moção). Seja breve e cordial.`;
+                prompt = `Você é um assistente legislativo da ${this.state.councilName || 'Câmara Municipal'}. O usuário deseja criar uma nova matéria. O tema informado foi: "${textToSend}". Confirme que entendeu o tema e pergunte qual é o tipo da matéria (ex: Projeto de Lei, Requerimento, Indicação, Moção). Seja breve e cordial.`;
                 nextStep = 1;
-                nextStateUpdates = { objeto: currentInput };
+                nextStateUpdates = { objeto: textToSend };
             } else if (chatStep === 1) {
                 // Passo 1: Usuário informa o Tipo
-                prompt = `Estamos criando uma matéria legislativa para a ${this.state.councilName || 'Câmara Municipal'} sobre o tema "${objeto}". O usuário informou que o tipo da matéria é: "${currentInput}". Confirme o tipo e peça para o usuário fornecer os detalhes específicos, justificativa ou pontos principais que devem constar no texto da lei.`;
+                prompt = `Estamos criando uma matéria legislativa para a ${this.state.councilName || 'Câmara Municipal'} sobre o tema "${objeto}". O usuário informou que o tipo da matéria é: "${textToSend}". Confirme o tipo e peça para o usuário fornecer os detalhes específicos, justificativa ou pontos principais que devem constar no texto da lei.`;
                 nextStep = 2;
-                nextStateUpdates = { tipoMateria: currentInput };
+                nextStateUpdates = { tipoMateria: textToSend };
             } else if (chatStep === 2) {
                 // Passo 2: Usuário informa Detalhes -> Gerar Minuta
                 prompt = `Atue como um consultor legislativo especialista e rigoroso.
@@ -511,7 +516,7 @@ class AddProducts extends Component {
                 
                 SUA TAREFA:
                 Analise o pedido de um(a) ${tipoMateria} sobre o tema "${objeto}".
-                Detalhes fornecidos: "${currentInput}".
+                Detalhes fornecidos: "${textToSend}".
 
                 ${fileName ? `OBSERVAÇÃO: O usuário forneceu um documento de referência anexado: ${fileName}. Considere que você tem acesso aos metadados deste documento para fundamentação.` : ''}
 
@@ -584,7 +589,12 @@ class AddProducts extends Component {
         } catch (error) {
             console.error("Erro ao processar IA:", error);
             this.setState(prevState => ({
-                messages: [...prevState.messages, { id: Date.now() + 1, sender: 'ai', text: error.message || "Desculpe, não consegui processar sua solicitação." }],
+                messages: [...prevState.messages, { 
+                    id: Date.now() + 1, 
+                    sender: 'ai', 
+                    text: "Erro na IA: " + (error.message || "Falha na comunicação."),
+                    isError: true 
+                }],
                 isGenerating: false
             }));
         }
@@ -1248,6 +1258,17 @@ class AddProducts extends Component {
                                                     sx={{ mt: 2, textTransform: 'none', borderRadius: '8px', backgroundColor: '#126B5E' }}
                                                 >
                                                     Aplicar ao Formulário
+                                                </Button>
+                                            )}
+                                            {msg.isError && (
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    startIcon={<FaUndo />}
+                                                    onClick={() => this.handleSendMessage(this.state.lastCommandText)}
+                                                    sx={{ mt: 1, textTransform: 'none', borderRadius: '8px', fontSize: '0.75rem', borderColor: 'rgba(255,255,255,0.5)', color: 'white' }}
+                                                >
+                                                    Tentar Novamente
                                                 </Button>
                                             )}
                                         </div>
