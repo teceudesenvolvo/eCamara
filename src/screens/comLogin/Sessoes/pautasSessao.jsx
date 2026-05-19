@@ -851,7 +851,7 @@ class PautasSessao extends Component {
                 <SessionStepper currentStep={currentStep} />
 
                 {currentStep === 1 && (
-                    <div style={{ maxWidth: '600px', margin: '0 auto', animation: 'slideUp 0.4s' }}>
+                    <div style={{ maxWidth: '100%', margin: '0 auto', animation: 'slideUp 0.4s' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '25px', marginBottom: '25px' }}>
                             <div className="form-group">
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>Data da Sessão</label>
