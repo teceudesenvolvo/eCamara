@@ -351,7 +351,13 @@ class SessaoPlenariaRestrita extends Component {
             const { camaraId, sessao } = this.state;
             if (!sessao) return;
             try {
-                await api.patch(`/sessions/${sessao.id}`, { status: 'Encerrada' });
+                await api.patch(`/sessions/${sessao.id}`, { 
+                    status: 'Encerrada',
+                    metadata: {
+                        ...sessao.metadata,
+                        closedAt: new Date().toISOString()
+                    }
+                });
                 alert("Sessão encerrada com sucesso.");
                 this.props.history.push(`/admin/pautas-sessao/${camaraId}`);
             } catch (error) {

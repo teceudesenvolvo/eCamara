@@ -28,6 +28,7 @@ class PautasSessao extends Component {
             novoNumeroPlenaria: '',
             novoTipoDeSessao: 'Presencial', // Presencial, Remota, Híbrida
             novaTransmissaoUrl: '',
+            novaUrlVirtualSessao: '',
             materiasDisponiveis: [],
             documentosAcessoriosDisponiveis: [],
             selectedDocumentoToAdd: '',
@@ -87,9 +88,9 @@ class PautasSessao extends Component {
         try {
             const response = await api.get(`/sessions/${camaraId}`);
             console.log("[Debug] Resposta bruta da API:", response.data);
-            
+
             const sessoesConsistent = normalizeSessionList(response.data);
-            
+
             console.log("[Debug] Sessões normalizadas via utility:", sessoesConsistent);
             this.setState({ sessoes: sessoesConsistent });
         } catch (error) {
@@ -104,8 +105,8 @@ class PautasSessao extends Component {
             const rawData = response.data;
             const data = Array.isArray(rawData) ? rawData : (rawData?.matters || rawData?.materias || Object.values(rawData || {}));
 
-            const materias = data.filter(m => m).map(m => ({ 
-                ...m, 
+            const materias = data.filter(m => m).map(m => ({
+                ...m,
                 id: m.id || m._id,
                 titulo: m.titulo || m.title || 'Matéria sem título',
                 autor: m.autor || m.autorNome || 'Autor não informado'
@@ -179,7 +180,7 @@ class PautasSessao extends Component {
             isStepping: true,
             currentStep: 1,
             selectedSessaoId: null, novaData: '', novoTipo: 'Sessão Ordinária',
-            novaTransmissaoUrl: '', novoTipoDeSessao: 'Presencial', novaLegislatura: '', novoNumeroPlenaria: ''
+            novaTransmissaoUrl: '', novaUrlVirtualSessao: '', novoTipoDeSessao: 'Presencial', novaLegislatura: '', novoNumeroPlenaria: ''
         });
     };
 
@@ -251,12 +252,12 @@ class PautasSessao extends Component {
     };
 
     handleSaveSession = async () => {
-        const { 
-            novaData, novoTipo, sessoes, novaTransmissaoUrl, camaraId, 
+        const {
+            novaData, novoTipo, sessoes, novaTransmissaoUrl, novaUrlVirtualSessao, camaraId,
             novoTipoDeSessao, novaLegislatura, novoNumeroPlenaria, homeConfig,
-            selectedSessaoId 
+            selectedSessaoId
         } = this.state;
-        
+
         if (!novaData || !novaLegislatura || !novoNumeroPlenaria) {
             alert("Por favor, preencha a data, legislatura e o número da sessão.");
             return;
@@ -267,9 +268,11 @@ class PautasSessao extends Component {
             : novaData || '';
 
         let finalTransmissaoUrl = novaTransmissaoUrl || '';
-        if ((novoTipoDeSessao === 'Remota' || novoTipoDeSessao === 'Híbrida') && !finalTransmissaoUrl) {
-            const jitsiRoomName = `e-camara-${camaraId}-${Date.now()}`;
-            finalTransmissaoUrl = `https://meet.jit.si/${jitsiRoomName}`;
+        let finalUrlVirtualSessao = novaUrlVirtualSessao || '';
+
+        if ((novoTipoDeSessao === 'Remota' || novoTipoDeSessao === 'Híbrida') && !finalUrlVirtualSessao) {
+            const jitsiRoomName = `e-camara-virtual-${camaraId}-${Date.now()}`;
+            finalUrlVirtualSessao = `https://meet.jit.si/${jitsiRoomName}`;
         }
 
         // Payload estritamente de acordo com a documentação do backend para evitar erros do Prisma
@@ -279,7 +282,8 @@ class PautasSessao extends Component {
             numeroSessao: String(novoNumeroPlenaria),
             tipoSessao: novoTipo.replace('Sessão ', ''),
             formatoSessao: novoTipoDeSessao,
-            urlTransmissao: finalTransmissaoUrl
+            urlTransmissao: finalTransmissaoUrl,
+            urlVirtualSessao: finalUrlVirtualSessao
         };
 
         let successMessage = "Sessão criada com sucesso! O título foi gerado automaticamente pelo sistema.";
@@ -306,15 +310,15 @@ class PautasSessao extends Component {
         } catch (error) {
 
             console.error("Erro detalhado ao criar sessão:", error.response?.data);
-            
+
             let errorMessage = "Erro de comunicação com o servidor.";
             if (error.response?.data) {
                 const data = error.response.data;
                 if (data.details) {
                     // O Prisma coloca o motivo exato do erro no FINAL da string, 
                     // que estava sendo cortada pelo navegador (...).
-                    const tail = data.details.length > 300 
-                        ? "..." + data.details.substring(data.details.length - 300) 
+                    const tail = data.details.length > 300
+                        ? "..." + data.details.substring(data.details.length - 300)
                         : data.details;
                     errorMessage = `${data.error || 'Erro'}\n\nMotivo:\n${tail}`;
                 } else {
@@ -346,6 +350,7 @@ class PautasSessao extends Component {
             novoNumeroPlenaria: isEmElaboracao ? sessao.numero : '',
             novoTipoDeSessao: isEmElaboracao ? sessao.formato : 'Presencial',
             novaTransmissaoUrl: isEmElaboracao ? sessao.urlTransmissao : '',
+            novaUrlVirtualSessao: isEmElaboracao ? sessao.urlVirtualSessao : '',
 
             // Signature and edital data
             // These are for GerenciarSessao component
@@ -750,7 +755,7 @@ class PautasSessao extends Component {
             content: [
                 logoBase64 ? { image: logoBase64, width: 70, absolutePosition: { x: 480, y: 35 } } : null,
                 { text: councilName || homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center', margin: [0, 10, 0, 30] },
-                
+
                 ...this.processHtmlToPdfMake(editalText),
 
                 // 🔥 🔐 BLOCO DE ASSINATURA DIGITAL
@@ -825,7 +830,7 @@ class PautasSessao extends Component {
 
     renderStepper = () => {
         const {
-            currentStep, novaData, novaLegislatura, novoNumeroPlenaria, novoTipo, novoTipoDeSessao, novaTransmissaoUrl,
+            currentStep, novaData, novaLegislatura, novoNumeroPlenaria, novoTipo, novoTipoDeSessao, novaTransmissaoUrl, novaUrlVirtualSessao,
             sessoes, selectedSessaoId, materiasDisponiveis, documentosAcessoriosDisponiveis, editalText, isGeneratingEdital,
             isFinalizing, roteiroPdfUrl, isEditingUrl, editedTransmissaoUrl, materiaSearchTerm, viewingMateriaForDetail,
             editalHorario, editalBaseLegal, editalOficio, isSignedEdital
@@ -874,7 +879,7 @@ class PautasSessao extends Component {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '25px', marginBottom: '30px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1.5fr', gap: '20px', marginBottom: '30px' }}>
                             <div className="form-group">
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>Formato</label>
                                 <select className="modal-input" style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee' }} value={novoTipoDeSessao} onChange={(e) => this.setState({ novoTipoDeSessao: e.target.value })}>
@@ -884,16 +889,30 @@ class PautasSessao extends Component {
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>URL da Transmissão (YouTube/Facebook)</label>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>URL da Transmissão (YouTube)</label>
                                 <div style={{ position: 'relative' }}>
                                     <FaLink style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
-                                    <input 
-                                        type="text" 
-                                        className="modal-input" 
-                                        style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee', paddingLeft: '45px' }} 
-                                        value={novaTransmissaoUrl} 
-                                        onChange={(e) => this.setState({ novaTransmissaoUrl: e.target.value })} 
-                                        placeholder="Cole o link aqui..." 
+                                    <input
+                                        type="text"
+                                        className="modal-input"
+                                        style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee', paddingLeft: '45px' }}
+                                        value={novaTransmissaoUrl}
+                                        onChange={(e) => this.setState({ novaTransmissaoUrl: e.target.value })}
+                                        placeholder="Cole o link aqui..."
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#444', fontSize: '0.9rem' }}>URL da Sala Virtual (Jitsi/Zoom)</label>
+                                <div style={{ position: 'relative' }}>
+                                    <FaLink style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+                                    <input
+                                        type="text"
+                                        className="modal-input"
+                                        style={{ borderRadius: '12px', height: '48px', border: '2px solid #eee', paddingLeft: '45px' }}
+                                        value={novaUrlVirtualSessao || ''}
+                                        onChange={(e) => this.setState({ novaUrlVirtualSessao: e.target.value })}
+                                        placeholder="Gerada automaticamente se vazio..."
                                     />
                                 </div>
                             </div>
@@ -959,9 +978,15 @@ class PautasSessao extends Component {
     };
 
     renderSessionCard = (sessao, onClickFn) => {
-        const { isAdmin } = this.state;
+        const { isAdmin, camaraId } = this.state;
         const statusColor = sessao.status === 'Aberta' ? '#2e7d32' : (sessao.status === 'Em Elaboração' ? '#ef6c00' : '#126B5E');
         const statusTagClass = sessao.status === 'Aberta' ? 'tag-success' : (sessao.status === 'Em Elaboração' ? 'tag-warning' : 'tag-primary');
+
+        const isClosed = ['Publicada', 'Encerrada'].includes(sessao.status);
+        const closedAt = sessao.metadata?.closedAt ? new Date(sessao.metadata.closedAt) : (sessao.createdAt ? new Date(sessao.createdAt) : null);
+        const isHourElapsed = closedAt ? (new Date() - closedAt >= 60 * 60 * 1000) : false;
+        const hasTransmissaoUrl = !!sessao.urlTransmissao;
+
         return (
             <div
                 key={sessao.id}
@@ -994,6 +1019,35 @@ class PautasSessao extends Component {
                         <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Visualizar <FaArrowLeft style={{ transform: 'rotate(180deg)' }} /></span>
                     </div>
                 </div>
+                {isClosed && isHourElapsed && hasTransmissaoUrl && (
+                    <button
+                        className="btn-primary"
+                        style={{
+                            marginTop: '15px',
+                            padding: '10px 15px',
+                            borderRadius: '12px',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            width: '100%',
+                            background: '#126B5E',
+                            color: '#fff',
+                            border: 'none',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 10px rgba(18, 107, 94, 0.2)',
+                            transition: 'all 0.2s ease-in-out'
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            this.props.history.push(`/admin/assistente-admin/novo/${camaraId}?youtubeUrl=${encodeURIComponent(sessao.urlTransmissao)}`);
+                        }}
+                    >
+                        <FaMagic /> Gerar Ata via IA
+                    </button>
+                )}
             </div>
         );
     };
@@ -1011,7 +1065,7 @@ class PautasSessao extends Component {
         } = this.state;
 
         const selectedSessao = sessoes.find(s => String(s.id) === String(selectedSessaoId));
-        
+
         if (this.state.isStepping) {
             return this.renderStepper();
         }
@@ -1123,8 +1177,8 @@ class PautasSessao extends Component {
         const isSearching = searchSessionTerm.trim() !== '' || filterSessionType !== 'Todos';
         const searchFiltered = statusFiltered.filter(s =>
             (s.tipo?.toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
-            String(s.numero || '').toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
-            s.data?.includes(searchSessionTerm)) &&
+                String(s.numero || '').toLowerCase().includes(searchSessionTerm.toLowerCase()) ||
+                s.data?.includes(searchSessionTerm)) &&
             (filterSessionType === 'Todos' || (s.tipoSessao || s.categoria || '').includes(filterSessionType))
         );
 

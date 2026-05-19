@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone, FaUpload, FaEye, FaCheckCircle, FaTimes, FaFileSignature } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaMagic, FaSpinner, FaDownload, FaCopy, FaPenNib, FaSave, FaMicrophone, FaUpload, FaEye, FaCheckCircle, FaTimes, FaFileSignature, FaYoutube, FaFile } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import MenuDashboard from '../../../componets/menuAdmin.jsx';
@@ -9,6 +9,7 @@ import { sendMessageToAIPrivate } from '../../../aiService.js';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import api from '../../../services/api.js';
+import { startAtaJobFromFile, startAtaJobFromYoutube, pollAtaJob } from '../../../services/ataJobService.js';
 import {
     TextField,
     Button,
@@ -62,16 +63,19 @@ const formats = [
     'header', 'bold', 'italic', 'underline', 'strike', 'list', 'bullet', 'align'
 ];
 
-const AdminAssistant = () => {
+const AdminAssistant = ({ history }) => {
     const [docType, setDocType] = useState('oficio');
     const [formData, setFormData] = useState({});
     const [generatedContent, setGeneratedContent] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [audioFile, setAudioFile] = useState(null);
+    const [youtubeUrl, setYoutubeUrl] = useState('');
+    const [ataInputMode, setAtaInputMode] = useState('file'); // 'file' | 'youtube'
     const [audioLoading, setAudioLoading] = useState(false);
     const [progressStep, setProgressStep] = useState(0); // 0: Idle, 1: Iniciado, 2: Processando, 3: Concluído
     const [statusMessage, setStatusMessage] = useState(''); // Estado para armazenar a mensagem de status
     const [elapsedTime, setElapsedTime] = useState(0); // Tempo decorrido em segundos
+    const cancelPollRef = useRef(null); // Referência para cancelar o polling quando necessário
     const [pdfData, setPdfData] = useState(null);
     const [showPdfPopup, setShowPdfPopup] = useState(false);
     const [isSigned, setIsSigned] = useState(false);
@@ -172,6 +176,17 @@ const AdminAssistant = () => {
         fetchConfigs();
     }, []);
 
+    // Detecta se foi passada uma URL de transmissão (YouTube) via query params
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const ytUrl = params.get('youtubeUrl');
+        if (ytUrl) {
+            setYoutubeUrl(decodeURIComponent(ytUrl));
+            setDocType('ata');
+            setAtaInputMode('youtube');
+        }
+    }, []);
+
     // Timer para o tempo decorrido
     useEffect(() => {
         let interval;
@@ -259,68 +274,120 @@ const AdminAssistant = () => {
         }
     };
 
+    // Inicia o job de ata e conecta o polling ao callback de status
+    const _startAtaJob = async (jobStartFn) => {
+        // Cancela polling anterior, se existir
+        if (cancelPollRef.current) {
+            cancelPollRef.current();
+            cancelPollRef.current = null;
+        }
+
+        setAudioLoading(true);
+        setProgressStep(1);
+        setStatusMessage('Iniciando processamento...');
+        setElapsedTime(0);
+
+        try {
+            const jobId = await jobStartFn();
+            console.log(`[AdminAssistant] Job de ata iniciado com ID: ${jobId}`);
+            setStatusMessage('Áudio enviado. Aguardando transcrição...');
+            setProgressStep(2);
+
+            const cancelFn = pollAtaJob(jobId, (status, data) => {
+                setStatusMessage(status);
+
+                switch (status) {
+                    case 'transcribing':
+                        setProgressStep(2);
+                        setStatusMessage('Transcrevendo áudio...');
+                        break;
+
+                    case 'generating':
+                        setProgressStep(2);
+                        setStatusMessage('Gerando ata com IA...');
+                        break;
+
+                    case 'completed': {
+                        setProgressStep(3);
+                        setStatusMessage('Ata gerada com sucesso!');
+
+                        let finalContent = data;
+                        try {
+                            if (typeof data === 'object' && data !== null) {
+                                if (data.html) {
+                                    finalContent = data.html;
+                                    if (data.metadata) {
+                                        setFormData(prev => ({ ...prev, ...data.metadata }));
+                                    }
+                                } else {
+                                    finalContent = JSON.stringify(data);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('[AdminAssistant] Resposta da IA não é JSON estruturado.', e);
+                        }
+
+                        setGeneratedContent(finalContent || '<p>Ata gerada com sucesso, mas o conteúdo está vazio.</p>');
+                        setAudioLoading(false);
+                        cancelPollRef.current = null;
+                        break;
+                    }
+
+                    case 'error':
+                        alert(`Erro no processamento: ${data || 'Erro desconhecido'}`);
+                        setAudioLoading(false);
+                        setProgressStep(0);
+                        cancelPollRef.current = null;
+                        break;
+
+                    default:
+                        break;
+                }
+            }, 5000);
+
+            cancelPollRef.current = cancelFn;
+        } catch (error) {
+            console.error('[AdminAssistant] Erro ao iniciar job de ata:', error);
+            alert(`Erro ao iniciar processamento: ${error.message}`);
+            setAudioLoading(false);
+            setProgressStep(0);
+        }
+    };
+
     const handleAudioGenerate = async () => {
         if (!audioFile) {
             alert('Por favor, selecione um arquivo de áudio.');
             return;
         }
-
-        alert('A geração de ata por áudio está em processo de migração para a nova API Node.js. Por favor, utilize a geração manual ou anexe o texto da transcrição.');
-        /*
-        setAudioLoading(true);
-        setProgressStep(1); // Job iniciado
-        setStatusMessage('Iniciando upload...');
-        setElapsedTime(0);
-
-        try {
-            const jobId = await startAtaGenerationJob(audioFile);
-            console.log(`Job de ata iniciado com ID: ${jobId}`);
-
-            const unsubscribe = listenToAtaJob(jobId, (status, data) => {
-                console.log(`Status do Job ${jobId}: ${status}`);
-                setStatusMessage(status); // Atualiza a mensagem de status na tela
-                switch (status) {
-                    case 'processing':
-                        setProgressStep(2); // Processando
-                        break;
-                    case 'completed':
-                        setProgressStep(3); // Concluído
-                        
-                        let finalContent = data;
-                        try {
-                            // Tenta interpretar a resposta como JSON para extrair metadados
-                            const parsedData = JSON.parse(data);
-                            if (parsedData.html && parsedData.metadata) {
-                                finalContent = parsedData.html;
-                                // Preenche os campos do formulário com os metadados extraídos
-                                setFormData(prev => ({ ...prev, ...parsedData.metadata }));
-                            }
-                        } catch (e) {
-                            console.warn("A resposta da IA não está em formato JSON estruturado, usando texto puro.", e);
-                        }
-
-                        setGeneratedContent(finalContent || '<p>Ata gerada com sucesso, mas o conteúdo está vazio.</p>');
-                        setAudioLoading(false);
-                        unsubscribe(); // Para de escutar
-                        break;
-                    case 'error':
-                        alert(`Erro no processamento do áudio: ${data}`);
-                        setAudioLoading(false);
-                        setProgressStep(0);
-                        unsubscribe(); // Para de escutar
-                        break;
-                    default:
-                        break;
-                }
-            });
-        } catch (error) {
-            console.error("Erro Áudio:", error);
-            alert(`Erro ao gerar ata: ${error.message}`);
-            setAudioLoading(false);
-            setProgressStep(0);
-        }
-        */
+        await _startAtaJob(() =>
+            startAtaJobFromFile(audioFile, camaraConfigs.camaraId)
+        );
     };
+
+    const handleYoutubeGenerate = async () => {
+        if (!youtubeUrl.trim()) {
+            alert('Por favor, insira a URL do vídeo do YouTube.');
+            return;
+        }
+        // Validação básica de URL do YouTube
+        const ytPattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]{11}/;
+        if (!ytPattern.test(youtubeUrl)) {
+            alert('URL do YouTube inválida. Use o formato: https://www.youtube.com/watch?v=... ou https://youtu.be/...');
+            return;
+        }
+        await _startAtaJob(() =>
+            startAtaJobFromYoutube(youtubeUrl, camaraConfigs.camaraId)
+        );
+    };
+
+    // Limpa o polling ao desmontar o componente
+    useEffect(() => {
+        return () => {
+            if (cancelPollRef.current) {
+                cancelPollRef.current();
+            }
+        };
+    }, []);
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
@@ -650,6 +717,12 @@ ${footer?.copyright || ''}`;
                     }
                 });
                 alert("Documento enviado para o Storage com sucesso!");
+                
+                if (history) {
+                    history.push(`/admin/assistente-admin/${camaraId}`);
+                } else {
+                    window.location.href = `/admin/assistente-admin/${camaraId}`;
+                }
             } catch (error) {
                 console.error("Erro ao salvar no storage:", error);
                 alert("Erro ao salvar. Verifique se o arquivo excede o limite de 50MB.");
@@ -780,44 +853,146 @@ ${footer?.copyright || ''}`;
                             </select>
                         </div>
 
-                        {/* Seção Especial para Ata via Upload de Áudio */}
+                        {/* Seção Especial para Ata via Áudio / YouTube */}
                         {docType === 'ata' && (
-                            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <label className="block text-sm font-bold text-blue-600 mb-2 flex items-center gap-2 label-form">
-                                    <FaMicrophone /> Gerar Ata via Áudio (Upload)
+                            <div className="mb-6" style={{
+                                background: 'linear-gradient(135deg, #f0fdf8 0%, #e8f5f1 100%)',
+                                borderRadius: '16px',
+                                border: '1.5px solid #b2dfdb',
+                                padding: '20px',
+                                boxShadow: '0 2px 12px rgba(18,107,94,0.07)'
+                            }}>
+                                <label className="label-form" style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    fontWeight: '700', color: '#126B5E', fontSize: '0.9rem', marginBottom: '14px'
+                                }}>
+                                    <FaMicrophone /> Gerar Ata via Mídia
                                 </label>
-                                <div className="flex gap-2 mb-2">
-                                    <input
-                                        type="file"
-                                        accept="audio/*,video/*"
-                                        className="modal-input flex-1"
-                                        onChange={(e) => setAudioFile(e.target.files[0])}
-                                        style={{ padding: '8px' }}
-                                    />
+
+                                {/* Tabs de seleção do modo */}
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                                     <button
-                                        onClick={handleAudioGenerate}
-                                        disabled={audioLoading}
-                                        className="btn-secondary"
-                                        style={{ background: '#126B5E', color: 'white', border: 'none', whiteSpace: 'nowrap', marginTop: '10px' }}
+                                        type="button"
+                                        onClick={() => setAtaInputMode('file')}
+                                        style={{
+                                            flex: 1, padding: '8px 12px', borderRadius: '10px',
+                                            fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                            border: ataInputMode === 'file' ? '2px solid #126B5E' : '2px solid #ccc',
+                                            background: ataInputMode === 'file' ? '#126B5E' : 'white',
+                                            color: ataInputMode === 'file' ? 'white' : '#555',
+                                            transition: 'all 0.2s ease'
+                                        }}
                                     >
-                                        {audioLoading ? <FaSpinner className="animate-spin" /> : <FaUpload />}
-                                        {audioLoading ? ' Processando...' : ' Enviar e Gerar'}
+                                        <FaFile size={12} /> Upload de Arquivo
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAtaInputMode('youtube')}
+                                        style={{
+                                            flex: 1, padding: '8px 12px', borderRadius: '10px',
+                                            fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                            border: ataInputMode === 'youtube' ? '2px solid #c00' : '2px solid #ccc',
+                                            background: ataInputMode === 'youtube' ? '#c00' : 'white',
+                                            color: ataInputMode === 'youtube' ? 'white' : '#555',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <FaYoutube size={14} /> URL do YouTube
                                     </button>
                                 </div>
 
-                                {/* Stepper de Progresso */}
-                                {audioLoading && (
-                                    <div className="mt-3 process-container">
-                                        <div className="flex justify-between text-xs text-gray-500 mb-1 process-text" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                                            <span className={progressStep >= 1 ? "text-green-600 font-bold" : ""}>{statusMessage}</span>
+                                {/* Modo: Upload de Arquivo */}
+                                {ataInputMode === 'file' && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <input
+                                            type="file"
+                                            accept="audio/*,video/*"
+                                            className="modal-input"
+                                            onChange={(e) => setAudioFile(e.target.files[0])}
+                                            style={{ padding: '8px' }}
+                                        />
+                                        {audioFile && (
+                                            <p style={{ fontSize: '0.8rem', color: '#126B5E', margin: 0 }}>
+                                                🎵 Arquivo selecionado: <strong>{audioFile.name}</strong>
+                                            </p>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={handleAudioGenerate}
+                                            disabled={audioLoading}
+                                            className="btn-secondary"
+                                            style={{ background: '#126B5E', color: 'white', border: 'none', width: '100%', justifyContent: 'center' }}
+                                        >
+                                            {audioLoading ? <FaSpinner className="animate-spin" /> : <FaUpload />}
+                                            {audioLoading ? ' Processando...' : ' Enviar e Gerar Ata'}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Modo: URL do YouTube */}
+                                {ataInputMode === 'youtube' && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <div style={{ position: 'relative' }}>
+                                            <FaYoutube size={16} style={{
+                                                position: 'absolute', left: '12px', top: '50%',
+                                                transform: 'translateY(-50%)', color: '#c00'
+                                            }} />
+                                            <input
+                                                type="url"
+                                                className="modal-input"
+                                                placeholder="https://www.youtube.com/watch?v=..."
+                                                value={youtubeUrl}
+                                                onChange={(e) => setYoutubeUrl(e.target.value)}
+                                                style={{ paddingLeft: '38px' }}
+                                                disabled={audioLoading}
+                                            />
                                         </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                            <div className="bg-green-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${(progressStep / 3) * 100}%` }}></div>
-                                        </div>
-                                        <p style={{ color: '#555', textAlign: 'left', fontSize: '0.85rem', marginTop: '15px', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                            <FaSpinner style={{ color: '#555' }} className="animate-spin" />
-                                            Processando áudio e gerando ata. <br /> Tempo decorrido: {formatTime(elapsedTime)}. <br /> Por favor aguarde...
+                                        <p style={{ fontSize: '0.75rem', color: '#777', margin: 0 }}>
+                                            Cole a URL do vídeo da sessão no YouTube. O áudio será extraído automaticamente.
                                         </p>
+                                        <button
+                                            type="button"
+                                            onClick={handleYoutubeGenerate}
+                                            disabled={audioLoading}
+                                            className="btn-secondary"
+                                            style={{ background: '#c00', color: 'white', border: 'none', width: '100%', justifyContent: 'center' }}
+                                        >
+                                            {audioLoading ? <FaSpinner className="animate-spin" /> : <FaYoutube />}
+                                            {audioLoading ? ' Processando...' : ' Extrair Áudio e Gerar Ata'}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Stepper de Progresso (comum aos dois modos) */}
+                                {audioLoading && (
+                                    <div className="mt-3 process-container" style={{ marginTop: '16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <FaSpinner className="animate-spin" style={{ color: '#126B5E', flexShrink: 0 }} />
+                                            <span style={{ fontSize: '0.85rem', color: '#126B5E', fontWeight: '600' }}>
+                                                {statusMessage}
+                                            </span>
+                                        </div>
+                                        <div style={{ background: '#ddd', borderRadius: '99px', height: '6px', overflow: 'hidden' }}>
+                                            <div style={{
+                                                background: 'linear-gradient(90deg, #126B5E, #1abc9c)',
+                                                height: '100%',
+                                                borderRadius: '99px',
+                                                width: `${(progressStep / 3) * 100}%`,
+                                                transition: 'width 0.5s ease'
+                                            }} />
+                                        </div>
+                                        <p style={{ color: '#888', fontSize: '0.78rem', marginTop: '8px', fontStyle: 'italic' }}>
+                                            ⏱ Tempo decorrido: {formatTime(elapsedTime)} — Por favor, aguarde...
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Sucesso */}
+                                {!audioLoading && progressStep === 3 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', color: '#126B5E', fontWeight: '600', fontSize: '0.85rem' }}>
+                                        <FaCheckCircle /> Ata gerada com sucesso! Revise e salve o documento.
                                     </div>
                                 )}
                             </div>

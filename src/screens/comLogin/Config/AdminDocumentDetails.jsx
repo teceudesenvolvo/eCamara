@@ -163,9 +163,9 @@ class AdminDocumentDetails extends Component {
                     console.error('[Error] Fallback ao buscar lista de documentos:', listError);
                 }
             }
-            this.setState({ 
-                loading: false, 
-                error: status === 404 ? 'Documento não encontrado (404).' : 'Erro de conexão ao buscar documento.' 
+            this.setState({
+                loading: false,
+                error: status === 404 ? 'Documento não encontrado (404).' : 'Erro de conexão ao buscar documento.'
             });
         }
     };
@@ -179,14 +179,14 @@ class AdminDocumentDetails extends Component {
 
         try {
             const response = await api.get(`/councils/${camaraId}`);
-            
+
             // Extração robusta dos dados da câmara lidando com possíveis retornos em array
             const councilData = Array.isArray(response.data) ? response.data[0] : (response.data || {});
             const councilName = councilData.name || ''; // Usa o nome institucional
             const configData = councilData.config || councilData.dadosConfig || {};
 
             const layoutData = configData.layout || {};
-            
+
             if (layoutData.logoLight) {
                 this.getBase64(layoutData.logoLight).then(logoBase64 => this.setState({ logoBase64 }));
             }
@@ -242,10 +242,10 @@ class AdminDocumentDetails extends Component {
         if (!documento) return null;
 
         const content = [
-            logoBase64 ? { 
-                image: logoBase64, 
-                width: 70, 
-                absolutePosition: { x: 480, y: 35 } 
+            logoBase64 ? {
+                image: logoBase64,
+                width: 70,
+                absolutePosition: { x: 480, y: 35 }
             } : null,
             { text: councilName || homeConfig.titulo || 'Câmara Municipal', style: 'header', alignment: 'center', margin: [0, 10, 0, 0] },
             footerConfig.slogan && { text: footerConfig.slogan, style: 'slogan', alignment: 'center', margin: [0, 0, 0, 15] },
@@ -411,7 +411,7 @@ class AdminDocumentDetails extends Component {
                 <MenuDashboard />
                 <div className="dashboard-content">
                     <div className="dashboard-header">
-                        
+
                         <div>
                             <h1 className="dashboard-header-title">{documento.titulo}</h1>
                             <p className="dashboard-header-desc">{(documento.tipo || 'Documento')} - Criado em {new Date(documento.createdAt).toLocaleDateString()}</p>
@@ -463,7 +463,7 @@ class AdminDocumentDetails extends Component {
                                                 {this.getLabel(key)}
                                             </label>
                                             <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '6px', border: '1px solid #eee', color: '#333', fontSize: '1rem' }}>
-                                                {value || <span style={{color: '#999', fontStyle: 'italic'}}>Não informado</span>}
+                                                {value || <span style={{ color: '#999', fontStyle: 'italic' }}>Não informado</span>}
                                             </div>
                                         </div>
                                     ))}
@@ -476,8 +476,8 @@ class AdminDocumentDetails extends Component {
                                                 <p style={{ margin: 0, fontWeight: 'bold', color: '#166534', fontSize: '0.9rem' }}>Anexo Vinculado</p>
                                                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#15803d' }}>{documento.attachment.name}</p>
                                             </div>
-                                            <button 
-                                                className="btn-primary" 
+                                            <button
+                                                className="btn-primary"
                                                 style={{ width: 'auto', padding: '8px 15px', fontSize: '0.8rem', background: '#16a34a' }}
                                                 onClick={() => {
                                                     const link = document.createElement('a');
@@ -491,8 +491,8 @@ class AdminDocumentDetails extends Component {
                                         </div>
                                     )}
 
-                                    <p style={{ fontSize: '0.9rem', color: '#555'}}>Este documento não possui metadados estruturados para exibição.</p>
-                                    <p style={{ fontSize: '0.9rem', color: '#555'}}>Utilize a opção "Visualizar PDF" para ver o conteúdo completo.</p>
+                                    <p style={{ fontSize: '0.9rem', color: '#555' }}>Este documento não possui metadados estruturados para exibição.</p>
+                                    <p style={{ fontSize: '0.9rem', color: '#555' }}>Utilize a opção "Visualizar PDF" para ver o conteúdo completo.</p>
                                 </div>
                             )}
 
