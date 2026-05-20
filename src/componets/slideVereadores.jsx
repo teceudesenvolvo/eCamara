@@ -58,23 +58,28 @@ class slideFeactures extends Component {
                 }
             });
 
-            console.log("Users data before mapping in slideVereadores:", usersData);
-            const fetchedVereadores = usersData
+            const allUsersData = usersResponse.data || [];
+            const usersList = Array.isArray(allUsersData) ? allUsersData : (allUsersData?.users || Object.values(allUsersData || {}));
+
+            const fetchedVereadores = usersList
                 .filter(u => {
                     const role = (u.role || u.tipo || '').toLowerCase();
                     const cargo = (u.cargo || '').toLowerCase();
-                    // Filtra por nível de acesso ou cargo institucional para identificar parlamentares
-                    return role === 'vereador' || role === 'presidente' || role === 'parlamentar' ||
+                    // Filtra especificamente por tipo (papel) ou cargo de Vereador e Presidente
+                    return role === 'vereador' || role === 'presidente' ||
                         cargo.includes('vereador') || cargo.includes('presidente');
                 })
-                .map(u => ({
-                    ...u,
-                    id: u.id,
-                    foto: u.foto || u.avatar || u.photoURL || 'https://www.nicepng.com/png/detail/787-7871387_our-team-person-unknown-png.png',
-                    materiasCount: materiasCountByUserId[u.id] || u._count?.matters || 0,
-                    comissoesCount: comissoesCountByUserId[u.id] || 0
-                }));
-            console.log("Fetched Vereadores after mapping:", fetchedVereadores);
+                .map(u => {
+                    const userId = u.id || u._id || u.uid;
+                    return {
+                        ...u,
+                        id: userId,
+                        name: u.name || u.nome || 'Parlamentar',
+                        foto: u.foto || u.avatar || u.photoURL || 'https://www.nicepng.com/png/detail/787-7871387_our-team-person-unknown-png.png',
+                        materiasCount: materiasCountByUserId[userId] || u._count?.matters || 0,
+                        comissoesCount: comissoesCountByUserId[userId] || 0
+                    };
+                });
 
             this.setState({ vereadores: fetchedVereadores, loading: false });
         } catch (error) {

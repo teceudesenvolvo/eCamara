@@ -19,12 +19,31 @@ class HomePage extends Component {
             isChatOpen: false,
             loading: true,
             camaraId: this.props.match.params.camaraId || 'master',
+            itemsLimit: 3,
         };
     }
 
     componentDidMount() {
         this.fetchData();
+        this.handleResize();
+        window.addEventListener('resize', this.handleResize);
     }
+
+    componentWillUnmount() {
+        window.removeEventListener('resize', this.handleResize);
+    }
+
+    handleResize = () => {
+        const width = window.innerWidth;
+        let limit = 3;
+        if (width > 1600) limit = 8;
+        else if (width > 1200) limit = 6;
+        else if (width > 992) limit = 4;
+        
+        if (limit !== this.state.itemsLimit) {
+            this.setState({ itemsLimit: limit });
+        }
+    };
 
     getYouTubeID = (url) => {
         if (!url) return null;
@@ -74,7 +93,7 @@ class HomePage extends Component {
             // 3. Recent matters for "Acontece na Câmara"
             const agendaRaw = mattersResponse.data || [];
             agendaRaw.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            const agenda = agendaRaw.slice(0, 3).map(materia => {
+            const agenda = agendaRaw.slice(0, 8).map(materia => {
                 const data = new Date(materia.dataApresenta || materia.createdAt);
                 return {
                     id: materia.id,
@@ -95,7 +114,7 @@ class HomePage extends Component {
                 homeConfig,
                 vereadores,
                 agenda,
-                sessoes: sessoes.slice(0, 3),
+                sessoes: sessoes.slice(0, 8),
                 loading: false,
             }, () => {
                 // Aplica a cor primária do banco de dados ao root do documento
@@ -117,7 +136,7 @@ class HomePage extends Component {
     }
 
     render() {
-        const { homeConfig, agenda, vereadores, sessoes, isChatOpen, loading, camaraId } = this.state;
+        const { homeConfig, agenda, vereadores, sessoes, isChatOpen, loading, camaraId, itemsLimit } = this.state;
 
         if (loading) {
             return (
@@ -163,7 +182,7 @@ class HomePage extends Component {
                             <Link to={`/materias/${camaraId}`} className="view-all-link">Ver tudo <FaArrowRight /></Link>
                         </div>
                         <div className="modern-grid">
-                            {agenda.length > 0 ? agenda.map(item => (
+                            {agenda.length > 0 ? agenda.slice(0, itemsLimit).map(item => (
                                 <div className="glass-card" key={item.id} onClick={() => this.props.history.push(`/materia/${camaraId}/${item.id}`)}>
                                     <div className="card-content-modern">
                                         <span className="card-tag">{item.day} {item.month} • {item.time}</span>
@@ -182,7 +201,7 @@ class HomePage extends Component {
                             <Link to={`/sessoes/${camaraId}`} className="view-all-link">Ver tudo <FaArrowRight /></Link>
                         </div>
                         <div className="modern-grid no-hover-container">
-                            {sessoes.length > 0 ? sessoes.map(sessao => {
+                            {sessoes.length > 0 ? sessoes.slice(0, itemsLimit).map(sessao => {
                                 const videoId = this.getYouTubeID(sessao.urlTransmissao || sessao.transmissaoUrl);
                                 const thumbUrl = videoId
                                     ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`

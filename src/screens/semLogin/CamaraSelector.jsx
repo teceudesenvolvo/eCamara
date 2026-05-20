@@ -31,7 +31,8 @@ const CamaraSelector = () => {
                         cityName: homeConfig.cidade || '',
                         corPrimaria: layoutConfig.corPrimaria || '#126B5E'
                     };
-                });
+                })
+                .filter(camara => camara.name !== 'Plataforma Root');
 
                 setCamaras(camaraList);
                 setLoading(false);
