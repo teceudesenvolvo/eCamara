@@ -69,6 +69,9 @@ class Configuracoes extends Component {
                 api.get(`/commissions/${camaraId}`)
             ]);
 
+            const allUsersData = usersResponse.data || [];
+            const usersMap = new Map(allUsersData.map(u => [u.id || u.uid, u]));
+
             const councilData = Array.isArray(councilResponse.data) ? councilResponse.data[0] : (councilResponse.data || {});
             const config = councilData.config || councilData.dadosConfig || {};
             
@@ -76,9 +79,8 @@ class Configuracoes extends Component {
             const layoutData = { ...this.state.layoutConfig, ...(config.layout || {}) };
             const permissoesData = config.permissoes || {};
             
-            // Extração robusta de usuários e comissões
-            const rawUsers = usersResponse.data;
-            const usersList = (Array.isArray(rawUsers) ? rawUsers : (rawUsers?.users || Object.values(rawUsers || {})))
+            // Extração robusta de usuários
+            const usersList = (Array.isArray(allUsersData) ? allUsersData : (allUsersData?.users || Object.values(allUsersData || {})))
                 .filter(u => u).map(u => ({ ...u, id: u.id || u._id }));
 
             const rawComissoes = comissoesResponse.data;
@@ -86,8 +88,15 @@ class Configuracoes extends Component {
                 .filter(c => c).map(c => ({
                     ...c,
                     id: c.id || c._id,
-                    nome: c.name || c.nome || 'Comissão sem nome', // Mapeia name do backend para nome do frontend
-                    membros: c.membros ? (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)) : [] // Normalize membros to array
+                    nome: c.name || c.nome || 'Comissão sem nome',
+                    membros: c.membros ? (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)).map(member => {
+                        const userProfile = usersMap.get(member.id || member.uid);
+                        return {
+                            ...member,
+                            foto: userProfile?.foto || userProfile?.avatar || userProfile?.photoURL || member.foto || member.avatar || member.photoURL || 'https://via.placeholder.com/50',
+                            nome: userProfile?.name || member.nome || member.name
+                        };
+                    }) : []
                 }));
 
             this.setState({
@@ -556,7 +565,7 @@ class Configuracoes extends Component {
                                     {comissao.membros && comissao.membros.length > 0 ? comissao.membros.map(membro => (
                                         <div key={membro.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f5', padding: '5px 10px', borderRadius: '8px', border: '1px solid #eee' }}>
                                             <img src={membro.foto || membro.avatar || 'https://via.placeholder.com/25'} alt={membro.name || membro.nome} style={{ width: '25px', height: '25px', borderRadius: '50%', objectFit: 'cover' }} />
-                                            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{membro.name || membro.nome} ({membro.cargo})</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{membro.nome} ({membro.cargo})</span>
                                             <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }} onClick={() => this.handleRemoveMember(comissao.id, membro.id)}><FaTimes size={12} /></button>
                                         </div>
                                     )) : (

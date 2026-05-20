@@ -49,23 +49,33 @@ class Comissoes extends Component {
         }
 
         try {
-            const response = await api.get(`/commissions/${camaraId}`);
-            const data = response.data || [];
+            const [commissionsResponse, usersResponse] = await Promise.all([
+                api.get(`/commissions/${camaraId}`),
+                api.get(`/users/council/${camaraId}`)
+            ]);
+
+            const data = commissionsResponse.data || [];
+            const usersData = usersResponse.data || [];
+            console.log("Dados brutos das comissões:", data);
             
             const fetchedComissoes = data.map((val) => ({
                 id: val.id,
-                nome: val.name || val.nome || 'Comissão sem nome',
+                nome: val.name || 'Comissão sem nome',
                 sigla: val.sigla || (val.name || val.nome)?.substring(0, 4).toUpperCase() || 'COM',
                 criacao: val.createdAt ? new Date(val.createdAt).toLocaleDateString('pt-BR') : '-',
                 tipo: val.tipo || 'Permanente',
                 situacao: val.status || 'Ativa',
                 descricao: val.descricao || '',
                 imagem: val.imagem || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=500&q=60',
-                membros: val.membros ? (Array.isArray(val.membros) ? val.membros : Object.values(val.membros)).map(m => ({
-                    ...m,
-                    // Resolve o problema da imagem aqui
-                    foto: m.foto || m.avatar || m.photoURL || 'https://via.placeholder.com/50'
-                })) : [],
+                membros: val.membros ? (Array.isArray(val.membros) ? val.membros : Object.values(val.membros)).map(member => {
+                    const user = usersData.find(u => u.id === member.id || u.uid === member.id);
+                    return {
+                        ...member,
+                        // Prioriza a foto do usuário completo, se disponível, senão usa o fallback
+                        foto: user?.foto || user?.avatar || user?.photoURL || member.foto || member.avatar || member.photoURL || 'https://via.placeholder.com/50',
+                        nome: user?.name || member.nome || member.name
+                    };
+                }) : [],
                 reunioes: val.reunioes ? (Array.isArray(val.reunioes) ? val.reunioes : Object.values(val.reunioes)) : []
             }));
 
@@ -222,7 +232,7 @@ class Comissoes extends Component {
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
                                             {selectedComissao.membros.length > 0 ? selectedComissao.membros.map((membro, index) => (
                                                 <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'rgba(255,255,255,0.5)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)', boxShadow: '0 4px 15px rgba(0,0,0,0.02)' }}>
-                                                    <img src={membro.foto || 'https://via.placeholder.com/50'} alt={membro.nome} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                    <img src={membro.foto || 'https://via.placeholder.com/50'} alt={membro.name} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
                                                     <div>
                                                         <p style={{ margin: 0, fontWeight: '700', fontSize: '0.95rem', color: '#1a1a1a' }}>{membro.nome}</p>
                                                         <p style={{ margin: 0, fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>{membro.cargo}</p>

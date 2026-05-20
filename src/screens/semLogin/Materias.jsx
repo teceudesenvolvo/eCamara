@@ -34,6 +34,7 @@ class Materias extends Component {
         data: '',
       },
       showFilters: true,
+      activeTab: 'todas', // 'todas' ou o tipo da matéria
     };
   }
 
@@ -59,12 +60,14 @@ class Materias extends Component {
         apresentacao: val.tipoApresentacao || 'Escrita',
         tramitacao: val.regTramita || 'Ordinária',
         exercicio: val.ano || '',
+        tipoMateria: val.tipoMateria || 'Matéria',
+        createdAt: val.createdAt,
         data: val.dataApresenta || (val.createdAt ? new Date(val.createdAt).toLocaleDateString('pt-BR') : ''),
         linkId: val.id
       }));
 
-      // Sort by creation date or date of presentation
-      fetchedRows.sort((a, b) => new Date(b.createdAt || b.data) - new Date(a.createdAt || a.data));
+      // Ordena por data de criação (mais recentes primeiro)
+      fetchedRows.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).reverse();
 
       this.setState({ rows: fetchedRows, loading: false });
 
@@ -100,16 +103,26 @@ class Materias extends Component {
     this.setState(prevState => ({ showFilters: !prevState.showFilters }));
   };
 
+  // Helper function to get unique matter types for tabs
+  getUniqueMatterTypesForTabs = () => {
+    const { rows } = this.state;
+    const types = new Set(rows.map(item => item.tipoMateria).filter(Boolean));
+    return ['todas', ...Array.from(types).sort()];
+  };
   render() {
-    const { rows, filterText, showFilters, loading, camaraId } = this.state;
+    const { rows, filterText, showFilters, loading, camaraId, activeTab } = this.state;
 
     // Filter the rows array based on the search term
     const filteredRows = rows.filter((row) => {
-      return Object.keys(filterText).every(key => {
+      const matchesSearch = Object.keys(filterText).every(key => {
         const rowValue = String(row[key] || '').toLowerCase();
         const filterValue = String(filterText[key] || '').toLowerCase();
         return rowValue.includes(filterValue);
       });
+
+      const matchesTab = activeTab === 'todas' || (row.tipoMateria || '').toLowerCase() === activeTab.toLowerCase();
+
+      return matchesSearch && matchesTab;
     });
 
     // Helper function to get unique values for select options
@@ -119,17 +132,61 @@ class Materias extends Component {
 
     const selectFields = ['autor', 'apresentacao', 'tramitacao', 'exercicio', 'data'];
 
+    const uniqueMatterTypesForTabs = this.getUniqueMatterTypesForTabs();
+
     return (
       <div className='App-header-modern'>
         <div className='home-content-wrapper' style={{ gap: '30px' }}>
           
           
           <div>
-          
           {loading && (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
                   <FaSpinner className="animate-spin" size={30} color="#126B5E" />
               </div>
+          )}
+
+          {!loading && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0px' }}>
+              <div style={{ 
+                display: 'flex', 
+                background: 'rgba(255, 255, 255, 0.4)', 
+                borderRadius: '30px', 
+                padding: '5px', 
+                backdropFilter: 'blur(20px)', 
+                border: '1px solid rgba(255,255,255,0.6)', 
+                boxShadow: '0 4px 15px rgba(0,0,0,0.05)', 
+                overflowX: 'auto',
+                maxWidth: '100%',
+                marginBottom: '70px',
+                scrollbarWidth: 'none' // Esconde scrollbar no Firefox
+              }}>
+                {uniqueMatterTypesForTabs.map(type => {
+                  const isActive = activeTab === type;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => this.setState({ activeTab: type })}
+                      style={{
+                        background: isActive ? '#fff' : 'transparent',
+                        color: isActive ? '#1a1a1a' : '#555',
+                        border: 'none',
+                        borderRadius: '25px',
+                        padding: '12px 24px',
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {type === 'todas' ? 'Todas' : type}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           <div className="search-box-wrapper-openai" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', width: '100%', maxWidth: 'none', marginBottom: '10px', padding: '10px 5px', borderRadius: '24px', background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)' }}>

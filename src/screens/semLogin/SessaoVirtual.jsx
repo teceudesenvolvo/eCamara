@@ -33,6 +33,7 @@ class SessaoVirtual extends Component {
       showMateriaModal: false,
       showFilePopup: false,
       fileUrl: null,
+      activeTab: 'todas',
     };
   }
 
@@ -57,9 +58,31 @@ class SessaoVirtual extends Component {
     }
 
     try {
-      const response = await api.get(`/session-detail/${sessaoId}`);
-      const normalized = normalizeSession(Array.isArray(response.data) ? response.data[0] : response.data);
+      const [sessionResponse, usersResponse] = await Promise.all([
+        api.get(`/session-detail/${sessaoId}`),
+        api.get(`/users/council/${camaraId}`)
+      ]);
+
+      const usersData = usersResponse.data || [];
+      const usersMap = new Map(usersData.map(user => [user.id || user.uid, user]));
+
+      const normalized = normalizeSession(Array.isArray(sessionResponse.data) ? sessionResponse.data[0] : sessionResponse.data);
+
       if (normalized) {
+        // Enriquecer a lista de presença com dados atualizados dos usuários (fotos e nomes)
+        const presencaRaw = normalized.presenca || {};
+        const presencaArray = Array.isArray(presencaRaw) ? presencaRaw : Object.values(presencaRaw);
+
+        normalized.presenca = presencaArray.map(p => {
+          const userId = p.userId || p.id || p.uid;
+          const userProfile = usersMap.get(userId);
+          return {
+            ...p,
+            foto: userProfile?.foto || userProfile?.avatar || userProfile?.photoURL || p.foto || p.avatar || p.photoURL || 'https://via.placeholder.com/150',
+            nome: userProfile?.name || p.nome || 'Parlamentar'
+          };
+        });
+
         this.setState({ sessao: normalized, loading: false });
       } else {
         if (this.state.loading) this.setState({ loading: false });
@@ -129,7 +152,7 @@ class SessaoVirtual extends Component {
   };
 
   render() {
-    const { sessao, loading, showMateriaModal, selectedMateria, user, userRole } = this.state;
+    const { sessao, loading, showMateriaModal, selectedMateria, user, userRole, activeTab } = this.state;
 
     if (loading) {
       return <div className='App-header-modern' style={{ justifyContent: 'center', alignItems: 'center', minHeight: '100vh', display: 'flex' }}><p>Carregando sessão...</p></div>;
@@ -140,7 +163,14 @@ class SessaoVirtual extends Component {
     }
 
     const materiasRaw = sessao.matters || sessao.itens || [];
-    const materias = Array.isArray(materiasRaw) ? materiasRaw : Object.values(materiasRaw);
+    const allMaterias = Array.isArray(materiasRaw) ? materiasRaw : Object.values(materiasRaw);
+
+    // Extração dinâmica dos tipos de matérias presentes nesta sessão para as abas
+    const uniqueMatterTypes = ['todas', ...new Set(allMaterias.map(m => m.tipoMateria).filter(Boolean))].sort();
+
+    const materias = activeTab === 'todas'
+      ? allMaterias
+      : allMaterias.filter(m => (m.tipoMateria || '').toLowerCase() === activeTab.toLowerCase());
 
     const presencaRaw = sessao.presenca || [];
     const presenca = (Array.isArray(presencaRaw) ? presencaRaw : Object.values(presencaRaw)).map(p => ({
@@ -262,8 +292,48 @@ class SessaoVirtual extends Component {
               <main className='sv-col-materias'>
               <h2 className='sv-section-title'>
                 Matérias em Pauta
-                <span className='sv-count-badge'>{materias.length}</span>
+                <span className='sv-count-badge'>{allMaterias.length}</span>
               </h2>
+
+              {/* Filtro por Abas (Scrollable no Mobile) */}
+              {allMaterias.length > 0 && uniqueMatterTypes.length > 2 && (
+                <div style={{ 
+                  display: 'flex', 
+                  background: 'rgba(255, 255, 255, 0.4)', 
+                  borderRadius: '30px', 
+                  padding: '5px', 
+                  backdropFilter: 'blur(20px)', 
+                  border: '1px solid rgba(255,255,255,0.6)', 
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.05)', 
+                  overflowX: 'auto',
+                  maxWidth: '100%',
+                  marginBottom: '20px',
+                  scrollbarWidth: 'none'
+                }}>
+                  {uniqueMatterTypes.map(type => (
+                    <button
+                      key={type}
+                      onClick={() => this.setState({ activeTab: type })}
+                      style={{
+                        background: activeTab === type ? '#fff' : 'transparent',
+                        color: activeTab === type ? '#1a1a1a' : '#555',
+                        border: 'none',
+                        borderRadius: '25px',
+                        padding: '10px 20px',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        boxShadow: activeTab === type ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {type === 'todas' ? 'Todas' : type}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {materias.length === 0 ? (
                 <div className='sv-empty-state'>Nenhuma matéria em pauta.</div>
               ) : (

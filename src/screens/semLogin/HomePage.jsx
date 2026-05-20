@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import { FaSearch, FaArrowRight } from 'react-icons/fa';
-import SlideFeacures from '../../componets/slideFeactures.jsx';
+import SlideFeacures from '../../componets/slideVereadores.jsx';
 import '../../App.css';
 import ChatAI from './ChatAI.jsx';
 import api from '../../services/api.js';
@@ -183,7 +183,7 @@ class HomePage extends Component {
                         </div>
                         <div className="modern-grid no-hover-container">
                             {sessoes.length > 0 ? sessoes.map(sessao => {
-                                const videoId = this.getYouTubeID(sessao.transmissaoUrl);
+                                const videoId = this.getYouTubeID(sessao.urlTransmissao || sessao.transmissaoUrl);
                                 const thumbUrl = videoId
                                     ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
                                     : 'https://via.placeholder.com/480x270?text=Sessão+Sem+Vídeo';

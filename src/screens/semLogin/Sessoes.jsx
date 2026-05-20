@@ -13,6 +13,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import PageHeader from '../../componets/PageHeader';
 
 import api from '../../services/api';
+import { parseSessionDate } from '../../utils/sessionNormalizer';
 
 class Sessoes extends Component {
     constructor(props) {
@@ -27,7 +28,7 @@ class Sessoes extends Component {
                 legislatura: '',
             },
             showFilters: true,
-            activeTab: 'todas', // 'todas' ou 'abertas'
+            activeTab: 'todas', // 'todas', 'abertas' ou 'encerradas'
             camaraId: this.props.match.params.camaraId || 'camara-teste',
         };
     }
@@ -43,12 +44,12 @@ class Sessoes extends Component {
             const response = await api.get(`/sessions/${camaraId}`);
             const sessoes = response.data;
 
-            // O backend já retorna ordenado por data de criação decrescente
-            // Se precisarmos manter a prioridade de "Abertas" no topo, fazemos aqui:
+            // Ordena as sessões por data em ordem decrescente, com sessões "Abertas" no topo
             const sortedSessoes = Array.isArray(sessoes) ? sessoes.sort((a, b) => {
                 if (a.status === 'Aberta' && b.status !== 'Aberta') return -1;
                 if (a.status !== 'Aberta' && b.status === 'Aberta') return 1;
-                return 0; // Mantém a ordem do backend para o resto
+                // Ordena por data da sessão em ordem decrescente
+                return parseSessionDate(b.data) - parseSessionDate(a.data);
             }) : [];
 
             this.setState({ sessoes: sortedSessoes, loading: false });
@@ -93,6 +94,8 @@ class Sessoes extends Component {
 
             if (activeTab === 'abertas') return (sessao.status || '').toLowerCase() === 'aberta';
 
+            if (activeTab === 'encerradas') return ['encerrada', 'publicada'].includes((sessao.status || '').toLowerCase());
+
             return true;
         });
 
@@ -123,6 +126,9 @@ class Sessoes extends Component {
                                 </button>
                                 <button onClick={() => this.setState({ activeTab: 'abertas' })} style={{ background: activeTab === 'abertas' ? '#fff' : 'transparent', color: activeTab === 'abertas' ? '#1a1a1a' : '#555', border: 'none', borderRadius: '25px', padding: '12px 24px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: activeTab === 'abertas' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>
                                     Sessões Abertas
+                                </button>
+                                <button onClick={() => this.setState({ activeTab: 'encerradas' })} style={{ background: activeTab === 'encerradas' ? '#fff' : 'transparent', color: activeTab === 'encerradas' ? '#1a1a1a' : '#555', border: 'none', borderRadius: '25px', padding: '12px 24px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: activeTab === 'encerradas' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>
+                                    Sessões Encerradas
                                 </button>
                             </div>
                         </div>
@@ -175,7 +181,7 @@ class Sessoes extends Component {
 
                     <div className="modern-grid no-hover-container">
                         {filteredSessoes.map((sessao) => {
-                            const videoId = this.getYouTubeID(sessao.transmissaoUrl);
+                            const videoId = this.getYouTubeID(sessao.urlTransmissao || sessao.transmissaoUrl);
                             const thumbUrl = videoId
                                 ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
                                 : 'https://via.placeholder.com/480x270?text=Sessão+Sem+Vídeo';

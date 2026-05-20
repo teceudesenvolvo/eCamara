@@ -104,8 +104,15 @@ class ComissaoDetails extends Component {
         this.setState({ loading: true });
 
         try {
-            const response = await api.get(`/commission-detail/${comissaoId}`);
-            if (response.data) {
+            const [commissionResponse, usersResponse] = await Promise.all([
+                api.get(`/commission-detail/${comissaoId}`),
+                api.get(`/users/council/${camaraId}`) // Fetch all users for the council
+            ]);
+
+            const usersData = usersResponse.data || [];
+            const usersMap = new Map(usersData.map(user => [user.id || user.uid, user]));
+
+            if (commissionResponse.data) {
                 const data = Array.isArray(response.data) ? response.data[0] : response.data;
                 const comissaoData = { ...data, id: data.id || data._id, nome: data.name || data.nome };
 
@@ -114,7 +121,12 @@ class ComissaoDetails extends Component {
                     const membrosNormalized = (Array.isArray(comissaoData.membros) ? comissaoData.membros : Object.values(comissaoData.membros))
                         .map(m => ({ ...m, id: m.id || m._id, nome: m.nome || m.name }));
 
-                    const membro = membrosNormalized.find(m => m.id === currentUser.id);
+                    // Enrich members with photo from usersMap
+                    comissaoData.membros = membrosNormalized.map(member => {
+                        const userProfile = usersMap.get(member.id);
+                        return { ...member, foto: userProfile?.foto || userProfile?.avatar || userProfile?.photoURL || member.foto || member.avatar || member.photoURL || 'https://via.placeholder.com/50', nome: userProfile?.name || member.nome || member.name };
+                    });
+                    const membro = comissaoData.membros.find(m => m.id === currentUser.id);
                     if (membro) userRole = membro.cargo;
                     comissaoData.membros = membrosNormalized;
                 }

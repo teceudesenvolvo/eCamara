@@ -58,6 +58,7 @@ class slideFeactures extends Component {
                 }
             });
 
+            console.log("Users data before mapping in slideVereadores:", usersData);
             const fetchedVereadores = usersData
                 .filter(u => {
                     const role = (u.role || u.tipo || '').toLowerCase();
@@ -69,10 +70,11 @@ class slideFeactures extends Component {
                 .map(u => ({
                     ...u,
                     id: u.id,
-                    foto: u.foto || u.avatar || u.photoURL || 'https://via.placeholder.com/150',
+                    foto: u.foto || u.avatar || u.photoURL || 'https://www.nicepng.com/png/detail/787-7871387_our-team-person-unknown-png.png',
                     materiasCount: materiasCountByUserId[u.id] || u._count?.matters || 0,
                     comissoesCount: comissoesCountByUserId[u.id] || 0
                 }));
+            console.log("Fetched Vereadores after mapping:", fetchedVereadores);
 
             this.setState({ vereadores: fetchedVereadores, loading: false });
         } catch (error) {
@@ -100,7 +102,7 @@ class slideFeactures extends Component {
                             this.props.history.push(`/vereador/${camaraId}/${vereador.id}`);
                         } else {
                             this.props.clickButton({ id: vereador.id });
-                            console.log(`Vereador selecionado: ${vereador.nome}`);
+                            console.log("Dados do vereador:", vereador);
                         }
                     }
                 }
@@ -110,13 +112,13 @@ class slideFeactures extends Component {
                         <div className="representative-image-wrapper">
                             <img
                                 className="representative-image"
-                                src={vereador.foto || vereador.avatar || vereador.photoURL || 'https://via.placeholder.com/150'}
-                                alt={vereador.nome}
+                                src={vereador.foto || 'https://via.placeholder.com/150'}
+                                alt={vereador.name}
                                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150'; }}
                             />
                         </div>
                         <div className="representative-info">
-                            <h5 className="representative-name">{vereador.nome}</h5>
+                            <h5 className="representative-name">{vereador.name}</h5>
                             <p className="representative-role" style={{ textTransform: 'capitalize' }}>{vereador.cargo || vereador.tipo || vereador.role}</p>
                         </div>
                     </div>
