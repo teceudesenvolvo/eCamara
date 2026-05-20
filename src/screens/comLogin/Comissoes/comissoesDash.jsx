@@ -29,16 +29,24 @@ class ComissoesDash extends Component {
 
     fetchComissoes = async (camaraId, userId) => {
         try {
-            const response = await api.get(`/commissions/${camaraId}`);
-            const allComissoes = response.data || [];
+            const [commissionsResponse, usersResponse] = await Promise.all([
+                api.get(`/commissions/${camaraId}`),
+                api.get(`/users/council/${camaraId}`)
+            ]);
+
+            const allComissoes = commissionsResponse.data || [];
+            const usersData = usersResponse.data || [];
+            const usersMap = new Map(usersData.map(user => [user.id || user.uid, user]));
 
             // Filtra para mostrar apenas as comissões das quais o usuário é membro
             const myComissoes = allComissoes.filter(c =>
                 c.membros && (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)).some(m => m.id === userId)
             ).map(c => ({
                 ...c,
-                // Normaliza membros para ser sempre um array
-                membros: c.membros ? (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)) : [],
+                membros: c.membros ? (Array.isArray(c.membros) ? c.membros : Object.values(c.membros)).map(member => {
+                    const userProfile = usersMap.get(member.id || member.uid);
+                    return { ...member, foto: userProfile?.foto || userProfile?.avatar || userProfile?.photoURL || member.foto || member.avatar || member.photoURL || 'https://via.placeholder.com/50', nome: userProfile?.name || member.nome || member.name };
+                }) : [],
             }));
             this.setState({ comissoes: myComissoes, loading: false });
         } catch (error) {
@@ -79,7 +87,7 @@ class ComissoesDash extends Component {
                         {comissoes.length > 0 ? comissoes.map(comissao => (
                             <div key={comissao.id} className="dashboard-card dashboard-card-hover" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => this.handleNavigateToDetails(comissao.id)}>
                                 <div style={{ padding: '25px', flex: 1 }}>
-                                    <h3 style={{ margin: '0 0 10px 0', color: '#126B5E', fontSize: '1.2rem' }}>{comissao.nome}</h3>
+                                    <h3 style={{ margin: '0 0 10px 0', color: '#126B5E !important', fontSize: '1.2rem' }}>{comissao.name}</h3>
                                     <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>{comissao.descricao}</p>
 
                                     {/* Grupo de Avatares (Apenas Imagens) */}
@@ -90,8 +98,8 @@ class ComissoesDash extends Component {
                                                     <img
                                                         key={membro.id || index}
                                                         src={membro.foto || membro.avatar}
-                                                        alt={membro.name || membro.nome}
-                                                        title={`${membro.name || membro.nome} - ${membro.cargo}`}
+                                                        alt={membro.nome}
+                                                        title={`${membro.nome} - ${membro.cargo}`}
                                                         style={{
                                                             width: '35px', height: '35px', borderRadius: '50%',
                                                             objectFit: 'cover', border: '2px solid #fff',

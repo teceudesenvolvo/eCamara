@@ -113,7 +113,7 @@ class ComissaoDetails extends Component {
             const usersMap = new Map(usersData.map(user => [user.id || user.uid, user]));
 
             if (commissionResponse.data) {
-                const data = Array.isArray(response.data) ? response.data[0] : response.data;
+                const data = Array.isArray(commissionResponse.data) ? commissionResponse.data[0] : commissionResponse.data;
                 const comissaoData = { ...data, id: data.id || data._id, nome: data.name || data.nome };
 
                 let userRole = 'Visitante';
@@ -128,7 +128,6 @@ class ComissaoDetails extends Component {
                     });
                     const membro = comissaoData.membros.find(m => m.id === currentUser.id);
                     if (membro) userRole = membro.cargo;
-                    comissaoData.membros = membrosNormalized;
                 }
 
                 this.setState({ comissao: comissaoData, userRole }, () => {
