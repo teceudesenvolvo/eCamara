@@ -19,7 +19,7 @@ class HomePage extends Component {
             isChatOpen: false,
             loading: true,
             camaraId: this.props.match.params.camaraId || 'master',
-            itemsLimit: 3,
+            itemsLimit: 4,
         };
     }
 
@@ -35,7 +35,7 @@ class HomePage extends Component {
 
     handleResize = () => {
         const width = window.innerWidth;
-        let limit = 3;
+        let limit = 4;
         if (width > 1900) limit = 10;
         else if (width > 1200) limit = 6;
         else if (width > 992) limit = 4;

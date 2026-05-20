@@ -7392,9 +7392,9 @@ footer>p {
 
 /* Ajustes para o hero-section-new em mobile */
 .hero-section-new {
-  width: 90%;
-  padding: 40px 15px;
-  margin: 20px auto;
+  width: 100%;
+  padding: 130px 5px;
+  margin: 0px auto;
 }
 
 .hero-section-new h1 {
