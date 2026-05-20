@@ -482,10 +482,14 @@ class Configuracoes extends Component {
         const actions = [
             { id: 'create_materia', label: 'Protocolar Matérias' },
             { id: 'view_parecer', label: 'Emitir Parecer Jurídico' },
+            { id: 'view_matters_dash', label: 'Visualizar Dashboard de Matérias' },
             { id: 'sign_despacho', label: 'Assinar Despachos' },
             { id: 'manage_sessions', label: 'Gerenciar Pautas' },
+            { id: 'manage_commissions', label: 'Gerenciar Comissões' },
             { id: 'control_panel', label: 'Controlar Painel de Votos' },
+            { id: 'manage_documents', label: 'Gerenciar Documentos Administrativos' },
             { id: 'admin_config', label: 'Configurações do Sistema' }
+            , { id: 'manage_layouts', label: 'Gerenciar Layouts' }
         ];
 
         return (

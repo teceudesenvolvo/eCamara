@@ -134,11 +134,12 @@ const MenuDashboard = ({ logo: propLogo }) => {
 
                 <nav className="nav-desktop">
 
-
-                    <Link to={`/admin/materias-dash/${camaraId}`} className={`aDesktop ${isActive('materias-dash')}`}>
-                        <FaAddressBook className="icon-desktop" />
-                        <span className="text-desktop">Minhas Matérias</span>
-                    </Link>
+                    {hasAccess('view_matters_dash') && (
+                        <Link to={`/admin/materias-dash/${camaraId}`} className={`aDesktop ${isActive('materias-dash')}`}>
+                            <FaAddressBook className="icon-desktop" />
+                            <span className="text-desktop">Minhas Matérias</span>
+                        </Link>
+                    )}
 
                     {activeModules['protocolar'] && hasAccess('create_materia') && (
                         <Link to={`/admin/protocolar-materia/${camaraId}`} className={`aDesktop ${isActive('protocolar-materia')}`}>
@@ -161,7 +162,7 @@ const MenuDashboard = ({ logo: propLogo }) => {
                         </Link>
                     )}
 
-                    {activeModules['comissoes'] && (
+                    {activeModules['comissoes'] && hasAccess('manage_commissions') && (
                         <Link to={`/admin/comissoes-dash/${camaraId}`} className={`aDesktop ${isActive('comissoes-dash')}`}>
                             <FaUsers className="icon-desktop" />
                             <span className="text-desktop">Comissões</span>
@@ -187,27 +188,30 @@ const MenuDashboard = ({ logo: propLogo }) => {
                         </Link>
                     ))}
 
-                    {hasAccess('admin_config') && (
-                        <>
+                    {/* Divider for Admin/Config related items */}
+                    {(hasAccess('admin_config') || hasAccess('manage_layouts') || (activeModules['assistente'] && hasAccess('manage_documents'))) && (
+                        <div className="divider-desktop">Administração</div>
+                    )}
 
-                            {activeModules['assistente'] && (
-                                <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
-                                    <FaFile className="icon-desktop" />
-                                    <span className="text-desktop">Documentos</span>
-                                </Link>
-                            )}
-                            <Link to={`/admin/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
-                                <FaCog className="icon-desktop" />
-                                <span className="text-desktop">Configurações</span>
-                            </Link>
+                    {activeModules['assistente'] && hasAccess('manage_documents') && (
+                        <Link to={`/admin/assistente-admin/${camaraId}`} className={`aDesktop ${isActive('assistente-admin')}`}>
+                            <FaFile className="icon-desktop" />
+                            <span className="text-desktop">Documentos</span>
+                        </Link>
+                    )}
 
+                    {hasAccess('admin_config') && ( // Este bloco estava causando o erro de JSX
+                        <Link to={`/admin/configuracoes/${camaraId}`} className={`aDesktop ${isActive('configuracoes')}`}>
+                            <FaCog className="icon-desktop" />
+                            <span className="text-desktop">Configurações</span>
+                        </Link>
+                    )}
 
-
-                            <Link to={`/admin/layout-manager/${camaraId}`} className={`aDesktop ${isActive('layout-manager')}`}>
-                                <FaPalette className="icon-desktop" />
-                                <span className="text-desktop">Layouts</span>
-                            </Link>
-                        </>
+                    {hasAccess('manage_layouts') && (
+                        <Link to={`/admin/layout-manager/${camaraId}`} className={`aDesktop ${isActive('layout-manager')}`}>
+                            <FaPalette className="icon-desktop" />
+                            <span className="text-desktop">Layouts</span>
+                        </Link>
                     )}
 
                     <Link to={`/admin/perfil/${camaraId}`} className={`aDesktop ${isActive('/perfil')}`}>

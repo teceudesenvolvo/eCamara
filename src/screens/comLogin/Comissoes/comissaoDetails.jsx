@@ -119,7 +119,7 @@ class ComissaoDetails extends Component {
                 let userRole = 'Visitante';
                 if (currentUser && comissaoData.membros) {
                     const membrosNormalized = (Array.isArray(comissaoData.membros) ? comissaoData.membros : Object.values(comissaoData.membros))
-                        .map(m => ({ ...m, id: m.id || m._id, nome: m.nome || m.name }));
+                        .map(m => ({ ...m, id: m.id || m._id, nome: m.name || m.nome }));
 
                     // Enrich members with photo from usersMap
                     comissaoData.membros = membrosNormalized.map(member => {
@@ -169,6 +169,19 @@ class ComissaoDetails extends Component {
                         m.status === 'Rejeitado na Comissão';
                 }
                 return false;
+            }).map(m => {
+                // Correção dinâmica para garantir que o nome apareça no status em vez do cargo
+                if (m.relatorId && comissao.membros) {
+                    const member = (Array.isArray(comissao.membros) ? comissao.membros : Object.values(comissao.membros)).find(mem => mem.id === m.relatorId);
+                    if (member && member.nome) {
+                        return {
+                            ...m,
+                            relatorNome: member.nome,
+                            status: (m.status || '').startsWith('Em Análise pelo Relator') ? `Em Análise pelo Relator (${member.nome})` : m.status
+                        };
+                    }
+                }
+                return m;
             });
             this.setState({ materias: materiasDaComissao, loading: false });
         } catch (error) {

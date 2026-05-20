@@ -44,28 +44,6 @@ class VirtualMeetingPage extends Component {
         }
         this.fetchConfigsAndLogo();
         this.fetchMeetingDetails();
-        this.fetchMaterias();
-    }
-
-    fetchMaterias = async () => {
-        const { camaraId, comissaoId } = this.state;
-        if (!camaraId) return;
-
-        try {
-            const response = await api.get(`/legislative-matters/${camaraId}`);
-            const allMaterias = response.data || [];
-            
-            // Filtramos as matérias que estão em algum estágio de análise pela comissão
-            // ou que foram citadas na pauta da reunião.
-            const materiasDaComissao = allMaterias.filter(m => {
-                const statusLower = (m.status || '').toLowerCase();
-                return statusLower.includes('comissão') || statusLower.includes('relator') || statusLower.includes('parecer');
-            });
-
-            this.setState({ materias: materiasDaComissao });
-        } catch (error) {
-            console.error("Erro ao buscar matérias:", error);
-        }
     };
 
     // --- Voting Methods ---
@@ -118,7 +96,7 @@ class VirtualMeetingPage extends Component {
             await api.patch(`/legislative-matters/id/${votingMateria.id}`, { votosComissao: updatedVotos });
             alert('Voto computado com sucesso!');
             this.setState({ showVotingModal: false, votingMateria: null, memberVote: 'Favorável', votoEmSeparadoFile: null });
-            this.fetchMaterias();
+            this.fetchMeetingDetails(); // Refresh meeting details including matters
         } catch (error) {
             console.error("Erro ao computar voto:", error);
             alert('Erro ao computar voto.');
@@ -131,7 +109,7 @@ class VirtualMeetingPage extends Component {
                 status: resultado === 'Aprovado' ? 'Aprovado na Comissão' : 'Rejeitado na Comissão',
                 dataVotacaoComissao: new Date().toISOString()
             });
-            alert(`Matéria ${resultado === 'Aprovado' ? 'Aprovada' : 'Rejeitada'} com sucesso!`);
+            alert(`Matéria ${resultado === 'Aprovado' ? 'Aprovada' : 'Rejeitada'} na comissão com sucesso!`);
             this.fetchMaterias();
         } catch (error) {
             console.error("Erro ao finalizar votação:", error);
@@ -175,21 +153,40 @@ class VirtualMeetingPage extends Component {
         }
 
         try {
-            // Utilizamos o endpoint de detalhes da comissão que é mais estável e contém o array de reuniões
-            const response = await api.get(`/commission-detail/${comissaoId}`);
-            const data = Array.isArray(response.data) ? response.data[0] : response.data;
+            // Buscamos os detalhes da comissão e os dados dos usuários simultaneamente
+            const [commissionResponse, usersResponse] = await Promise.all([
+                api.get(`/commission-detail/${comissaoId}`),
+                api.get(`/users/council/${this.state.camaraId}`)
+            ]);
+
+            const data = Array.isArray(commissionResponse.data) ? commissionResponse.data[0] : commissionResponse.data;
+            const usersData = usersResponse.data || [];
+            const usersMap = new Map(usersData.map(user => [user.id || user.uid, user]));
 
             if (data) {
                 const rawReunioes = data.reunioes || data.meetings || [];
                 const reunioesList = Array.isArray(rawReunioes) ? rawReunioes : Object.values(rawReunioes);
                 
+                // Localizar a reunião específica antes de processar pautas ou membros
+                const reuniaoIdToFind = reuniaoId;
+                const reuniaoData = reunioesList.find(r => (r.id || r._id) == reuniaoIdToFind);
+
                 const { currentUser } = this.state;
                 let userRole = 'Visitante';
                 let normalizedMembros = [];
                 
                 if (data.membros) {
                     normalizedMembros = (Array.isArray(data.membros) ? data.membros : Object.values(data.membros))
-                        .map(m => ({ ...m, id: m.id || m._id, nome: m.nome || m.name }));
+                        .map(m => {
+                            const memberId = m.id || m._id;
+                            const userProfile = usersMap.get(memberId);
+                            return {
+                                ...m,
+                                id: memberId,
+                                nome: userProfile?.name || m.name || m.nome || 'Parlamentar',
+                                foto: userProfile?.foto || userProfile?.avatar || userProfile?.photoURL || m.foto || m.avatar || m.photoURL || 'https://via.placeholder.com/150'
+                            };
+                        });
                     
                     if (currentUser) {
                         const membro = normalizedMembros.find(m => m.id === currentUser.id);
@@ -197,9 +194,27 @@ class VirtualMeetingPage extends Component {
                     }
                 }
 
-                // Usamos == para permitir comparação de string com número se necessário
-                const reuniaoIdToFind = reuniaoId;
-                const reuniaoData = reunioesList.find(r => (r.id || r._id) == reuniaoIdToFind);
+                // Fetch full details for pautadas matters
+                let pautadasMateriasDetails = [];
+                if (reuniaoData && reuniaoData.materiasPautadas && reuniaoData.materiasPautadas.length > 0) {
+                    const pautadasIds = reuniaoData.materiasPautadas.map(m => m.id);
+                    const allMateriasResponse = await api.get(`/legislative-matters/${this.state.camaraId}`);
+                    const allMaterias = allMateriasResponse.data || [];
+                    pautadasMateriasDetails = allMaterias.filter(m => pautadasIds.includes(m.id)).map(m => {
+                        if (m.relatorId && normalizedMembros.length > 0) {
+                            const member = normalizedMembros.find(mem => mem.id === m.relatorId);
+                            if (member && member.nome) {
+                                return {
+                                    ...m,
+                                    relatorNome: member.nome,
+                                    status: (m.status || '').startsWith('Em Análise pelo Relator') ? `Em Análise pelo Relator (${member.nome})` : m.status
+                                };
+                            }
+                        }
+                        return m;
+                    });
+                }
+
 
                 if (reuniaoData) {
                     const tipo = (reuniaoData.tipo || reuniaoData.type || '').toLowerCase();
@@ -213,6 +228,7 @@ class VirtualMeetingPage extends Component {
                             reuniao: { ...reuniaoData, tipo: 'Virtual', url: finalUrl },
                             jitsiUrl: finalUrl,
                             comissao: { ...data, membros: normalizedMembros },
+                            materias: pautadasMateriasDetails, // Set the pautadas matters here
                             userRole,
                             loading: false,
                         });
