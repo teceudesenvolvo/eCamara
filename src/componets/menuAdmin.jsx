@@ -96,11 +96,42 @@ const MenuDashboard = ({ logo: propLogo }) => {
         }
     }, [location.pathname, propLogo]);
 
-
     // Validador de Acesso
     const hasAccess = (permissionId) => {
-        if (userType === 'admin' || userType === 'superadmin') return true;
-        return permissions[userCargo]?.[permissionId] === true;
+        const typeLower = (userType || '').toLowerCase();
+        // Admins e Superadmins possuem acesso total irrestrito
+        if (typeLower === 'admin' || typeLower === 'superadmin') return true;
+
+        if (!permissions) return false;
+
+        const cargoToMatch = (userCargo || '').toLowerCase();
+        const roleToMatch = (userType || '').toLowerCase();
+
+        // Agregador de papéis: o usuário pode acumular permissões (ex: Cargo de Presidente + Tipo Vereador)
+        const userRoles = [cargoToMatch, roleToMatch];
+
+        // Permissões padrão para Procuradoria
+        if (userRoles.some(r => r.includes('procurador') || r.includes('jurídico'))) {
+            if (permissionId === 'view_parecer' || permissionId === 'manage_documents' || permissionId === 'view_matters_dash') {
+                // Se a permissão já estiver explicitamente negada na matriz, respeita a negação
+                if (Object.keys(permissions).some(permissionKey => {
+                    const keyLower = permissionKey.toLowerCase();
+                    return userRoles.includes(keyLower) && permissions[permissionKey]?.[permissionId] === false;
+                })) return false;
+                return true; // Concede acesso por padrão se não houver negação explícita
+            }
+        }
+
+        // Herança lógica: Se o usuário é Presidente (ou da Presidência), ele herda as permissões de Vereador
+        if (userRoles.some(r => r.includes('presidente'))) {
+            userRoles.push('vereador');
+        }
+
+        // Verifica em todos os papéis do usuário se algum deles possui a permissão definida como true na matriz
+        return Object.keys(permissions).some(permissionKey => {
+            const keyLower = permissionKey.toLowerCase();
+            return userRoles.includes(keyLower) && permissions[permissionKey]?.[permissionId] === true;
+        });
     };
 
     // Configuração dos Serviços para iteração
