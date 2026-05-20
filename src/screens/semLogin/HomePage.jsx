@@ -36,7 +36,7 @@ class HomePage extends Component {
     handleResize = () => {
         const width = window.innerWidth;
         let limit = 4;
-        if (width > 1900) limit = 10;
+        if (width > 1800) limit = 10;
         else if (width > 1200) limit = 6;
         else if (width > 992) limit = 4;
         
